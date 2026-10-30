@@ -56,6 +56,27 @@ class AgentHealer:
                 "2. Step back and formulate a third, completely new hypothesis.\n"
                 "3. Re-examine the original issue prompt for missed constraints."
             )
+        elif pattern_type == "fuzzy_repetition":
+            base = (
+                f"Polymorphic action repetition detected for '{failing_action[:60]}'.\n"
+                "1. Stop tweaking flags, parameters, or superficial argument variations of this command.\n"
+                "2. The underlying premise of this tool/command invocation is failing.\n"
+                "3. Pivot completely to an alternative approach or inspect prerequisite dependencies."
+            )
+        elif pattern_type == "delegation_cycle":
+            base = (
+                "A multi-agent delegation cycle (ping-pong handoff) was detected.\n"
+                "1. Do NOT delegate or hand off this task to another agent again.\n"
+                "2. Take decisive local ownership and execute the required action directly.\n"
+                "3. If missing information, inspect the environment or state yourself instead of delegating."
+            )
+        elif pattern_type == "output_stagnation":
+            base = (
+                "Environment feedback is completely stagnant despite varied command attempts.\n"
+                "1. Stop executing commands that produce the same static failure state.\n"
+                "2. Inspect the environment prerequisites (running services, network ports, installed packages).\n"
+                "3. Verify that previous modifications were actually applied and saved."
+            )
         elif "importerror" in err_lower or "modulenotfounderror" in err_lower:
             base = (
                 "The current import path or dependency is unresolved.\n"

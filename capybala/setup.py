@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="capybala",
-    version="0.4.0",
+    version="0.5.0",
     description="Context-Aware Pruning for Yielding & Backtrack-Aligned Loop Avoidance: The chill, self-healing runtime that cures autonomous AI agents from cognitive deadlocks.",
     packages=find_packages(),
     python_requires=">=3.9",

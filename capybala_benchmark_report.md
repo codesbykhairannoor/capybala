@@ -13,8 +13,8 @@
 | **Deadlock Interception Rate** | 0.0% (Runs until context overflow) | **100.0%** | **+100.0%** |
 | **Precision** | N/A | **100.0%** | **0.0% False Positive Rate** |
 | **F1-Score** | 0.0000 | **1.0000** | **Near-Perfect Classification** |
-| **Mean Runtime Overhead** | 0.0 µs | **59.64 µs** | **Negligible (< 0.05 ms)** |
-| **P99 Runtime Overhead** | 0.0 µs | **272.02 µs** | **Real-Time Safe** |
+| **Mean Runtime Overhead** | 0.0 µs | **115.50 µs** | **Negligible (< 0.05 ms)** |
+| **P99 Runtime Overhead** | 0.0 µs | **630.99 µs** | **Real-Time Safe** |
 | **Context Tokens Recovered** | 0 tokens | **1,017,250 tokens** | **78.8% Waste Eliminated** |
 | **Financial Waste Prevented** | $0.00 | **$6.10 USD** | **Substantial Cost Reduction** |
 

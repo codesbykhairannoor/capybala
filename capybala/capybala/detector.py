@@ -3,12 +3,15 @@ capybala.detector
 ~~~~~~~~~~~~~~~~~
 Zero-overhead, bounded-memory algorithmic detector for Cognitive Deadlocks:
 - Direct action repetition (A -> A -> A)
+- Fuzzy polymorphic loop detection (token Jaccard + 3-gram character shingles)
+- Multi-agent delegation ping-pong cycle detection (A <-> B handoff cycles)
 - Multi-step oscillation loops (A -> B -> A -> B or A -> B -> C -> A -> B -> C)
 - Repeating traceback exception signatures
+- Observation / output stagnation with dynamic polling exemptions
 - Dynamic tool-call polling unpacker & whitelist (curl, kubectl, docker wait, ps)
 - Volatile JSON argument normalizer (strips dynamic timestamps, nonces, request IDs)
 - Circuit breaker engine preventing Infinite Healing Loops (Meta-Deadlocks)
-- Zero memory pinning: ring buffer stores 16-byte SHA digests and 80-char previews.
+- Zero memory pinning: ring buffer stores 16-byte SHA digests and compact previews.
 """
 
 import re
@@ -33,7 +36,7 @@ class DeadlockEmergencyStop(RuntimeError):
 @dataclass
 class DeadlockEvent:
     is_deadlock: bool
-    pattern_type: Optional[str] = None  # 'direct_repetition', 'oscillation', 'semantic_traceback'
+    pattern_type: Optional[str] = None  # 'direct_repetition', 'fuzzy_repetition', 'delegation_cycle', 'oscillation', 'semantic_traceback', 'output_stagnation'
     repetition_count: int = 0
     details: str = ""
     signature: str = ""
@@ -71,18 +74,26 @@ class DeadlockDetector:
         history_window: int = 24,
         max_interventions: int = 5,
         circuit_breaker_enabled: bool = True,
+        fuzzy_threshold: float = 0.65,
+        enable_fuzzy: bool = True,
+        enable_delegation: bool = True,
     ):
         self.repetition_threshold = repetition_threshold
         self.oscillation_threshold = oscillation_threshold
         self.history_window = history_window
         self.max_interventions = max_interventions
         self.circuit_breaker_enabled = circuit_breaker_enabled
+        self.fuzzy_threshold = fuzzy_threshold
+        self.enable_fuzzy = enable_fuzzy
+        self.enable_delegation = enable_delegation
 
-        # Store ONLY compact fixed-size digests (16 bytes each), not multi-MB strings
+        # Store ONLY compact fixed-size digests (16 bytes each), previews, and bounded buffers
         self.action_history: deque = deque(maxlen=history_window)
         self.obs_hash_history: deque = deque(maxlen=history_window)
         self.observation_signatures: deque = deque(maxlen=history_window)
         self.action_previews: deque = deque(maxlen=history_window)
+        self.raw_actions: deque = deque(maxlen=history_window)
+        self.delegation_history: deque = deque(maxlen=history_window)
         self.turn_counter = 0
 
         # Circuit breaker state
@@ -170,6 +181,79 @@ class DeadlockDetector:
 
         return s
 
+    def _calculate_fuzzy_similarity(self, s1: str, s2: str) -> float:
+        """
+        Calculates ultra-fast sub-millisecond lexical similarity combining
+        token overlap and 3-gram character shingles (zero external dependencies).
+        """
+        if s1 == s2:
+            return 1.0
+        if not s1 or not s2:
+            return 0.0
+
+        tok1 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s1.lower()))
+        tok2 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s2.lower()))
+
+        jaccard_tok = len(tok1 & tok2) / len(tok1 | tok2) if (tok1 or tok2) else 0.0
+        min_tok = min(len(tok1), len(tok2))
+        overlap_tok = len(tok1 & tok2) / min_tok if min_tok > 0 else 0.0
+
+        s1_clean = re.sub(r"\s+", " ", s1.lower()).strip()
+        s2_clean = re.sub(r"\s+", " ", s2.lower()).strip()
+
+        k = 3
+        sh1 = {s1_clean[i:i+k] for i in range(len(s1_clean) - k + 1)} if len(s1_clean) >= k else {s1_clean}
+        sh2 = {s2_clean[i:i+k] for i in range(len(s2_clean) - k + 1)} if len(s2_clean) >= k else {s2_clean}
+
+        jaccard_char = len(sh1 & sh2) / len(sh1 | sh2) if (sh1 or sh2) else 0.0
+        min_char = min(len(sh1), len(sh2))
+        overlap_char = len(sh1 & sh2) / min_char if min_char > 0 else 0.0
+
+        sim = 0.35 * overlap_char + 0.25 * overlap_tok + 0.20 * jaccard_tok + 0.20 * jaccard_char
+        return round(sim, 4)
+
+    def _extract_delegation_target(self, action: Optional[str]) -> str:
+        """
+        Extracts target agent / recipient from multi-agent handoff primitives
+        (CrewAI, LangGraph, AutoGen, OpenAI Swarm).
+        """
+        if not action:
+            return ""
+
+        act_str = str(action).strip()
+
+        # 1. Direct tool call pattern: e.g. delegate_to(agent="coder", ...), handoff("qa")
+        m = re.search(
+            r"(?:delegate|handoff|transfer|assign|route|call_subagent|ask_agent)[a-zA-Z0-9_]*\s*\(\s*(?:(?:agent|target|recipient|coworker|to_agent|agent_name)\s*=\s*)?['\"]([a-zA-Z0-9_\-]+)['\"]",
+            act_str,
+            re.IGNORECASE
+        )
+        if m:
+            return m.group(1).lower()
+
+        # 2. JSON or dict payload containing delegation keys
+        dict_match = re.search(r"(\{.*\}|\[.*\])", act_str, re.DOTALL)
+        if dict_match:
+            try:
+                data = json.loads(dict_match.group(0))
+                if isinstance(data, dict):
+                    for key in ("agent", "target", "recipient", "coworker", "target_agent", "recipient_agent", "next_agent"):
+                        if key in data and isinstance(data[key], str):
+                            return data[key].strip().lower()
+            except Exception:
+                pass
+
+        # 3. Key-value pair in unparsed action strings: coworker='Engineer' or agent="coder"
+        m_kv = re.search(
+            r"['\"]?(?:agent|target|recipient|coworker|target_agent|recipient_agent|next_agent)['\"]?\s*[:=]\s*['\"]([a-zA-Z0-9_\-]+)['\"]",
+            act_str,
+            re.IGNORECASE
+        )
+        if m_kv and re.search(r"(?:delegate|handoff|transfer|assign|route|subagent|agent|ask)", act_str, re.IGNORECASE):
+            return m_kv.group(1).lower()
+
+        return ""
+
     def _is_polling_command(self, action: Optional[str]) -> bool:
         """
         Determines if a command is a legitimate polling primitive.
@@ -249,6 +333,10 @@ class DeadlockDetector:
         self.obs_hash_history.append(obs_hash)
         self.observation_signatures.append(err_sig)
         self.action_previews.append(raw_action[:80])
+        self.raw_actions.append(raw_action[:512])
+
+        del_target = self._extract_delegation_target(raw_action)
+        self.delegation_history.append(del_target)
 
         # 0. WHITELIST CHECK: Legitimate Polling Primitives are exempt
         if self._is_polling_command(raw_action):
@@ -282,12 +370,79 @@ class DeadlockDetector:
                         loop_onset_turn=onset_turn,
                     )
 
-        # 2. OSCILLATION LOOP CHECK
+        # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
+        if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= self.repetition_threshold:
+            recent_raw = list(self.raw_actions)[-self.repetition_threshold:]
+            recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+
+            # MUST have active error or failure indications (never flag successful variations)
+            has_error = any(e is not None for e in recent_errs) or bool(
+                re.search(r"\b(error|fail|failed|failure|exception)\b", safe_obs, re.IGNORECASE)
+            )
+
+            if has_error:
+                # Check if all actions are variants of the anchor action (recent_raw[0])
+                # OR all adjacent pairs have high fuzzy similarity
+                is_anchor_loop = all(
+                    self._calculate_fuzzy_similarity(recent_raw[0], recent_raw[i]) >= self.fuzzy_threshold
+                    for i in range(1, len(recent_raw))
+                )
+                is_pairwise_loop = all(
+                    self._calculate_fuzzy_similarity(recent_raw[i], recent_raw[i + 1]) >= self.fuzzy_threshold
+                    for i in range(len(recent_raw) - 1)
+                )
+
+                if is_anchor_loop or is_pairwise_loop:
+                    onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                    preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
+                    detected_event = DeadlockEvent(
+                        is_deadlock=True,
+                        pattern_type="fuzzy_repetition",
+                        repetition_count=self.repetition_threshold,
+                        details=f"Polymorphic command loop ({self.repetition_threshold}x variants with persistent failure): '{preview}'",
+                        signature=f"fuzzy_{self._hash(recent_raw[-1])}",
+                        loop_onset_turn=onset_turn,
+                    )
+
+        # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong)
+        if not detected_event and self.enable_delegation:
+            valid_del = [t for t in self.delegation_history if t]
+            if len(valid_del) >= 4:
+                # 2-agent ping-pong: A -> B -> A -> B
+                if valid_del[-1] == valid_del[-3] and valid_del[-2] == valid_del[-4] and valid_del[-1] != valid_del[-2]:
+                    onset_turn = max(1, self.turn_counter - 4 + 1)
+                    detected_event = DeadlockEvent(
+                        is_deadlock=True,
+                        pattern_type="delegation_cycle",
+                        repetition_count=2,
+                        details=f"Multi-agent delegation cycle detected: '{valid_del[-2]}' <-> '{valid_del[-1]}' ping-pong handoffs.",
+                        signature=f"del_{valid_del[-2]}_{valid_del[-1]}",
+                        loop_onset_turn=onset_turn,
+                    )
+                # 3-agent cycle: A -> B -> C -> A -> B -> C
+                elif len(valid_del) >= 6:
+                    if (
+                        valid_del[-1] == valid_del[-4]
+                        and valid_del[-2] == valid_del[-5]
+                        and valid_del[-3] == valid_del[-6]
+                        and len({valid_del[-1], valid_del[-2], valid_del[-3]}) == 3
+                    ):
+                        onset_turn = max(1, self.turn_counter - 6 + 1)
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="delegation_cycle",
+                            repetition_count=2,
+                            details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
+                            signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
+                            loop_onset_turn=onset_turn,
+                        )
+
+        # 4. OSCILLATION LOOP CHECK
         if not detected_event:
             hist = list(self.action_history)
             n = len(hist)
 
-            # 2a. Period-2 Oscillation (A -> B -> A -> B)
+            # 4a. Period-2 Oscillation (A -> B -> A -> B)
             required_turns_p2 = self.oscillation_threshold * 2
             if n >= required_turns_p2:
                 if hist[-1] == hist[-3] and hist[-2] == hist[-4] and hist[-1] != hist[-2]:
@@ -301,7 +456,7 @@ class DeadlockDetector:
                         loop_onset_turn=onset_turn,
                     )
 
-            # 2b. Period-3 Oscillation (A -> B -> C -> A -> B -> C)
+            # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C)
             if not detected_event:
                 required_turns_p3 = 6
                 if n >= required_turns_p3:
@@ -321,7 +476,7 @@ class DeadlockDetector:
                             loop_onset_turn=onset_turn,
                         )
 
-        # 3. SEMANTIC TRACEBACK DEADLOCK CHECK
+        # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
         if not detected_event and err_sig is not None:
             if len(self.observation_signatures) >= self.repetition_threshold:
                 recent_sigs = list(self.observation_signatures)[-self.repetition_threshold:]
@@ -335,6 +490,26 @@ class DeadlockDetector:
                         signature=self._hash(err_sig),
                         loop_onset_turn=onset_turn,
                     )
+
+        # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
+        if not detected_event:
+            if len(self.obs_hash_history) >= self.repetition_threshold:
+                recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
+                if len(set(recent_obs_hashes)) == 1 and safe_obs.strip():
+                    recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                    has_error = any(e is not None for e in recent_errs) or bool(
+                        re.search(r"\b(error|fail|failed|failure|exception|denied|refused|cannot|unresolved)\b", safe_obs, re.IGNORECASE)
+                    )
+                    if has_error:
+                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="output_stagnation",
+                            repetition_count=self.repetition_threshold,
+                            details=f"Observation stagnation deadlock: Environment produced identical failing output {self.repetition_threshold} times in a row.",
+                            signature=recent_obs_hashes[-1],
+                            loop_onset_turn=onset_turn,
+                        )
 
         # CIRCUIT BREAKER & PROGRESSION EVALUATION
         if detected_event and detected_event.is_deadlock:
@@ -363,6 +538,8 @@ class DeadlockDetector:
         self.obs_hash_history.clear()
         self.observation_signatures.clear()
         self.action_previews.clear()
+        self.raw_actions.clear()
+        self.delegation_history.clear()
         self.turn_counter = 0
         self.consecutive_deadlocks = 0
         self.total_deadlocks_detected = 0

@@ -44,6 +44,7 @@ def heal(
     max_interventions: int = 5,
     circuit_breaker: bool = True,
     raise_on_circuit_break: bool = False,
+    fuzzy_threshold: float = 0.65,
 ) -> List[Dict[str, Any]]:
     """
     1-Line Functional Healer.
@@ -91,11 +92,12 @@ def heal(
             prev_act, _ = turns_sequence[-1]
             turns_sequence[-1] = (prev_act, content)
 
-    # Evaluate sequence against DeadlockDetector with circuit breaker
+    # Evaluate sequence against DeadlockDetector with circuit breaker & fuzzy detection
     detector = DeadlockDetector(
         repetition_threshold=repetition_threshold,
         max_interventions=max_interventions,
         circuit_breaker_enabled=circuit_breaker,
+        fuzzy_threshold=fuzzy_threshold,
     )
     last_action = ""
     last_obs = ""
@@ -164,6 +166,7 @@ def watch(
     max_interventions: int = 5,
     circuit_breaker: bool = True,
     raise_on_circuit_break: bool = False,
+    fuzzy_threshold: float = 0.65,
 ) -> Any:
     """
     Explicit, Non-Invasive Client Wrapper (like Tenacity / Instructor).
@@ -199,6 +202,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return await orig_create(*args, **kwargs)
 
@@ -214,6 +218,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return orig_create(*args, **kwargs)
 
@@ -239,6 +244,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return await orig_create(*args, **kwargs)
 
@@ -255,6 +261,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return orig_create(*args, **kwargs)
 
@@ -280,6 +287,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return await orig_inference(*args, **kwargs)
 
@@ -296,6 +304,7 @@ def watch(
                             max_interventions=max_interventions,
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
+                            fuzzy_threshold=fuzzy_threshold,
                         )
                     return orig_inference(*args, **kwargs)
 
