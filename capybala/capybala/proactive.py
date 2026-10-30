@@ -103,3 +103,4 @@ class SearchOptimizer:
         if should_inject and hint:
             return observation.rstrip() + "\n\n" + hint
         return observation
+

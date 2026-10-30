@@ -210,8 +210,8 @@ class DeadlockDetector:
         # Replace UUIDs / GUIDs without catastrophic backtracking
         s = re.sub(r"(?:\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", "<UUID>", s)
 
-        # Replace ISO8601 timestamps (with optional ms and timezone offsets e.g. +07:00, Z)
-        s = re.sub(r"\d{4}-\d{2}-\d{2}[tT ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:z|[+-]\d{2}:?\d{2})?", "<TIMESTAMP>", s)
+        # Replace ISO8601 timestamps (with optional ms via dot or comma and timezone offsets e.g. +07:00, Z)
+        s = re.sub(r"\d{4}-\d{2}-\d{2}[tT ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:z|[+-]\d{2}:?\d{2})?", "<TIMESTAMP>", s)
 
         # Replace Unix epoch timestamps (10 to 13 digits)
         s = re.sub(r"\b1[6789]\d{8,11}\b", "<EPOCH_TS>", s)
@@ -628,8 +628,9 @@ class DeadlockDetector:
                     eval_raw = list(self.raw_actions)[-effective_threshold:]
                     eval_errs = list(self.observation_signatures)[-effective_threshold:]
 
-                    # MUST have active error or failure indications (never flag successful variations)
-                    has_error = any(e is not None for e in eval_errs) or self._has_failure_indicator(safe_obs)
+                    # MUST have active error or failure indications on the latest turn (never flag successful actions)
+                    current_turn_failed = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
+                    has_error = current_turn_failed
 
                     if has_error:
                         # Check if all actions are variants of the anchor action (eval_raw[0])
@@ -772,16 +773,28 @@ class DeadlockDetector:
                                 )
 
                             if is_cycle_match:
-                                # Ensure the latest turn is an active failure OR observation is stagnant across cycles
-                                current_fail = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
+                                # Ensure the latest turn is an active failure (never flag on successful turns)
+                                current_turn_failed = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
+                                if not current_turn_failed:
+                                    continue
+
                                 obs_h = list(self.obs_hash_history)
+                                err_sigs = list(self.observation_signatures)
                                 is_stagnant = False
                                 if len(obs_h) >= period + 1 and obs_h[-1] == obs_h[-period-1]:
                                     is_stagnant = True
                                 if len(obs_h) >= 2 * period + 1 and obs_h[-1] == obs_h[-2*period-1]:
                                     is_stagnant = True
 
-                                if current_fail or is_stagnant:
+                                # Persistent error signature across cycle (same exception repeating across periods)
+                                is_repeating_error = False
+                                if err_sigs[-1] is not None:
+                                    if len(err_sigs) >= period + 1 and err_sigs[-1] == err_sigs[-period-1]:
+                                        is_repeating_error = True
+                                    if len(err_sigs) >= 2 * period + 1 and err_sigs[-1] == err_sigs[-2*period-1]:
+                                        is_repeating_error = True
+
+                                if is_repeating_error or is_stagnant:
                                     onset_turn = max(1, self.turn_counter - req_turns + 1)
                                     detected_event = DeadlockEvent(
                                         is_deadlock=True,

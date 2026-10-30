@@ -248,3 +248,4 @@ class SchemaValidator:
             return messages, fixes_applied
 
         return final_msgs, fixes_applied
+

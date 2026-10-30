@@ -74,3 +74,4 @@ class DeadlockPolicy:
     def is_in_refinement(self) -> bool:
         """True if the policy is currently enforcing strict refinement thresholds."""
         return self.current_phase == DeadlockMode.REFINEMENT
+

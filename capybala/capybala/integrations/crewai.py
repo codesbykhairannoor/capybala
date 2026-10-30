@@ -78,3 +78,4 @@ class CapybalaCrewCallback:
             }
             if self.verbose:
                 print(f"[Capybala CrewAI Guard] Intercepted deadlock: {event.pattern_type} on '{action_str[:50]}'")
+

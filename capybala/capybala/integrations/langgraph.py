@@ -66,3 +66,4 @@ class CapybalaLangGraphMiddleware:
                 SchemaValidator.validate_and_repair(msgs, in_place=True)
                 heal(msgs, verbose=self.verbose)
         return state
+
