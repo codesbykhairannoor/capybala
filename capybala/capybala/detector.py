@@ -101,6 +101,7 @@ class DeadlockDetector:
         max_exploration_depth: int = 15,
         enable_exploration_guard: bool = True,
         policy: Optional[Any] = None,
+        enable_attractor: bool = True,
     ):
         self.repetition_threshold = repetition_threshold
         self.oscillation_threshold = oscillation_threshold
@@ -112,6 +113,14 @@ class DeadlockDetector:
         self.enable_delegation = enable_delegation
         self.max_exploration_depth = max_exploration_depth
         self.enable_exploration_guard = enable_exploration_guard
+        self.enable_attractor = enable_attractor
+
+        # Post-IF-ELSE Semantic Attractor & Manifold Engine
+        if enable_attractor:
+            from .attractor import SemanticAttractorDetector
+            self.attractor_detector = SemanticAttractorDetector()
+        else:
+            self.attractor_detector = None
 
         # Adaptive Deadlock Policy
         if policy == "adaptive":
@@ -231,14 +240,18 @@ class DeadlockDetector:
     def _has_failure_indicator(self, text: Optional[str]) -> bool:
         """
         Detects genuine failure indicators while strictly ignoring false positives
-        such as '0 failed', '0 errors', 'no errors', 'zero failures' common in passing test outputs.
+        such as '0 failed', '0 errors', 'no errors', 'zero failures' common in passing test outputs,
+        as well as editor file view displays containing source code.
         """
         if not text:
+            return False
+        s = str(text).strip()
+        if s.startswith(("[File:", "[Opened:")):
             return False
         clean = re.sub(
             r"\b(?:0|zero|no)\s+(?:errors?|failures?|failed|exceptions?)\b",
             "",
-            str(text).lower()
+            s.lower()
         )
         return bool(re.search(r"\b(error|fail|failed|failure|exception|denied|refused|cannot|unresolved)\b", clean))
 
@@ -453,18 +466,22 @@ class DeadlockDetector:
                 return True
             return False
 
+        # Viewport navigation commands are strictly non-mutating
+        if self._is_navigation_command(act_clean):
+            return False
+
         # Extract primary command verb (first token)
         first_token = act_clean.split()[0] if act_clean else ""
         first_token = re.sub(r"[^a-zA-Z0-9_\-]", "", first_token)
 
         # 2. Strict read-only precedence
         for ro in READ_ONLY_COMMAND_VERBS:
-            if first_token == ro or first_token.startswith(ro):
+            if first_token == ro:
                 return False
 
-        # 3. Check mutating verbs
+        # 3. Check mutating verbs (exact verb matching to prevent 'goto' matching 'go')
         for mut in MUTATING_COMMAND_VERBS:
-            if first_token == mut or first_token.startswith(mut):
+            if first_token == mut:
                 return True
 
         # Fallback: check if line begins with an active command
@@ -501,13 +518,23 @@ class DeadlockDetector:
         Extracts specific Exception signature along with the target error message.
         Inspects only the tail 16KB where stack traces reside.
         Strips passing summary counts ('0 failed', 'no errors') to prevent false positive matches.
+        Exempts editor file views and reading operations displaying source code.
         """
         if not output:
             return None
 
-        # Editor navigation commands display source code (e.g. raise RuntimeError), not execution crashes
-        if action and self._is_navigation_command(action):
+        # Editor file views display source code (e.g. raise RuntimeError), not execution crashes
+        out_clean = str(output).lstrip()
+        if out_clean.startswith(("[File:", "[Opened:")):
             return None
+
+        # Editor navigation and file viewing commands display source code, not execution crashes
+        if action:
+            act_clean = str(action).strip().lower()
+            if self._is_navigation_command(act_clean):
+                return None
+            if any(act_clean.startswith(p + " ") or act_clean == p for p in ("open", "view", "read", "cat", "head", "tail", "less", "more")):
+                return None
 
         target = str(output)[-16384:]
         # Strip passing counters so words like '0 failed' or 'no errors' are never misidentified as exceptions
@@ -786,13 +813,20 @@ class DeadlockDetector:
                                 if len(obs_h) >= 2 * period + 1 and obs_h[-1] == obs_h[-2*period-1]:
                                     is_stagnant = True
 
-                                # Persistent error signature across cycle (same exception repeating across periods)
+                                # Persistent error signature across cycle (same exception repeating across periods with high similarity)
                                 is_repeating_error = False
                                 if err_sigs[-1] is not None:
-                                    if len(err_sigs) >= period + 1 and err_sigs[-1] == err_sigs[-period-1]:
-                                        is_repeating_error = True
-                                    if len(err_sigs) >= 2 * period + 1 and err_sigs[-1] == err_sigs[-2*period-1]:
-                                        is_repeating_error = True
+                                    curr_err_type = err_sigs[-1].split(":")[0].strip()
+                                    if len(err_sigs) >= period + 1 and err_sigs[-period-1] is not None:
+                                        prev_type = err_sigs[-period-1].split(":")[0].strip()
+                                        sim = self._calculate_fuzzy_similarity(err_sigs[-1], err_sigs[-period-1])
+                                        if err_sigs[-1] == err_sigs[-period-1] or (curr_err_type == prev_type and sim >= 0.75):
+                                            is_repeating_error = True
+                                    if len(err_sigs) >= 2 * period + 1 and err_sigs[-2*period-1] is not None:
+                                        prev_type2 = err_sigs[-2*period-1].split(":")[0].strip()
+                                        sim2 = self._calculate_fuzzy_similarity(err_sigs[-1], err_sigs[-2*period-1])
+                                        if err_sigs[-1] == err_sigs[-2*period-1] or (curr_err_type == prev_type2 and sim2 >= 0.75):
+                                            is_repeating_error = True
 
                                 if is_repeating_error or is_stagnant:
                                     onset_turn = max(1, self.turn_counter - req_turns + 1)
@@ -863,12 +897,42 @@ class DeadlockDetector:
                         loop_onset_turn=onset_turn,
                     )
 
+            # 8. POST-IF-ELSE SEMANTIC ATTRACTOR & DYNAMICAL MANIFOLD CHECK
+            if not detected_event and self.enable_attractor and self.attractor_detector is not None:
+                current_fail = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
+
+                # State space shift: Successful code edits modify the vector field, resetting execution attractors
+                act_clean = raw_action.strip().lower()
+                first_tok = act_clean.split()[0] if act_clean else ""
+                first_tok = first_tok.split("(")[0]
+                if first_tok in ("edit", "write", "create", "patch", "replace") and not current_fail:
+                    self.attractor_detector.reset()
+
+                is_attractor, confidence, attractor_details = self.attractor_detector.inspect_step(
+                    raw_action,
+                    is_failing=current_fail
+                )
+                if is_attractor:
+                    onset_turn = max(1, self.turn_counter - self.attractor_detector.stagnation_steps + 1)
+                    detected_event = DeadlockEvent(
+                        is_deadlock=True,
+                        pattern_type="semantic_attractor",
+                        repetition_count=self.attractor_detector.stagnation_steps,
+                        details=attractor_details,
+                        signature=f"attractor_{confidence:.2f}",
+                        loop_onset_turn=onset_turn,
+                    )
+
             # CIRCUIT BREAKER & PROGRESSION EVALUATION
             if detected_event and detected_event.is_deadlock:
                 self.consecutive_deadlocks += 1
                 self.total_deadlocks_detected += 1
                 self.healthy_turns_since_deadlock = 0
                 detected_event.consecutive_deadlocks = self.consecutive_deadlocks
+
+                # Reset attractor buffer on intervention to prevent cross-loop contamination
+                if self.attractor_detector is not None:
+                    self.attractor_detector.reset()
 
                 if self.circuit_breaker_enabled and self.consecutive_deadlocks >= self.max_interventions:
                     detected_event.is_circuit_broken = True
@@ -899,3 +963,5 @@ class DeadlockDetector:
             self.consecutive_deadlocks = 0
             self.total_deadlocks_detected = 0
             self.healthy_turns_since_deadlock = 0
+            if self.attractor_detector is not None:
+                self.attractor_detector.reset()

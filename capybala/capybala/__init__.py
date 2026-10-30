@@ -11,10 +11,11 @@ from .detector import DeadlockDetector, DeadlockEvent, DeadlockEmergencyStop
 from .pruner import ContextPruner, PruneResult
 from .healer import AgentHealer, HealingPrescription
 
-# Proactive Engine & Adaptive Policy
+# Proactive Engine, Adaptive Policy & Semantic Attractor Manifold
 from .validator import SchemaValidator, repair_json_string
 from .proactive import SearchOptimizer
 from .policy import DeadlockPolicy, DeadlockMode
+from .attractor import SemanticAttractorDetector
 
 # Framework Integrations (Universal ABS Middleware)
 from .integrations import (
@@ -47,12 +48,13 @@ __all__ = [
     "PruneResult",
     "AgentHealer",
     "HealingPrescription",
-    # Proactive & Adaptive
+    # Proactive, Adaptive & Manifold
     "SchemaValidator",
     "repair_json_string",
     "SearchOptimizer",
     "DeadlockPolicy",
     "DeadlockMode",
+    "SemanticAttractorDetector",
     # Universal Integrations
     "CapybalaLangGraphMiddleware",
     "capybala_node",
