@@ -100,6 +100,7 @@ class DeadlockDetector:
         enable_delegation: bool = True,
         max_exploration_depth: int = 15,
         enable_exploration_guard: bool = True,
+        policy: Optional[Any] = None,
     ):
         self.repetition_threshold = repetition_threshold
         self.oscillation_threshold = oscillation_threshold
@@ -111,6 +112,19 @@ class DeadlockDetector:
         self.enable_delegation = enable_delegation
         self.max_exploration_depth = max_exploration_depth
         self.enable_exploration_guard = enable_exploration_guard
+
+        # Adaptive Deadlock Policy
+        if policy == "adaptive":
+            from .policy import DeadlockPolicy, DeadlockMode
+            self.policy = DeadlockPolicy(mode=DeadlockMode.ADAPTIVE)
+        elif policy == "exploration":
+            from .policy import DeadlockPolicy, DeadlockMode
+            self.policy = DeadlockPolicy(mode=DeadlockMode.EXPLORATION)
+        elif policy == "refinement":
+            from .policy import DeadlockPolicy, DeadlockMode
+            self.policy = DeadlockPolicy(mode=DeadlockMode.REFINEMENT)
+        else:
+            self.policy = policy
 
         # Store ONLY compact fixed-size digests (16 bytes each), previews, and bounded buffers
         self.action_history: deque = deque(maxlen=history_window)
@@ -562,12 +576,22 @@ class DeadlockDetector:
 
             detected_event: Optional[DeadlockEvent] = None
 
+            # Calculate dynamic thresholds from policy if present
+            if self.policy is not None:
+                self.policy.update_action(raw_action)
+                p_thresh = self.policy.get_thresholds()
+                eff_rep_threshold = p_thresh.get("repetition_threshold", self.repetition_threshold)
+                eff_osc_threshold = p_thresh.get("oscillation_threshold", self.oscillation_threshold)
+            else:
+                eff_rep_threshold = self.repetition_threshold
+                eff_osc_threshold = self.oscillation_threshold
+
             # 1. DIRECT REPETITION CHECK (A -> A -> A)
-            if len(self.action_history) >= self.repetition_threshold:
-                recent_actions = list(self.action_history)[-self.repetition_threshold:]
+            if len(self.action_history) >= eff_rep_threshold:
+                recent_actions = list(self.action_history)[-eff_rep_threshold:]
                 if len(set(recent_actions)) == 1:
-                    recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
-                    recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
+                    recent_errs = list(self.observation_signatures)[-eff_rep_threshold:]
+                    recent_obs_hashes = list(self.obs_hash_history)[-eff_rep_threshold:]
 
                     # Require BOTH error persistence OR strictly static output across turns
                     has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
@@ -580,25 +604,25 @@ class DeadlockDetector:
                         is_stuck_output = False
 
                     if has_error or is_stuck_output:
-                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                        onset_turn = max(1, self.turn_counter - eff_rep_threshold + 1)
                         preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
                             pattern_type="direct_repetition",
-                            repetition_count=self.repetition_threshold,
-                            details=f"Command repeated {self.repetition_threshold}x with persistent failure: '{preview}'",
+                            repetition_count=eff_rep_threshold,
+                            details=f"Command repeated {eff_rep_threshold}x with persistent failure: '{preview}'",
                             signature=action_hash,
                             loop_onset_turn=onset_turn,
                         )
 
             # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
-            if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= self.repetition_threshold:
-                recent_raw = list(self.raw_actions)[-self.repetition_threshold:]
+            if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= eff_rep_threshold:
+                recent_raw = list(self.raw_actions)[-eff_rep_threshold:]
                 
                 # Adaptive threshold: if the agent is actively refining code following syntax warnings,
                 # give 1 extra iteration of grace period to prevent false alarms on interactive editing
                 is_refining = self._is_active_code_refinement(recent_raw, safe_obs)
-                effective_threshold = self.repetition_threshold + 1 if is_refining else self.repetition_threshold
+                effective_threshold = eff_rep_threshold + 1 if is_refining else eff_rep_threshold
 
                 if len(self.raw_actions) >= effective_threshold:
                     eval_raw = list(self.raw_actions)[-effective_threshold:]
@@ -675,15 +699,15 @@ class DeadlockDetector:
                 n = len(hist)
 
                 # 4a. Period-2 Oscillation (A -> B -> A -> B)
-                required_turns_p2 = self.oscillation_threshold * 2
+                required_turns_p2 = eff_osc_threshold * 2
                 if n >= required_turns_p2:
                     if hist[-1] == hist[-3] and hist[-2] == hist[-4] and hist[-1] != hist[-2]:
                         onset_turn = max(1, self.turn_counter - required_turns_p2 + 1)
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
                             pattern_type="oscillation",
-                            repetition_count=self.oscillation_threshold,
-                            details=f"2-step oscillating action loop detected ({self.oscillation_threshold} cycles).",
+                            repetition_count=eff_osc_threshold,
+                            details=f"2-step oscillating action loop detected ({eff_osc_threshold} cycles).",
                             signature=f"{hist[-2]}_{hist[-1]}",
                             loop_onset_turn=onset_turn,
                         )
@@ -771,23 +795,23 @@ class DeadlockDetector:
 
             # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
             if not detected_event and err_sig is not None:
-                if len(self.observation_signatures) >= self.repetition_threshold:
-                    recent_sigs = list(self.observation_signatures)[-self.repetition_threshold:]
+                if len(self.observation_signatures) >= eff_rep_threshold:
+                    recent_sigs = list(self.observation_signatures)[-eff_rep_threshold:]
                     if all(s == err_sig for s in recent_sigs):
-                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                        onset_turn = max(1, self.turn_counter - eff_rep_threshold + 1)
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
                             pattern_type="semantic_traceback",
-                            repetition_count=self.repetition_threshold,
-                            details=f"Persistent traceback deadlock: '{err_sig}' repeated {self.repetition_threshold} times.",
+                            repetition_count=eff_rep_threshold,
+                            details=f"Persistent traceback deadlock: '{err_sig}' repeated {eff_rep_threshold} times.",
                             signature=self._hash(err_sig),
                             loop_onset_turn=onset_turn,
                         )
 
             # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
             if not detected_event:
-                is_refining = self._is_active_code_refinement(list(self.raw_actions)[-self.repetition_threshold:], safe_obs)
-                eff_obs_thresh = self.repetition_threshold + 1 if is_refining else self.repetition_threshold
+                is_refining = self._is_active_code_refinement(list(self.raw_actions)[-eff_rep_threshold:], safe_obs)
+                eff_obs_thresh = eff_rep_threshold + 1 if is_refining else eff_rep_threshold
 
                 if len(self.obs_hash_history) >= eff_obs_thresh:
                     recent_obs_hashes = list(self.obs_hash_history)[-eff_obs_thresh:]

@@ -4,14 +4,27 @@ Context-Aware Pruning for Yielding & Backtrack-Aligned Loop Avoidance
 """
 
 # The Requests-Grade Core API (Clean, Zero-Magic)
-from .api import watch, heal, validate
+from .api import watch, heal, validate, repair
 
-# Core Components
+# Core Engine
 from .detector import DeadlockDetector, DeadlockEvent, DeadlockEmergencyStop
 from .pruner import ContextPruner, PruneResult
 from .healer import AgentHealer, HealingPrescription
 
-# Optional Framework Adapters
+# Proactive Engine & Adaptive Policy
+from .validator import SchemaValidator, repair_json_string
+from .proactive import SearchOptimizer
+from .policy import DeadlockPolicy, DeadlockMode
+
+# Framework Integrations (Universal ABS Middleware)
+from .integrations import (
+    CapybalaLangGraphMiddleware,
+    capybala_node,
+    CapybalaCrewCallback,
+    CapybalaAutoGenFilter,
+)
+
+# Legacy / Base Adapters
 from .adapters import (
     BaseAgentAdapter,
     CapybalaGuard,
@@ -19,12 +32,13 @@ from .adapters import (
     CapybalaCallbackHandler
 )
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 __all__ = [
     # Top-Level DX
     "watch",
     "heal",
     "validate",
+    "repair",
     # Core Engine
     "DeadlockDetector",
     "DeadlockEvent",
@@ -33,6 +47,17 @@ __all__ = [
     "PruneResult",
     "AgentHealer",
     "HealingPrescription",
+    # Proactive & Adaptive
+    "SchemaValidator",
+    "repair_json_string",
+    "SearchOptimizer",
+    "DeadlockPolicy",
+    "DeadlockMode",
+    # Universal Integrations
+    "CapybalaLangGraphMiddleware",
+    "capybala_node",
+    "CapybalaCrewCallback",
+    "CapybalaAutoGenFilter",
     # Adapters
     "BaseAgentAdapter",
     "CapybalaGuard",

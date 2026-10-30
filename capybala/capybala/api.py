@@ -48,12 +48,14 @@ def heal(
     fuzzy_threshold: float = 0.65,
     max_exploration_depth: int = 15,
     enable_exploration_guard: bool = True,
+    auto_repair_schema: bool = True,
+    policy: Optional[Any] = None,
 ) -> List[Dict[str, Any]]:
     """
     1-Line Functional Healer.
-    Inspects messages, detects deadlocks, performs atomic rollback, and injects reflection.
-    Mutates messages in-place to prevent outer loop ghost pruning desync, and returns pruned history.
-    Enforces Circuit Breaker against Infinite Healing Loops (Meta-Deadlocks).
+    Inspects messages, validates and repairs schemas, detects deadlocks, performs atomic rollback,
+    and injects reflection. Mutates messages in-place to prevent outer loop ghost pruning desync,
+    and returns pruned history. Enforces Circuit Breaker against Infinite Healing Loops.
 
     Usage:
         import capybala as cb
@@ -61,6 +63,11 @@ def heal(
     """
     if not isinstance(messages, list) or len(messages) < 4:
         return messages
+
+    # Proactive schema validation & repair (fixes malformed arguments, IDs, and orphan calls)
+    if auto_repair_schema:
+        from .validator import SchemaValidator
+        SchemaValidator.validate_and_repair(messages, in_place=True)
 
     # Dynamic window: inspect up to 32 recent messages to avoid parallel tool-call amnesia
     window_slice = messages[-32:] if len(messages) > 32 else messages
@@ -162,6 +169,7 @@ def heal(
         fuzzy_threshold=fuzzy_threshold,
         max_exploration_depth=max_exploration_depth,
         enable_exploration_guard=enable_exploration_guard,
+        policy=policy,
     )
     last_action = ""
     last_obs = ""
@@ -446,3 +454,17 @@ def validate(messages: List[Dict[str, Any]], check_turn_alternation: bool = Fals
         return False, f"Orphan tool response without tool_call: {unmatched_responses}"
 
     return True, None
+
+
+def repair(messages: List[Dict[str, Any]], in_place: bool = True) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """
+    Proactively validates and repairs message schema invariants:
+    - Repairs malformed JSON arguments in tool calls.
+    - Fills missing tool_call_id attributes.
+    - Pairs orphaned tool calls or responses to guarantee zero 400 Bad Request errors.
+
+    Usage:
+        messages, fixes = capybala.repair(messages)
+    """
+    from .validator import SchemaValidator
+    return SchemaValidator.validate_and_repair(messages, in_place=in_place)
