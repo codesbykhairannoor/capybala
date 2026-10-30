@@ -8,6 +8,7 @@ Includes Circuit Breaker against Infinite Healing Loops and full streaming suppo
 """
 
 import sys
+import json
 import asyncio
 import functools
 import inspect
@@ -62,7 +63,7 @@ def heal(
     # Dynamic window: inspect up to 32 recent messages to avoid parallel tool-call amnesia
     window_slice = messages[-32:] if len(messages) > 32 else messages
 
-    tool_call_map = {}  # call_id -> action_str
+    tool_call_map = {}  # call_id or tool_name -> action_str
     turns_sequence = []  # list of (action, observation)
 
     for msg in window_slice:
@@ -70,27 +71,78 @@ def heal(
             continue
 
         role = msg.get("role", "")
-        content = str(msg.get("content", ""))
+        content = msg.get("content", "")
+        parts = msg.get("parts")
 
+        # 1. Handle Gemini parts format
+        if parts and isinstance(parts, list):
+            if role in ("model", "assistant"):
+                for part in parts:
+                    if isinstance(part, dict):
+                        if "function_calls" in part:
+                            for fc in part["function_calls"]:
+                                fn_name = fc.get("name", "tool")
+                                fn_args = json.dumps(fc.get("args", {}), sort_keys=True)
+                                turns_sequence.append((f"{fn_name}({fn_args})", ""))
+                        elif "text" in part:
+                            turns_sequence.append((str(part["text"]), ""))
+            elif role in ("user", "tool", "tool_response"):
+                obs_text = ""
+                for part in parts:
+                    if isinstance(part, dict) and "text" in part:
+                        obs_text += str(part["text"]) + " "
+                obs_text = obs_text.strip()
+                if turns_sequence:
+                    prev_act, _ = turns_sequence[-1]
+                    turns_sequence[-1] = (prev_act, obs_text)
+                else:
+                    turns_sequence.append(("", obs_text))
+            continue
+
+        # 2. Handle Anthropic list-of-blocks content format:
+        # [{"type": "tool_use", "id": "...", "name": "...", "input": {...}}]
+        # [{"type": "tool_result", "tool_use_id": "...", "content": "..."}]
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    b_type = block.get("type")
+                    if b_type == "tool_use":
+                        call_id = block.get("id") or f"call_{len(tool_call_map)}"
+                        fn_name = block.get("name", "tool")
+                        fn_args = block.get("input", {})
+                        arg_str = json.dumps(fn_args, sort_keys=True) if isinstance(fn_args, (dict, list)) else str(fn_args)
+                        act_str = f"{fn_name}({arg_str})"
+                        tool_call_map[call_id] = act_str
+                        tool_call_map[fn_name] = act_str
+                    elif b_type == "tool_result":
+                        tid = block.get("tool_use_id") or block.get("id")
+                        act = tool_call_map.get(tid, "tool_execution")
+                        res_content = str(block.get("content", ""))
+                        turns_sequence.append((act, res_content))
+            continue
+
+        # 3. Handle OpenAI tool_calls format
         if "tool_calls" in msg and msg["tool_calls"]:
             for tc in msg["tool_calls"]:
                 if isinstance(tc, dict):
-                    call_id = tc.get("id")
+                    call_id = tc.get("id") or f"call_{len(tool_call_map)}"
                     fn = tc.get("function", {})
-                    action_str = f"{fn.get('name', 'tool')}({fn.get('arguments', '')})"
-                    if call_id:
-                        tool_call_map[call_id] = action_str
-                    else:
-                        turns_sequence.append((action_str, ""))
+                    fn_name = fn.get("name", "tool")
+                    action_str = f"{fn_name}({fn.get('arguments', '')})"
+                    tool_call_map[call_id] = action_str
+                    tool_call_map[fn_name] = action_str
         elif role in ("tool", "tool_response"):
             tid = msg.get("tool_call_id")
-            act = tool_call_map.get(tid, "tool_execution")
-            turns_sequence.append((act, content))
-        elif role == "assistant":
-            turns_sequence.append((content, ""))
+            act = tool_call_map.get(tid)
+            if not act and tool_call_map:
+                act = list(tool_call_map.values())[-1]
+            act = act or "tool_execution"
+            turns_sequence.append((act, str(content)))
+        elif role in ("assistant", "model"):
+            turns_sequence.append((str(content), ""))
         elif role in ("system", "user") and turns_sequence:
             prev_act, _ = turns_sequence[-1]
-            turns_sequence[-1] = (prev_act, content)
+            turns_sequence[-1] = (prev_act, str(content))
 
     # Evaluate sequence against DeadlockDetector with circuit breaker & fuzzy detection
     detector = DeadlockDetector(
@@ -159,6 +211,19 @@ def heal(
     return messages
 
 
+def _is_async_callable(func: Any) -> bool:
+    """Robust detection of coroutines, async generators, bound async methods, and AsyncMock."""
+    if inspect.iscoroutinefunction(func) or asyncio.iscoroutinefunction(func):
+        return True
+    if hasattr(func, "__func__") and (
+        inspect.iscoroutinefunction(func.__func__) or asyncio.iscoroutinefunction(func.__func__)
+    ):
+        return True
+    if getattr(func, "_is_coroutine", None) is not None:
+        return True
+    return False
+
+
 def watch(
     client: Any,
     max_repetition: int = 3,
@@ -190,7 +255,7 @@ def watch(
         if hasattr(client, "chat") and hasattr(client.chat, "completions") and hasattr(client.chat.completions, "create"):
             orig_create = client.chat.completions.create
 
-            if inspect.iscoroutinefunction(orig_create):
+            if _is_async_callable(orig_create):
                 @functools.wraps(orig_create)
                 async def async_guarded_create(*args, **kwargs):
                     if "messages" in kwargs:
@@ -231,7 +296,7 @@ def watch(
         if hasattr(client, "messages") and hasattr(client.messages, "create"):
             orig_create = client.messages.create
 
-            if inspect.iscoroutinefunction(orig_create):
+            if _is_async_callable(orig_create):
                 @functools.wraps(orig_create)
                 async def async_guarded_anthropic(*args, **kwargs):
                     if "messages" in kwargs:
@@ -274,7 +339,7 @@ def watch(
         if hasattr(client, "inference") and hasattr(client.inference, "chat_completion"):
             orig_inference = client.inference.chat_completion
 
-            if inspect.iscoroutinefunction(orig_inference):
+            if _is_async_callable(orig_inference):
                 @functools.wraps(orig_inference)
                 async def async_guarded_llama(*args, **kwargs):
                     if "messages" in kwargs:

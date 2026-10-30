@@ -17,6 +17,7 @@ Zero-overhead, bounded-memory algorithmic detector for Cognitive Deadlocks:
 import re
 import json
 import hashlib
+import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Any, Dict, Set
@@ -95,6 +96,9 @@ class DeadlockDetector:
         self.raw_actions: deque = deque(maxlen=history_window)
         self.delegation_history: deque = deque(maxlen=history_window)
         self.turn_counter = 0
+
+        # Thread-safety lock
+        self._lock = threading.RLock()
 
         # Circuit breaker state
         self.consecutive_deadlocks = 0
@@ -181,33 +185,62 @@ class DeadlockDetector:
 
         return s
 
+    def _has_failure_indicator(self, text: Optional[str]) -> bool:
+        """
+        Detects genuine failure indicators while strictly ignoring false positives
+        such as '0 failed', '0 errors', 'no errors', 'zero failures' common in passing test outputs.
+        """
+        if not text:
+            return False
+        clean = re.sub(
+            r"\b(?:0|zero|no)\s+(?:errors?|failures?|failed|exceptions?)\b",
+            "",
+            str(text).lower()
+        )
+        return bool(re.search(r"\b(error|fail|failed|failure|exception|denied|refused|cannot|unresolved)\b", clean))
+
     def _calculate_fuzzy_similarity(self, s1: str, s2: str) -> float:
         """
         Calculates ultra-fast sub-millisecond lexical similarity combining
         token overlap and 3-gram character shingles (zero external dependencies).
+        Bounded to first 4,096 characters to prevent ReDoS or unbounded allocation.
         """
-        if s1 == s2:
-            return 1.0
-        if not s1 or not s2:
+        s1_str = str(s1 or "")[:4096]
+        s2_str = str(s2 or "")[:4096]
+
+        if s1_str == s2_str:
+            return 1.0 if s1_str else 0.0
+
+        s1_clean = re.sub(r"\s+", " ", s1_str.lower()).strip()
+        s2_clean = re.sub(r"\s+", " ", s2_str.lower()).strip()
+
+        if s1_clean == s2_clean:
+            return 1.0 if s1_clean else 0.0
+        if not s1_clean or not s2_clean:
             return 0.0
 
-        tok1 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s1.lower()))
-        tok2 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s2.lower()))
+        tok1 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s1_clean))
+        tok2 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s2_clean))
 
-        jaccard_tok = len(tok1 & tok2) / len(tok1 | tok2) if (tok1 or tok2) else 0.0
-        min_tok = min(len(tok1), len(tok2))
-        overlap_tok = len(tok1 & tok2) / min_tok if min_tok > 0 else 0.0
-
-        s1_clean = re.sub(r"\s+", " ", s1.lower()).strip()
-        s2_clean = re.sub(r"\s+", " ", s2.lower()).strip()
+        if not tok1 and not tok2:
+            jaccard_tok = 1.0 if s1_clean == s2_clean else 0.0
+            overlap_tok = jaccard_tok
+        else:
+            jaccard_tok = len(tok1 & tok2) / len(tok1 | tok2) if (tok1 or tok2) else 0.0
+            min_tok = min(len(tok1), len(tok2))
+            overlap_tok = len(tok1 & tok2) / min_tok if min_tok > 0 else 0.0
 
         k = 3
         sh1 = {s1_clean[i:i+k] for i in range(len(s1_clean) - k + 1)} if len(s1_clean) >= k else {s1_clean}
         sh2 = {s2_clean[i:i+k] for i in range(len(s2_clean) - k + 1)} if len(s2_clean) >= k else {s2_clean}
 
-        jaccard_char = len(sh1 & sh2) / len(sh1 | sh2) if (sh1 or sh2) else 0.0
-        min_char = min(len(sh1), len(sh2))
-        overlap_char = len(sh1 & sh2) / min_char if min_char > 0 else 0.0
+        if not sh1 and not sh2:
+            jaccard_char = 1.0 if s1_clean == s2_clean else 0.0
+            overlap_char = jaccard_char
+        else:
+            jaccard_char = len(sh1 & sh2) / len(sh1 | sh2) if (sh1 or sh2) else 0.0
+            min_char = min(len(sh1), len(sh2))
+            overlap_char = len(sh1 & sh2) / min_char if min_char > 0 else 0.0
 
         sim = 0.35 * overlap_char + 0.25 * overlap_tok + 0.20 * jaccard_tok + 0.20 * jaccard_char
         return round(sim, 4)
@@ -216,13 +249,33 @@ class DeadlockDetector:
         """
         Extracts target agent / recipient from multi-agent handoff primitives
         (CrewAI, LangGraph, AutoGen, OpenAI Swarm).
+        Supports nested lists, JSON dicts, and tool wrappers.
         """
         if not action:
             return ""
 
         act_str = str(action).strip()
 
-        # 1. Direct tool call pattern: e.g. delegate_to(agent="coder", ...), handoff("qa")
+        # 1. JSON or dict payload containing delegation keys or lists
+        dict_match = re.search(r"(\{.*\}|\[.*\])", act_str, re.DOTALL)
+        if dict_match:
+            try:
+                data = json.loads(dict_match.group(0))
+                if isinstance(data, dict):
+                    for pl_key in ("targets", "recipients", "agents", "coworkers"):
+                        if pl_key in data and isinstance(data[pl_key], list) and data[pl_key]:
+                            return str(data[pl_key][0]).strip().lower()
+                    for key in ("agent", "target", "recipient", "coworker", "target_agent", "recipient_agent", "next_agent"):
+                        if key in data and data[key]:
+                            val = data[key]
+                            if isinstance(val, list) and val:
+                                return str(val[0]).strip().lower()
+                            if isinstance(val, str):
+                                return val.strip().lower()
+            except Exception:
+                pass
+
+        # 2. Direct tool call pattern: e.g. delegate_to(agent="coder", ...), handoff("qa")
         m = re.search(
             r"(?:delegate|handoff|transfer|assign|route|call_subagent|ask_agent)[a-zA-Z0-9_]*\s*\(\s*(?:(?:agent|target|recipient|coworker|to_agent|agent_name)\s*=\s*)?['\"]([a-zA-Z0-9_\-]+)['\"]",
             act_str,
@@ -230,18 +283,6 @@ class DeadlockDetector:
         )
         if m:
             return m.group(1).lower()
-
-        # 2. JSON or dict payload containing delegation keys
-        dict_match = re.search(r"(\{.*\}|\[.*\])", act_str, re.DOTALL)
-        if dict_match:
-            try:
-                data = json.loads(dict_match.group(0))
-                if isinstance(data, dict):
-                    for key in ("agent", "target", "recipient", "coworker", "target_agent", "recipient_agent", "next_agent"):
-                        if key in data and isinstance(data[key], str):
-                            return data[key].strip().lower()
-            except Exception:
-                pass
 
         # 3. Key-value pair in unparsed action strings: coworker='Engineer' or agent="coder"
         m_kv = re.search(
@@ -291,14 +332,23 @@ class DeadlockDetector:
         """
         Extracts specific Exception signature along with the target error message.
         Inspects only the tail 16KB where stack traces reside.
+        Strips passing summary counts ('0 failed', 'no errors') to prevent false positive matches.
         """
         if not output:
             return None
 
         target = str(output)[-16384:]
+        # Strip passing counters so words like '0 failed' or 'no errors' are never misidentified as exceptions
+        clean_target = re.sub(
+            r"\b(?:0|zero|no)\s+(?:errors?|failures?|failed|exceptions?)\b",
+            "",
+            target,
+            flags=re.IGNORECASE
+        )
+
         error_match = re.findall(
             r"([A-Za-z0-9_]+Error|[A-Za-z0-9_]+Exception|FAILED|SyntaxError|NameError|ImportError|AttributeError|IndexError|KeyError):?\s*(.*)",
-            target,
+            clean_target,
             re.IGNORECASE,
         )
         if error_match:
@@ -319,228 +369,227 @@ class DeadlockDetector:
         Stores compact digests only, preventing memory leaks on multi-megabyte payloads.
         Sanitizes dynamic volatile keys from JSON tool arguments.
         Enforces Circuit Breaker against infinite healing loops.
+        Thread-safe under concurrent agent environments.
         """
-        self.turn_counter += 1
-        raw_action = str(current_action or "")
-        sanitized_action = self._sanitize_action(raw_action)
-        safe_obs = str(observation or "")
+        with self._lock:
+            self.turn_counter += 1
+            raw_action = str(current_action or "")
+            sanitized_action = self._sanitize_action(raw_action)
+            safe_obs = str(observation or "")
 
-        action_hash = self._hash(sanitized_action)
-        obs_hash = self._hash(safe_obs)
-        err_sig = self._extract_error_signature(safe_obs, sanitized_action)
+            action_hash = self._hash(sanitized_action)
+            obs_hash = self._hash(safe_obs)
+            err_sig = self._extract_error_signature(safe_obs, sanitized_action)
 
-        self.action_history.append(action_hash)
-        self.obs_hash_history.append(obs_hash)
-        self.observation_signatures.append(err_sig)
-        self.action_previews.append(raw_action[:80])
-        self.raw_actions.append(raw_action[:512])
+            self.action_history.append(action_hash)
+            self.obs_hash_history.append(obs_hash)
+            self.observation_signatures.append(err_sig)
+            self.action_previews.append(raw_action[:80])
+            self.raw_actions.append(raw_action[:512])
 
-        del_target = self._extract_delegation_target(raw_action)
-        self.delegation_history.append(del_target)
+            del_target = self._extract_delegation_target(raw_action)
+            self.delegation_history.append(del_target)
 
-        # 0. WHITELIST CHECK: Legitimate Polling Primitives are exempt
-        if self._is_polling_command(raw_action):
-            self.healthy_turns_since_deadlock += 1
-            if self.healthy_turns_since_deadlock >= 3:
-                self.consecutive_deadlocks = 0
-            return DeadlockEvent(is_deadlock=False)
+            # 0. WHITELIST CHECK: Legitimate Polling Primitives are exempt
+            if self._is_polling_command(raw_action):
+                self.healthy_turns_since_deadlock += 1
+                if self.healthy_turns_since_deadlock >= 3:
+                    self.consecutive_deadlocks = 0
+                return DeadlockEvent(is_deadlock=False)
 
-        detected_event: Optional[DeadlockEvent] = None
+            detected_event: Optional[DeadlockEvent] = None
 
-        # 1. DIRECT REPETITION CHECK (A -> A -> A)
-        if len(self.action_history) >= self.repetition_threshold:
-            recent_actions = list(self.action_history)[-self.repetition_threshold:]
-            if len(set(recent_actions)) == 1:
+            # 1. DIRECT REPETITION CHECK (A -> A -> A)
+            if len(self.action_history) >= self.repetition_threshold:
+                recent_actions = list(self.action_history)[-self.repetition_threshold:]
+                if len(set(recent_actions)) == 1:
+                    recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                    recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
+
+                    # Require BOTH error persistence OR strictly static output across turns
+                    has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
+                    is_stuck_output = len(set(recent_obs_hashes)) == 1
+
+                    if has_error or is_stuck_output:
+                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                        preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="direct_repetition",
+                            repetition_count=self.repetition_threshold,
+                            details=f"Command repeated {self.repetition_threshold}x with persistent failure: '{preview}'",
+                            signature=action_hash,
+                            loop_onset_turn=onset_turn,
+                        )
+
+            # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
+            if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= self.repetition_threshold:
+                recent_raw = list(self.raw_actions)[-self.repetition_threshold:]
                 recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
-                recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
 
-                # Require BOTH error persistence OR strictly static output across turns
-                has_error = any(e is not None for e in recent_errs)
-                is_stuck_output = len(set(recent_obs_hashes)) == 1
+                # MUST have active error or failure indications (never flag successful variations)
+                has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
 
-                if has_error or is_stuck_output:
-                    onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
-                    preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
-                    detected_event = DeadlockEvent(
-                        is_deadlock=True,
-                        pattern_type="direct_repetition",
-                        repetition_count=self.repetition_threshold,
-                        details=f"Command repeated {self.repetition_threshold}x with persistent failure: '{preview}'",
-                        signature=action_hash,
-                        loop_onset_turn=onset_turn,
+                if has_error:
+                    # Check if all actions are variants of the anchor action (recent_raw[0])
+                    # OR all adjacent pairs have high fuzzy similarity
+                    is_anchor_loop = all(
+                        self._calculate_fuzzy_similarity(recent_raw[0], recent_raw[i]) >= self.fuzzy_threshold
+                        for i in range(1, len(recent_raw))
+                    )
+                    is_pairwise_loop = all(
+                        self._calculate_fuzzy_similarity(recent_raw[i], recent_raw[i + 1]) >= self.fuzzy_threshold
+                        for i in range(len(recent_raw) - 1)
                     )
 
-        # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
-        if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= self.repetition_threshold:
-            recent_raw = list(self.raw_actions)[-self.repetition_threshold:]
-            recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                    if is_anchor_loop or is_pairwise_loop:
+                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                        preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="fuzzy_repetition",
+                            repetition_count=self.repetition_threshold,
+                            details=f"Polymorphic command loop ({self.repetition_threshold}x variants with persistent failure): '{preview}'",
+                            signature=f"fuzzy_{self._hash(recent_raw[-1])}",
+                            loop_onset_turn=onset_turn,
+                        )
 
-            # MUST have active error or failure indications (never flag successful variations)
-            has_error = any(e is not None for e in recent_errs) or bool(
-                re.search(r"\b(error|fail|failed|failure|exception)\b", safe_obs, re.IGNORECASE)
-            )
-
-            if has_error:
-                # Check if all actions are variants of the anchor action (recent_raw[0])
-                # OR all adjacent pairs have high fuzzy similarity
-                is_anchor_loop = all(
-                    self._calculate_fuzzy_similarity(recent_raw[0], recent_raw[i]) >= self.fuzzy_threshold
-                    for i in range(1, len(recent_raw))
-                )
-                is_pairwise_loop = all(
-                    self._calculate_fuzzy_similarity(recent_raw[i], recent_raw[i + 1]) >= self.fuzzy_threshold
-                    for i in range(len(recent_raw) - 1)
-                )
-
-                if is_anchor_loop or is_pairwise_loop:
-                    onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
-                    preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
-                    detected_event = DeadlockEvent(
-                        is_deadlock=True,
-                        pattern_type="fuzzy_repetition",
-                        repetition_count=self.repetition_threshold,
-                        details=f"Polymorphic command loop ({self.repetition_threshold}x variants with persistent failure): '{preview}'",
-                        signature=f"fuzzy_{self._hash(recent_raw[-1])}",
-                        loop_onset_turn=onset_turn,
-                    )
-
-        # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong)
-        if not detected_event and self.enable_delegation:
-            valid_del = [t for t in self.delegation_history if t]
-            if len(valid_del) >= 4:
-                # 2-agent ping-pong: A -> B -> A -> B
-                if valid_del[-1] == valid_del[-3] and valid_del[-2] == valid_del[-4] and valid_del[-1] != valid_del[-2]:
-                    onset_turn = max(1, self.turn_counter - 4 + 1)
-                    detected_event = DeadlockEvent(
-                        is_deadlock=True,
-                        pattern_type="delegation_cycle",
-                        repetition_count=2,
-                        details=f"Multi-agent delegation cycle detected: '{valid_del[-2]}' <-> '{valid_del[-1]}' ping-pong handoffs.",
-                        signature=f"del_{valid_del[-2]}_{valid_del[-1]}",
-                        loop_onset_turn=onset_turn,
-                    )
-                # 3-agent cycle: A -> B -> C -> A -> B -> C
-                elif len(valid_del) >= 6:
-                    if (
-                        valid_del[-1] == valid_del[-4]
-                        and valid_del[-2] == valid_del[-5]
-                        and valid_del[-3] == valid_del[-6]
-                        and len({valid_del[-1], valid_del[-2], valid_del[-3]}) == 3
-                    ):
-                        onset_turn = max(1, self.turn_counter - 6 + 1)
+            # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong)
+            if not detected_event and self.enable_delegation:
+                valid_del = [t for t in self.delegation_history if t]
+                if len(valid_del) >= 4:
+                    # 2-agent ping-pong: A -> B -> A -> B
+                    if valid_del[-1] == valid_del[-3] and valid_del[-2] == valid_del[-4] and valid_del[-1] != valid_del[-2]:
+                        onset_turn = max(1, self.turn_counter - 4 + 1)
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
                             pattern_type="delegation_cycle",
                             repetition_count=2,
-                            details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
-                            signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
+                            details=f"Multi-agent delegation cycle detected: '{valid_del[-2]}' <-> '{valid_del[-1]}' ping-pong handoffs.",
+                            signature=f"del_{valid_del[-2]}_{valid_del[-1]}",
                             loop_onset_turn=onset_turn,
                         )
+                    # 3-agent cycle: A -> B -> C -> A -> B -> C
+                    elif len(valid_del) >= 6:
+                        if (
+                            valid_del[-1] == valid_del[-4]
+                            and valid_del[-2] == valid_del[-5]
+                            and valid_del[-3] == valid_del[-6]
+                            and len({valid_del[-1], valid_del[-2], valid_del[-3]}) == 3
+                        ):
+                            onset_turn = max(1, self.turn_counter - 6 + 1)
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="delegation_cycle",
+                                repetition_count=2,
+                                details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
+                                signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
+                                loop_onset_turn=onset_turn,
+                            )
 
-        # 4. OSCILLATION LOOP CHECK
-        if not detected_event:
-            hist = list(self.action_history)
-            n = len(hist)
-
-            # 4a. Period-2 Oscillation (A -> B -> A -> B)
-            required_turns_p2 = self.oscillation_threshold * 2
-            if n >= required_turns_p2:
-                if hist[-1] == hist[-3] and hist[-2] == hist[-4] and hist[-1] != hist[-2]:
-                    onset_turn = max(1, self.turn_counter - required_turns_p2 + 1)
-                    detected_event = DeadlockEvent(
-                        is_deadlock=True,
-                        pattern_type="oscillation",
-                        repetition_count=self.oscillation_threshold,
-                        details=f"2-step oscillating action loop detected ({self.oscillation_threshold} cycles).",
-                        signature=f"{hist[-2]}_{hist[-1]}",
-                        loop_onset_turn=onset_turn,
-                    )
-
-            # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C)
+            # 4. OSCILLATION LOOP CHECK
             if not detected_event:
-                required_turns_p3 = 6
-                if n >= required_turns_p3:
-                    if (
-                        hist[-1] == hist[-4]
-                        and hist[-2] == hist[-5]
-                        and hist[-3] == hist[-6]
-                        and len({hist[-1], hist[-2], hist[-3]}) == 3
-                    ):
-                        onset_turn = max(1, self.turn_counter - required_turns_p3 + 1)
+                hist = list(self.action_history)
+                n = len(hist)
+
+                # 4a. Period-2 Oscillation (A -> B -> A -> B)
+                required_turns_p2 = self.oscillation_threshold * 2
+                if n >= required_turns_p2:
+                    if hist[-1] == hist[-3] and hist[-2] == hist[-4] and hist[-1] != hist[-2]:
+                        onset_turn = max(1, self.turn_counter - required_turns_p2 + 1)
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
                             pattern_type="oscillation",
-                            repetition_count=2,
-                            details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C).",
-                            signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
+                            repetition_count=self.oscillation_threshold,
+                            details=f"2-step oscillating action loop detected ({self.oscillation_threshold} cycles).",
+                            signature=f"{hist[-2]}_{hist[-1]}",
                             loop_onset_turn=onset_turn,
                         )
 
-        # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
-        if not detected_event and err_sig is not None:
-            if len(self.observation_signatures) >= self.repetition_threshold:
-                recent_sigs = list(self.observation_signatures)[-self.repetition_threshold:]
-                if all(s == err_sig for s in recent_sigs):
-                    onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
-                    detected_event = DeadlockEvent(
-                        is_deadlock=True,
-                        pattern_type="semantic_traceback",
-                        repetition_count=self.repetition_threshold,
-                        details=f"Persistent traceback deadlock: '{err_sig}' repeated {self.repetition_threshold} times.",
-                        signature=self._hash(err_sig),
-                        loop_onset_turn=onset_turn,
-                    )
+                # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C)
+                if not detected_event:
+                    required_turns_p3 = 6
+                    if n >= required_turns_p3:
+                        if (
+                            hist[-1] == hist[-4]
+                            and hist[-2] == hist[-5]
+                            and hist[-3] == hist[-6]
+                            and len({hist[-1], hist[-2], hist[-3]}) == 3
+                        ):
+                            onset_turn = max(1, self.turn_counter - required_turns_p3 + 1)
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="oscillation",
+                                repetition_count=2,
+                                details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C).",
+                                signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
+                                loop_onset_turn=onset_turn,
+                            )
 
-        # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
-        if not detected_event:
-            if len(self.obs_hash_history) >= self.repetition_threshold:
-                recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
-                if len(set(recent_obs_hashes)) == 1 and safe_obs.strip():
-                    recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
-                    has_error = any(e is not None for e in recent_errs) or bool(
-                        re.search(r"\b(error|fail|failed|failure|exception|denied|refused|cannot|unresolved)\b", safe_obs, re.IGNORECASE)
-                    )
-                    if has_error:
+            # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
+            if not detected_event and err_sig is not None:
+                if len(self.observation_signatures) >= self.repetition_threshold:
+                    recent_sigs = list(self.observation_signatures)[-self.repetition_threshold:]
+                    if all(s == err_sig for s in recent_sigs):
                         onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
                         detected_event = DeadlockEvent(
                             is_deadlock=True,
-                            pattern_type="output_stagnation",
+                            pattern_type="semantic_traceback",
                             repetition_count=self.repetition_threshold,
-                            details=f"Observation stagnation deadlock: Environment produced identical failing output {self.repetition_threshold} times in a row.",
-                            signature=recent_obs_hashes[-1],
+                            details=f"Persistent traceback deadlock: '{err_sig}' repeated {self.repetition_threshold} times.",
+                            signature=self._hash(err_sig),
                             loop_onset_turn=onset_turn,
                         )
 
-        # CIRCUIT BREAKER & PROGRESSION EVALUATION
-        if detected_event and detected_event.is_deadlock:
-            self.consecutive_deadlocks += 1
-            self.total_deadlocks_detected += 1
-            self.healthy_turns_since_deadlock = 0
-            detected_event.consecutive_deadlocks = self.consecutive_deadlocks
+            # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
+            if not detected_event:
+                if len(self.obs_hash_history) >= self.repetition_threshold:
+                    recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
+                    if len(set(recent_obs_hashes)) == 1 and safe_obs.strip():
+                        recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                        has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
+                        if has_error:
+                            onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="output_stagnation",
+                                repetition_count=self.repetition_threshold,
+                                details=f"Observation stagnation deadlock: Environment produced identical failing output {self.repetition_threshold} times in a row.",
+                                signature=recent_obs_hashes[-1],
+                                loop_onset_turn=onset_turn,
+                            )
 
-            if self.circuit_breaker_enabled and self.consecutive_deadlocks >= self.max_interventions:
-                detected_event.is_circuit_broken = True
-                detected_event.details = (
-                    f"CIRCUIT BREAKER TRIPPED: Exceeded max consecutive deadlock interventions "
-                    f"({self.max_interventions}). Halting execution to prevent infinite token burn."
-                )
-            return detected_event
-        else:
-            # Healthy turn progression
-            self.healthy_turns_since_deadlock += 1
-            if self.healthy_turns_since_deadlock >= 3:
-                self.consecutive_deadlocks = 0
-            return DeadlockEvent(is_deadlock=False)
+            # CIRCUIT BREAKER & PROGRESSION EVALUATION
+            if detected_event and detected_event.is_deadlock:
+                self.consecutive_deadlocks += 1
+                self.total_deadlocks_detected += 1
+                self.healthy_turns_since_deadlock = 0
+                detected_event.consecutive_deadlocks = self.consecutive_deadlocks
+
+                if self.circuit_breaker_enabled and self.consecutive_deadlocks >= self.max_interventions:
+                    detected_event.is_circuit_broken = True
+                    detected_event.details = (
+                        f"CIRCUIT BREAKER TRIPPED: Exceeded max consecutive deadlock interventions "
+                        f"({self.max_interventions}). Halting execution to prevent infinite token burn."
+                    )
+                return detected_event
+            else:
+                # Healthy turn progression
+                self.healthy_turns_since_deadlock += 1
+                if self.healthy_turns_since_deadlock >= 3:
+                    self.consecutive_deadlocks = 0
+                return DeadlockEvent(is_deadlock=False)
 
     def reset(self):
         """Resets detection history and circuit breaker counters."""
-        self.action_history.clear()
-        self.obs_hash_history.clear()
-        self.observation_signatures.clear()
-        self.action_previews.clear()
-        self.raw_actions.clear()
-        self.delegation_history.clear()
-        self.turn_counter = 0
-        self.consecutive_deadlocks = 0
-        self.total_deadlocks_detected = 0
-        self.healthy_turns_since_deadlock = 0
+        with self._lock:
+            self.action_history.clear()
+            self.obs_hash_history.clear()
+            self.observation_signatures.clear()
+            self.action_previews.clear()
+            self.raw_actions.clear()
+            self.delegation_history.clear()
+            self.turn_counter = 0
+            self.consecutive_deadlocks = 0
+            self.total_deadlocks_detected = 0
+            self.healthy_turns_since_deadlock = 0

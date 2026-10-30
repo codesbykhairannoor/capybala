@@ -54,14 +54,15 @@ class ContextPruner:
         3. Enforces strict provider schema invariants (Anthropic turn alternation).
         4. Returns a deep-copied history with injected recovery guidance.
         """
-        if not messages:
-            return PruneResult(
-                pruned_messages=[],
-                messages_removed_count=0,
-                characters_saved=0,
-                tokens_saved_estimate=0,
-                tombstone="",
-            )
+        with self._lock:
+            if not messages:
+                return PruneResult(
+                    pruned_messages=[],
+                    messages_removed_count=0,
+                    characters_saved=0,
+                    tokens_saved_estimate=0,
+                    tombstone="",
+                )
 
         # Defensive sanitization: ensure list of dicts
         valid_messages = [m for m in messages if isinstance(m, dict)]
@@ -92,8 +93,8 @@ class ContextPruner:
             if curr.get("role") in ("tool", "tool_response"):
                 target_idx -= 1
                 continue
-            # If target ends on an assistant message with tool_calls, rewind past that assistant
-            if curr.get("role") == "assistant" and (curr.get("tool_calls") or curr.get("function_call")):
+            # If target ends on an assistant or model message with tool_calls, rewind past that turn
+            if curr.get("role") in ("assistant", "model") and (curr.get("tool_calls") or curr.get("function_call") or curr.get("parts")):
                 target_idx -= 1
                 continue
             break
@@ -102,8 +103,8 @@ class ContextPruner:
         if target_idx < len(valid_messages) and valid_messages[target_idx].get("role") in ("tool", "tool_response"):
             while target_idx > protected_prefix_count:
                 target_idx -= 1
-                if valid_messages[target_idx].get("role") == "assistant" and (
-                    valid_messages[target_idx].get("tool_calls") or valid_messages[target_idx].get("function_call")
+                if valid_messages[target_idx].get("role") in ("assistant", "model") and (
+                    valid_messages[target_idx].get("tool_calls") or valid_messages[target_idx].get("function_call") or valid_messages[target_idx].get("parts")
                 ):
                     target_idx -= 1
                     break
@@ -135,15 +136,15 @@ class ContextPruner:
 
         # 4. UNIVERSAL PROVIDER SCHEMA COMPLIANCE
         # Mid-stream role: 'system' is rejected with 400 Bad Request by Anthropic, Mistral, and Llama-3!
-        # Inject recovery directive as role: 'user' to remain 100% compliant across all LLM inference engines.
-        is_anthropic = provider.lower() == "anthropic" or (
+        # Inject recovery directive as role: 'user'.
+        # For Anthropic, merge into the existing user turn if present to strictly enforce Claude turn-alternation schema.
+        is_anthropic = (provider.lower() == "anthropic") or (
             provider.lower() == "auto"
             and any(("tool_use_id" in str(m) or "tool_use" in str(m) or "tool_result" in str(m)) for m in valid_messages)
         )
 
         if is_anthropic:
             if clean_history and clean_history[-1].get("role") == "user":
-                # Merge into the existing user turn without violating Claude turn-alternation schema
                 prev_content = clean_history[-1].get("content")
                 if isinstance(prev_content, list):
                     clean_history[-1]["content"] = prev_content + [{"type": "text", "text": f"\n\n{reflection_text}"}]
@@ -154,9 +155,8 @@ class ContextPruner:
         else:
             clean_history.append({"role": "user", "content": reflection_text})
 
-        with self._lock:
-            self.total_tokens_saved += tokens_saved
-            self.total_prune_operations += 1
+        self.total_tokens_saved += tokens_saved
+        self.total_prune_operations += 1
 
         return PruneResult(
             pruned_messages=clean_history,
