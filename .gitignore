@@ -24,4 +24,7 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+real_trajectories_cache/
+hf_dataset_cache/
+probe_hf_dataset.py
 
