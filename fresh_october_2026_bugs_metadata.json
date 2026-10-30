@@ -1,0 +1,21 @@
+{
+  "title": "LiveSWE 2026: 1,000 Fresh Bug-Fix Tasks (October 2026)",
+  "id": "axioo/liveswe-2026-fresh-github-bugs",
+  "licenses": [
+    {
+      "name": "CC-BY-4.0"
+    }
+  ],
+  "keywords": [
+    "artificial intelligence",
+    "software engineering",
+    "github",
+    "python",
+    "large language models",
+    "benchmark",
+    "meta",
+    "llama"
+  ],
+  "description": "Zero-contamination software engineering benchmark containing 1,000 real-world Python bug-fix Pull Requests merged in October 2026 across 416 open-source repositories."
+}
+

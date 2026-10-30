@@ -1,0 +1,21 @@
+{
+  "title": "Llama Agent Deadlock & Failure Loops Benchmark",
+  "id": "axioo/llama-agent-deadlock-benchmark",
+  "licenses": [
+    {
+      "name": "CC-BY-4.0"
+    }
+  ],
+  "keywords": [
+    "artificial intelligence",
+    "large language models",
+    "meta",
+    "llama",
+    "autonomous agents",
+    "swe-bench",
+    "software engineering",
+    "benchmark"
+  ],
+  "description": "Empirical trajectory telemetry dataset capturing cognitive deadlocks, cascading error loops, and context-overflow failures in autonomous Llama-3-70B coding agents evaluated on real-world GitHub issues."
+}
+

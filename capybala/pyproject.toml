@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "capybala"
+version = "0.3.0"
+authors = [
+  { name = "Capybala Team" },
+]
+description = "Context-Aware Pruning for Yielding & Backtrack-Aligned Loop Avoidance: The chill, self-healing runtime that cures autonomous AI agents from cognitive deadlocks."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.optional-dependencies]
+llama-stack = ["llama-stack-client"]
+langchain = ["langchain-core"]
+all = ["llama-stack-client", "langchain-core"]
+
+[project.urls]
+"Homepage" = "https://github.com/capybala/capybala"
+"Bug Tracker" = "https://github.com/capybala/capybala/issues"
