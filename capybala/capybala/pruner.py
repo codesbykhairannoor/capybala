@@ -39,6 +39,34 @@ class ContextPruner:
         self.total_tokens_saved = 0
         self.total_prune_operations = 0
 
+    def _is_tool_response(self, msg: Dict[str, Any]) -> bool:
+        """Determines if a message is a tool execution result across OpenAI, Anthropic, and Gemini."""
+        if not isinstance(msg, dict):
+            return False
+        role = msg.get("role")
+        if role in ("tool", "tool_response"):
+            return True
+        # Anthropic Claude tool response: role == 'user' containing tool_result content block
+        if role == "user":
+            content = msg.get("content")
+            if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+                return True
+        return False
+
+    def _has_tool_calls(self, msg: Dict[str, Any]) -> bool:
+        """Determines if a message contains tool/function calls across OpenAI, Anthropic, and Gemini."""
+        if not isinstance(msg, dict):
+            return False
+        role = msg.get("role")
+        if role in ("assistant", "model"):
+            if msg.get("tool_calls") or msg.get("function_call") or msg.get("parts"):
+                return True
+            # Anthropic Claude tool call: content block list containing tool_use
+            content = msg.get("content")
+            if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_use" for b in content):
+                return True
+        return False
+
     def rollback_and_reflect(
         self,
         messages: List[Dict[str, Any]],
@@ -87,26 +115,22 @@ class ContextPruner:
         target_idx = max(protected_prefix_count, len(valid_messages) - rollback_turns)
 
         # 2. STRICT PROTOCOL SCHEMA ADJACENCY ALIGNMENT
-        # (Prevents OpenAI & Anthropic 400 Bad Request on incomplete tool batches)
+        # (Prevents OpenAI, Anthropic & Gemini 400 Bad Request on incomplete tool batches)
         while target_idx > protected_prefix_count:
             curr = valid_messages[target_idx - 1]
-            # If target ends on a tool response, rewind past all responses to find the calling assistant
-            if curr.get("role") in ("tool", "tool_response"):
+            if self._is_tool_response(curr):
                 target_idx -= 1
                 continue
-            # If target ends on an assistant or model message with tool_calls, rewind past that turn
-            if curr.get("role") in ("assistant", "model") and (curr.get("tool_calls") or curr.get("function_call") or curr.get("parts")):
+            if self._has_tool_calls(curr):
                 target_idx -= 1
                 continue
             break
 
-        # Also ensure target_idx itself is not in the middle of a tool batch
-        if target_idx < len(valid_messages) and valid_messages[target_idx].get("role") in ("tool", "tool_response"):
+        # Also ensure target_idx itself is not in the middle of an unfulfilled tool batch
+        if target_idx < len(valid_messages) and self._is_tool_response(valid_messages[target_idx]):
             while target_idx > protected_prefix_count:
                 target_idx -= 1
-                if valid_messages[target_idx].get("role") in ("assistant", "model") and (
-                    valid_messages[target_idx].get("tool_calls") or valid_messages[target_idx].get("function_call") or valid_messages[target_idx].get("parts")
-                ):
+                if self._has_tool_calls(valid_messages[target_idx]):
                     target_idx -= 1
                     break
 
@@ -213,25 +237,44 @@ class ContextPruner:
             chars_saved = 0
             compressed_count = 0
 
-            # Only inspect turns older than max_age_turns
-            boundary = len(cleaned_messages) - max_age_turns
+            # Safe boundary: strictly protects turns within max_age_turns and root context (index 0)
+            effective_age = max(1, max_age_turns)
+            boundary = max(1, len(cleaned_messages) - effective_age)
 
             neg_patterns = (
                 r"\b(?:no matches found|found 0 matches|0 matches found|directory [^\n]+ not found|file not found|no such file or directory)\b"
             )
+            positive_guard = (
+                r"\b(?:found \d+ matches|\d+ lines total|records found|loaded successfully|test passed)\b"
+            )
 
             for i in range(1, boundary):
                 msg = cleaned_messages[i]
-                role = msg.get("role")
-                if role in ("tool", "tool_response", "user"):
-                    content = msg.get("content")
-                    if isinstance(content, str) and len(content) > 60:
-                        if re.search(neg_patterns, content, re.IGNORECASE):
-                            first_line = content.strip().splitlines()[0][:80]
-                            tombstone = f"[Search Result: 0 matches found ({first_line})]"
-                            chars_saved += (len(content) - len(tombstone))
-                            msg["content"] = tombstone
-                            compressed_count += 1
+                # STRICT ISOLATION: ONLY compress genuine tool observations, NEVER user or assistant messages
+                if not self._is_tool_response(msg):
+                    continue
+
+                content = msg.get("content")
+                # 1. Standard string content (OpenAI / standard tool format)
+                if isinstance(content, str) and len(content) > 60:
+                    if re.search(neg_patterns, content, re.IGNORECASE) and not re.search(positive_guard, content, re.IGNORECASE):
+                        first_line = content.strip().splitlines()[0][:80]
+                        tombstone = f"[Search Result: 0 matches found ({first_line})]"
+                        chars_saved += max(0, len(content) - len(tombstone))
+                        msg["content"] = tombstone
+                        compressed_count += 1
+                # 2. Anthropic Claude list-of-blocks tool_result format
+                elif isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "tool_result":
+                            b_content = block.get("content")
+                            if isinstance(b_content, str) and len(b_content) > 60:
+                                if re.search(neg_patterns, b_content, re.IGNORECASE) and not re.search(positive_guard, b_content, re.IGNORECASE):
+                                    first_line = b_content.strip().splitlines()[0][:80]
+                                    tombstone = f"[Search Result: 0 matches found ({first_line})]"
+                                    chars_saved += max(0, len(b_content) - len(tombstone))
+                                    block["content"] = tombstone
+                                    compressed_count += 1
 
             tokens_saved = max(0, int(chars_saved / 4))
             self.total_tokens_saved += tokens_saved

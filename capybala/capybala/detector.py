@@ -52,11 +52,19 @@ POLLING_COMMAND_PREFIXES = (
     "sleep", "ping", "tail -f", "tail -n", "journalctl", "watch"
 )
 
-# Commands that alter environment state or execute code, resetting exploration thrashing
-MUTATING_COMMAND_PATTERNS = (
-    r"\b(?:edit|write|create|replace|patch|rm|del|mkdir|touch|cp|mv)\b",
-    r"\b(?:python|pytest|unittest|node|npm|yarn|cargo|make|go|pip|bash|sh)\b",
-    r"\b(?:git\s+(?:commit|add|checkout|apply|revert|reset)|submit)\b"
+# Primary read-only command verbs (arguments do NOT make them mutating)
+READ_ONLY_COMMAND_VERBS = (
+    "grep", "find", "cat", "head", "tail", "less", "more",
+    "ls", "dir", "pwd", "cd", "echo", "env", "which", "file",
+    "open", "view", "read", "search", "find_file"
+)
+
+# Mutating commands that actually alter files, system state, or run verification
+MUTATING_COMMAND_VERBS = (
+    "edit", "write", "create", "replace", "patch", "rm", "del",
+    "mkdir", "touch", "cp", "mv", "sed", "python", "pytest",
+    "unittest", "node", "npm", "yarn", "cargo", "make", "go",
+    "pip", "submit"
 )
 
 # Volatile keys stripped from JSON tool call arguments to prevent hash divergence
@@ -105,6 +113,7 @@ class DeadlockDetector:
         self.observation_signatures: deque = deque(maxlen=history_window)
         self.action_previews: deque = deque(maxlen=history_window)
         self.raw_actions: deque = deque(maxlen=history_window)
+        self.full_action_sha_history: deque = deque(maxlen=history_window)
         self.delegation_history: deque = deque(maxlen=history_window)
         self.turn_counter = 0
 
@@ -178,8 +187,8 @@ class DeadlockDetector:
         # Strip true memory pointer addresses (0x followed by 8+ hex chars) -> PRESERVES Git SHAs
         s = re.sub(r"0x[0-9a-f]{8,}", "<PTR_ADDR>", s)
 
-        # Replace UUIDs / GUIDs
-        s = re.sub(r"\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?", "<UUID>", s)
+        # Replace UUIDs / GUIDs without catastrophic backtracking
+        s = re.sub(r"(?:\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", "<UUID>", s)
 
         # Replace ISO8601 timestamps (with optional ms and timezone offsets e.g. +07:00, Z)
         s = re.sub(r"\d{4}-\d{2}-\d{2}[tT ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:z|[+-]\d{2}:?\d{2})?", "<TIMESTAMP>", s)
@@ -342,24 +351,62 @@ class DeadlockDetector:
     def _is_mutating_or_execution(self, action: Optional[str]) -> bool:
         """
         Determines if an action modifies state, writes code, or executes verification.
-        Resets exploration thrashing counters.
+        Inspects primary command verbs to prevent false positives on arguments
+        (e.g. `grep 'write' file.py` or `find . -name '*create*'` are strictly read-only).
         """
         if not action:
             return False
         act_clean = str(action).strip().lower()
-        for pat in MUTATING_COMMAND_PATTERNS:
-            if re.search(pat, act_clean):
+
+        # 1. Unpack tool call wrapper if present
+        # e.g. bash({"command": "grep write ..."}) or run_shell("find ...")
+        cmd_match = re.search(r"['\"](?:command|cmd|input|script)['\"]\s*:\s*['\"]([^'\"]+)['\"]", act_clean)
+        if cmd_match:
+            act_clean = cmd_match.group(1).strip()
+        else:
+            sub_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", act_clean)
+            if sub_match:
+                act_clean = sub_match.group(1).strip()
+
+        # Strip command prefixes like sudo, nohup, timeout
+        act_clean = re.sub(r"^(?:sudo|nohup|timeout\s+\d+|watch\s+-n\s+\d+)\s+", "", act_clean).strip()
+
+        # Check git subcommands specifically
+        if act_clean.startswith("git ") or act_clean.startswith("git\t"):
+            parts = act_clean.split()
+            git_sub = parts[1] if len(parts) > 1 else ""
+            if git_sub in ("log", "show", "status", "diff", "branch", "tag", "remote"):
+                return False
+            if git_sub in ("commit", "add", "checkout", "apply", "revert", "reset", "push", "pull", "merge", "stash"):
                 return True
-        return False
+            return False
+
+        # Extract primary command verb (first token)
+        first_token = act_clean.split()[0] if act_clean else ""
+        first_token = re.sub(r"[^a-zA-Z0-9_\-]", "", first_token)
+
+        # 2. Strict read-only precedence
+        for ro in READ_ONLY_COMMAND_VERBS:
+            if first_token == ro or first_token.startswith(ro):
+                return False
+
+        # 3. Check mutating verbs
+        for mut in MUTATING_COMMAND_VERBS:
+            if first_token == mut or first_token.startswith(mut):
+                return True
+
+        # Fallback: check if line begins with an active command
+        return bool(re.search(r"^(?:edit|write|create|replace|patch|rm|del|mkdir|touch|cp|mv|python|pytest|unittest|make|cargo|npm|pip|submit)\b", act_clean))
 
     def _is_active_code_refinement(self, recent_actions: List[str], safe_obs: str) -> bool:
         """
         Detects if the agent is actively iterating on code edits (e.g. fixing syntax errors)
         where consecutive edit payloads differ, avoiding premature false alarms on interactive editor refinement.
+        Uses full-action SHA digests to guarantee 100% precision regardless of payload length.
         """
-        if len(recent_actions) < 2:
+        if len(self.full_action_sha_history) < 2:
             return False
-        # Check if actions are edit/patch/write commands
+        # Check if recent action is an edit command
         is_edit_cmd = any(re.search(r"^(?:edit|patch|replace|write_file|create)\b", str(a).strip().lower()) for a in recent_actions)
         if not is_edit_cmd:
             return False
@@ -368,8 +415,8 @@ class DeadlockDetector:
         is_syntax_issue = any(k in obs_lower for k in ("syntax error", "syntaxerror", "invalid syntax", "unexpected indent", "new syntax error"))
         if not is_syntax_issue:
             return False
-        # Check if payload changed between the last two attempts
-        return recent_actions[-1].strip() != recent_actions[-2].strip()
+        # Check if full payload changed between the last two attempts via 16-byte SHA
+        return self.full_action_sha_history[-1] != self.full_action_sha_history[-2]
 
     def _hash(self, text: Optional[str]) -> str:
         return hashlib.sha256(self._normalize_text(text).encode("utf-8")).hexdigest()[:16]
@@ -432,12 +479,15 @@ class DeadlockDetector:
             self.observation_signatures.append(err_sig)
             self.action_previews.append(raw_action[:80])
             self.raw_actions.append(raw_action[:512])
+            full_action_sha = hashlib.sha256(raw_action.encode("utf-8")).hexdigest()[:16]
+            self.full_action_sha_history.append(full_action_sha)
 
             del_target = self._extract_delegation_target(raw_action)
             self.delegation_history.append(del_target)
 
             # 0. WHITELIST CHECK: Legitimate Polling Primitives are exempt
             if self._is_polling_command(raw_action):
+                self.consecutive_exploration_turns = 0  # Legitimate polling resets exploration thrashing
                 self.healthy_turns_since_deadlock += 1
                 if self.healthy_turns_since_deadlock >= 3:
                     self.consecutive_deadlocks = 0
@@ -666,6 +716,7 @@ class DeadlockDetector:
             self.observation_signatures.clear()
             self.action_previews.clear()
             self.raw_actions.clear()
+            self.full_action_sha_history.clear()
             self.delegation_history.clear()
             self.turn_counter = 0
             self.consecutive_exploration_turns = 0

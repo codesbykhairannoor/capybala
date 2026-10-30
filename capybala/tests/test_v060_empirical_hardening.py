@@ -97,7 +97,7 @@ class TestV060EmpiricalHardening(unittest.TestCase):
             {"role": "tool", "content": "No matches found for 'class OldOrchestrator' in /repo/src\n" * 10},
             {"role": "assistant", "content": "Let me check directory."},
             # Ancient dead search 2
-            {"role": "user", "content": "Directory src/legacy not found in current workspace\n" * 10},
+            {"role": "tool", "content": "Directory src/legacy not found in current workspace\n" * 10},
             {"role": "assistant", "content": "Found the right file, let's open it."},
             # Recent messages (should not be touched)
             {"role": "tool", "content": "Found 5 matches for 'class ActiveOrchestrator' in /repo/active.py"},
@@ -130,3 +130,4 @@ class TestV060EmpiricalHardening(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

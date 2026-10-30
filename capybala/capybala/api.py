@@ -65,7 +65,8 @@ def heal(
     # Dynamic window: inspect up to 32 recent messages to avoid parallel tool-call amnesia
     window_slice = messages[-32:] if len(messages) > 32 else messages
 
-    tool_call_map = {}  # call_id or tool_name -> action_str
+    tool_call_map = {}  # call_id -> action_str (exact pairing)
+    tool_name_map = {}  # fn_name -> list of action_strs (FIFO fallback queue to avoid collisions)
     turns_sequence = []  # list of (action, observation)
 
     for msg in window_slice:
@@ -115,10 +116,15 @@ def heal(
                         arg_str = json.dumps(fn_args, sort_keys=True) if isinstance(fn_args, (dict, list)) else str(fn_args)
                         act_str = f"{fn_name}({arg_str})"
                         tool_call_map[call_id] = act_str
-                        tool_call_map[fn_name] = act_str
+                        tool_name_map.setdefault(fn_name, []).append(act_str)
                     elif b_type == "tool_result":
                         tid = block.get("tool_use_id") or block.get("id")
-                        act = tool_call_map.get(tid, "tool_execution")
+                        act = tool_call_map.get(tid)
+                        if not act and tid in tool_name_map and tool_name_map[tid]:
+                            act = tool_name_map[tid].pop(0)
+                        elif not act and tool_call_map:
+                            act = list(tool_call_map.values())[-1]
+                        act = act or "tool_execution"
                         res_content = str(block.get("content", ""))
                         turns_sequence.append((act, res_content))
             continue
@@ -132,11 +138,13 @@ def heal(
                     fn_name = fn.get("name", "tool")
                     action_str = f"{fn_name}({fn.get('arguments', '')})"
                     tool_call_map[call_id] = action_str
-                    tool_call_map[fn_name] = action_str
+                    tool_name_map.setdefault(fn_name, []).append(action_str)
         elif role in ("tool", "tool_response"):
             tid = msg.get("tool_call_id")
             act = tool_call_map.get(tid)
-            if not act and tool_call_map:
+            if not act and tid in tool_name_map and tool_name_map[tid]:
+                act = tool_name_map[tid].pop(0)
+            elif not act and tool_call_map:
                 act = list(tool_call_map.values())[-1]
             act = act or "tool_execution"
             turns_sequence.append((act, str(content)))
@@ -205,12 +213,13 @@ def heal(
             details=event.details,
         )
 
-    # In-place slice mutation: Prevents Ghost Pruning Desync in developer outer loops!
-    if isinstance(messages, list):
-        try:
-            messages[:] = rollback_res.pruned_messages
-        except TypeError:
-            pass
+    # In-place slice mutation with mutex lock: Prevents Ghost Pruning Desync in concurrent threads
+    with _api_lock:
+        if isinstance(messages, list):
+            try:
+                messages[:] = rollback_res.pruned_messages
+            except TypeError:
+                pass
 
     return messages
 
@@ -417,6 +426,16 @@ def validate(messages: List[Dict[str, Any]], check_turn_alternation: bool = Fals
             tid = msg.get("tool_call_id")
             if tid:
                 tool_response_ids.add(tid)
+
+        # Check Anthropic block format
+        content = msg.get("content")
+        if isinstance(content, list):
+            for b in content:
+                if isinstance(b, dict):
+                    if b.get("type") == "tool_use" and b.get("id"):
+                        tool_call_ids.add(b["id"])
+                    elif b.get("type") == "tool_result" and (b.get("tool_use_id") or b.get("id")):
+                        tool_response_ids.add(b.get("tool_use_id") or b.get("id"))
 
     unmatched_calls = tool_call_ids - tool_response_ids
     unmatched_responses = tool_response_ids - tool_call_ids
