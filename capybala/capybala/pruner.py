@@ -5,9 +5,11 @@ Thread-Safe, Deep-Copy, Schema-Invariant Context Rollback & Reflection Engine.
 Guarantees:
 - Zero orphan tool calls or responses across OpenAI, Anthropic, and Llama Stack.
 - Zero caller message pollution via strict copy.deepcopy().
-- Universal provider schema compatibility: eliminates mid-stream 'system' role
-  rejections (which trigger 400 Bad Request on Anthropic, Mistral, and Llama-3).
-- Thread-safe telemetry with internal mutex.
+- Universal provider schema compatibility: enforces strict turn alternation
+  for Anthropic Claude (preventing consecutive 'user' roles), and eliminates
+  mid-stream 'system' role rejections (which trigger 400 Bad Request on Anthropic, Mistral, and Llama-3).
+- Defensive invariant handling for non-dict or malformed message structures.
+- Thread-safe telemetry with internal reentrant mutex (threading.RLock).
 """
 
 import copy
@@ -49,7 +51,8 @@ class ContextPruner:
         Executes an Atomic Checkpoint Rollback:
         1. Protects Root Context (system prompt + initial user prompt).
         2. Rewinds history atomically before unfulfilled tool calls or orphan responses.
-        3. Returns a deep-copied history with injected recovery guidance.
+        3. Enforces strict provider schema invariants (Anthropic turn alternation).
+        4. Returns a deep-copied history with injected recovery guidance.
         """
         if not messages:
             return PruneResult(
@@ -60,20 +63,31 @@ class ContextPruner:
                 tombstone="",
             )
 
+        # Defensive sanitization: ensure list of dicts
+        valid_messages = [m for m in messages if isinstance(m, dict)]
+        if not valid_messages:
+            return PruneResult(
+                pruned_messages=[],
+                messages_removed_count=0,
+                characters_saved=0,
+                tokens_saved_estimate=0,
+                tombstone="",
+            )
+
         # 1. Protect Root Context: System instruction (turn 0) and first user prompt
         protected_prefix_count = 1
-        for i, msg in enumerate(messages[:4]):
+        for i, msg in enumerate(valid_messages[:4]):
             if msg.get("role") == "user":
                 protected_prefix_count = i + 1
                 break
 
         # Calculate initial target rollback boundary
-        target_idx = max(protected_prefix_count, len(messages) - rollback_turns)
+        target_idx = max(protected_prefix_count, len(valid_messages) - rollback_turns)
 
         # 2. STRICT PROTOCOL SCHEMA ADJACENCY ALIGNMENT
         # (Prevents OpenAI & Anthropic 400 Bad Request on incomplete tool batches)
         while target_idx > protected_prefix_count:
-            curr = messages[target_idx - 1]
+            curr = valid_messages[target_idx - 1]
             # If target ends on a tool response, rewind past all responses to find the calling assistant
             if curr.get("role") in ("tool", "tool_response"):
                 target_idx -= 1
@@ -85,18 +99,20 @@ class ContextPruner:
             break
 
         # Also ensure target_idx itself is not in the middle of a tool batch
-        if target_idx < len(messages) and messages[target_idx].get("role") in ("tool", "tool_response"):
+        if target_idx < len(valid_messages) and valid_messages[target_idx].get("role") in ("tool", "tool_response"):
             while target_idx > protected_prefix_count:
                 target_idx -= 1
-                if messages[target_idx].get("role") == "assistant" and (messages[target_idx].get("tool_calls") or messages[target_idx].get("function_call")):
+                if valid_messages[target_idx].get("role") == "assistant" and (
+                    valid_messages[target_idx].get("tool_calls") or valid_messages[target_idx].get("function_call")
+                ):
                     target_idx -= 1
                     break
 
         target_idx = max(protected_prefix_count, target_idx)
 
         # Deep-copy to prevent mutating caller message objects
-        clean_history = copy.deepcopy(messages[:target_idx])
-        discarded_slice = messages[target_idx:]
+        clean_history = copy.deepcopy(valid_messages[:target_idx])
+        discarded_slice = valid_messages[target_idx:]
 
         # Calculate token savings
         chars_saved = sum(len(str(m.get("content", ""))) for m in discarded_slice)
@@ -122,7 +138,7 @@ class ContextPruner:
         # Inject recovery directive as role: 'user' to remain 100% compliant across all LLM inference engines.
         is_anthropic = provider.lower() == "anthropic" or (
             provider.lower() == "auto"
-            and any(("tool_use_id" in str(m) or "tool_use" in str(m) or "tool_result" in str(m)) for m in messages)
+            and any(("tool_use_id" in str(m) or "tool_use" in str(m) or "tool_result" in str(m)) for m in valid_messages)
         )
 
         if is_anthropic:

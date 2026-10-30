@@ -25,6 +25,8 @@ class CapybalaGuard(BaseAgentAdapter):
         supervisor_model: str = "meta-llama/llama-3.2-1b-instruct",
         supervisor_client: Optional[Any] = None,
         use_supervisor_llm: bool = False,
+        max_interventions: int = 5,
+        circuit_breaker_enabled: bool = True,
     ):
         super().__init__(
             repetition_threshold=repetition_threshold,
@@ -32,6 +34,8 @@ class CapybalaGuard(BaseAgentAdapter):
             supervisor_model=supervisor_model,
             supervisor_client=supervisor_client,
             use_supervisor_llm=use_supervisor_llm,
+            max_interventions=max_interventions,
+            circuit_breaker_enabled=circuit_breaker_enabled,
         )
         self.messages = messages
         self.task_prompt = task_prompt

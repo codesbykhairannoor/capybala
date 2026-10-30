@@ -3,11 +3,12 @@ capybala.adapters.base
 ~~~~~~~~~~~~~~~~~~~~~~
 Abstract Base Adapter for universal agent framework integration.
 Combines Detector, Pruner, and Healer into a unified lifecycle interceptor.
+Enforces Circuit Breakers against infinite healing loops.
 """
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Tuple, Optional
-from ..detector import DeadlockDetector, DeadlockEvent
+from ..detector import DeadlockDetector, DeadlockEvent, DeadlockEmergencyStop
 from ..pruner import ContextPruner, PruneResult
 from ..healer import AgentHealer, HealingPrescription
 
@@ -24,19 +25,24 @@ class BaseAgentAdapter(ABC):
         supervisor_model: str = "meta-llama/llama-3.2-1b-instruct",
         supervisor_client: Optional[Any] = None,
         use_supervisor_llm: bool = False,
+        max_interventions: int = 5,
+        circuit_breaker_enabled: bool = True,
     ):
         self.detector = DeadlockDetector(
             repetition_threshold=repetition_threshold,
-            oscillation_threshold=oscillation_threshold
+            oscillation_threshold=oscillation_threshold,
+            max_interventions=max_interventions,
+            circuit_breaker_enabled=circuit_breaker_enabled,
         )
         self.pruner = ContextPruner()
         self.healer = AgentHealer(
             supervisor_client=supervisor_client,
-            supervisor_model=supervisor_model
+            supervisor_model=supervisor_model,
         )
         self.use_supervisor_llm = use_supervisor_llm
         self.interventions_count = 0
         self.total_tokens_recovered = 0
+        self.is_circuit_broken = False
 
     def intercept_step(
         self,
@@ -64,14 +70,17 @@ class BaseAgentAdapter(ABC):
 
         # Deadlock detected! Execute Capybala self-healing protocol:
         self.interventions_count += 1
+        if event.is_circuit_broken:
+            self.is_circuit_broken = True
 
-        # 1. Formulate strategic Doctor Prescription
+        # 1. Formulate strategic Doctor Prescription with progressive escalation
         rx = self.healer.prescribe(
             deadlock_pattern=event.pattern_type or "unknown",
             failing_action=action,
             error_signature=observation,
             task_prompt=task_prompt,
-            use_supervisor_llm=self.use_supervisor_llm
+            use_supervisor_llm=self.use_supervisor_llm,
+            escalation_level=event.consecutive_deadlocks or 1,
         )
 
         # 2. Execute Atomic Checkpoint Rollback with Domain Guidance
@@ -80,7 +89,7 @@ class BaseAgentAdapter(ABC):
             failing_action=action,
             deadlock_details=event.details,
             reflection_guidance=rx.recommended_pivot,
-            rollback_turns=event.repetition_count * 2
+            rollback_turns=event.repetition_count * 2,
         )
         self.total_tokens_recovered += prune_result.tokens_saved_estimate
 
@@ -89,4 +98,4 @@ class BaseAgentAdapter(ABC):
     def reset(self):
         """Resets detector state for a new conversation turn."""
         self.detector.reset()
-
+        self.is_circuit_broken = False
