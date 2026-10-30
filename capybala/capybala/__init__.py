@@ -19,7 +19,7 @@ from .adapters import (
     CapybalaCallbackHandler
 )
 
-__version__ = "0.6.1"
+__version__ = "0.7.0"
 __all__ = [
     # Top-Level DX
     "watch",

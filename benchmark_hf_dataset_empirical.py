@@ -264,7 +264,7 @@ def main():
             messages.append({"role": role, "content": content})
             
         initial_len = len(messages)
-        healed_messages = heal(messages, raise_on_circuit_break=False)
+        healed_messages = heal(messages, verbose=False, raise_on_circuit_break=False)
         is_valid = validate(healed_messages)
         if is_valid:
             schema_compliant += 1

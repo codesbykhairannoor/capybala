@@ -52,6 +52,11 @@ POLLING_COMMAND_PREFIXES = (
     "sleep", "ping", "tail -f", "tail -n", "journalctl", "watch"
 )
 
+# Editor viewport navigation commands (exempt from static-output repetition on buffer boundaries)
+EDITOR_NAVIGATION_PREFIXES = (
+    "scroll_up", "scroll_down", "scroll", "page_up", "page_down", "goto", "cursor"
+)
+
 # Primary read-only command verbs (arguments do NOT make them mutating)
 READ_ONLY_COMMAND_VERBS = (
     "grep", "find", "cat", "head", "tail", "less", "more",
@@ -109,6 +114,7 @@ class DeadlockDetector:
 
         # Store ONLY compact fixed-size digests (16 bytes each), previews, and bounded buffers
         self.action_history: deque = deque(maxlen=history_window)
+        self.structural_action_history: deque = deque(maxlen=history_window)
         self.obs_hash_history: deque = deque(maxlen=history_window)
         self.observation_signatures: deque = deque(maxlen=history_window)
         self.action_previews: deque = deque(maxlen=history_window)
@@ -348,6 +354,45 @@ class DeadlockDetector:
 
         return False
 
+    def _is_navigation_command(self, action: Optional[str]) -> bool:
+        """
+        Determines if a command is an editor viewport navigation primitive
+        (e.g. scroll_up, scroll_down, goto line) which should not trigger
+        static-output repetition deadlock on boundary limits (line 1 or EOF).
+        """
+        if not action:
+            return False
+        act_clean = str(action).strip().lower()
+        cmd_match = re.search(r"['\"](?:command|cmd|input|script)['\"]\s*:\s*['\"]([^'\"]+)['\"]", act_clean)
+        if cmd_match:
+            act_clean = cmd_match.group(1).strip()
+        else:
+            sub_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", act_clean)
+            if sub_match:
+                act_clean = sub_match.group(1).strip()
+
+        for prefix in EDITOR_NAVIGATION_PREFIXES:
+            p = prefix.strip()
+            if act_clean == p or act_clean.startswith(p + " ") or act_clean.startswith(p + "\t") or act_clean.startswith(p + "("):
+                return True
+        return False
+
+    def _normalize_structural_action(self, action: Optional[str]) -> str:
+        """
+        Extracts high-level command verbs and normalizes dynamic line numbers and ranges
+        to detect structural trial-and-error oscillation loops even when line targets shift.
+        e.g. 'goto 434' -> 'goto <NUM>', 'edit 422:422\n...' -> 'edit <RANGE>'
+        """
+        if not action:
+            return ""
+        s = str(action).strip()
+        s = re.sub(r"\b(edit|patch)\s+\d+:\d+", r"\1 <RANGE>", s)
+        s = re.sub(r"\b(goto|line|scroll_up|scroll_down)\s+\d+", r"\1 <NUM>", s)
+        lines = s.splitlines()
+        if len(lines) > 1 and any(k in lines[0].lower() for k in ("edit", "patch", "create", "write")):
+            return lines[0].strip().lower()
+        return s[:256].strip().lower()
+
     def _is_mutating_or_execution(self, action: Optional[str]) -> bool:
         """
         Determines if an action modifies state, writes code, or executes verification.
@@ -446,6 +491,10 @@ class DeadlockDetector:
         if not output:
             return None
 
+        # Editor navigation commands display source code (e.g. raise RuntimeError), not execution crashes
+        if action and self._is_navigation_command(action):
+            return None
+
         target = str(output)[-16384:]
         # Strip passing counters so words like '0 failed' or 'no errors' are never misidentified as exceptions
         clean_target = re.sub(
@@ -497,6 +546,8 @@ class DeadlockDetector:
             self.raw_actions.append(raw_action[:512])
             full_action_sha = hashlib.sha256(raw_action.encode("utf-8")).hexdigest()[:16]
             self.full_action_sha_history.append(full_action_sha)
+            norm_structural = self._normalize_structural_action(raw_action)
+            self.structural_action_history.append(self._hash(norm_structural))
 
             del_target = self._extract_delegation_target(raw_action)
             self.delegation_history.append(del_target)
@@ -521,6 +572,12 @@ class DeadlockDetector:
                     # Require BOTH error persistence OR strictly static output across turns
                     has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
                     is_stuck_output = len(set(recent_obs_hashes)) == 1
+
+                    # Navigation primitives (scroll_up, scroll_down, goto) are exempt from static-output deadlocks
+                    # when reaching boundary limits (line 1 or EOF), unless accompanied by genuine failure indicators
+                    is_nav = self._is_navigation_command(raw_action)
+                    if is_nav and not has_error:
+                        is_stuck_output = False
 
                     if has_error or is_stuck_output:
                         onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
@@ -668,6 +725,49 @@ class DeadlockDetector:
                                 signature=f"{hist[-4]}_{hist[-3]}_{hist[-2]}_{hist[-1]}",
                                 loop_onset_turn=onset_turn,
                             )
+
+                # 4d. Structural Trial-and-Error Oscillation (Period 2, 3, 4 with failure/stagnation)
+                if not detected_event:
+                    s_hist = list(self.structural_action_history)
+                    s_n = len(s_hist)
+                    for period in (3, 4, 2):
+                        # Period 2 (edit <-> test) requires at least 3 cycles (6 turns) to prevent premature TDD alarms
+                        req_cycles = 3 if period == 2 else 2
+                        req_turns = period * req_cycles
+                        if s_n >= req_turns:
+                            is_cycle_match = False
+                            if period == 2 and req_cycles == 3:
+                                is_cycle_match = (
+                                    s_hist[-2:] == s_hist[-4:-2] == s_hist[-6:-4]
+                                    and len(set(s_hist[-2:])) == 2
+                                )
+                            else:
+                                is_cycle_match = (
+                                    s_hist[-period:] == s_hist[-2*period : -period]
+                                    and len(set(s_hist[-period:])) == period
+                                )
+
+                            if is_cycle_match:
+                                # Ensure the latest turn is an active failure OR observation is stagnant across cycles
+                                current_fail = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
+                                obs_h = list(self.obs_hash_history)
+                                is_stagnant = False
+                                if len(obs_h) >= period + 1 and obs_h[-1] == obs_h[-period-1]:
+                                    is_stagnant = True
+                                if len(obs_h) >= 2 * period + 1 and obs_h[-1] == obs_h[-2*period-1]:
+                                    is_stagnant = True
+
+                                if current_fail or is_stagnant:
+                                    onset_turn = max(1, self.turn_counter - req_turns + 1)
+                                    detected_event = DeadlockEvent(
+                                        is_deadlock=True,
+                                        pattern_type="structural_oscillation",
+                                        repetition_count=req_cycles,
+                                        details=f"Structural trial-and-error oscillation detected ({period}-step cycle with failure or stagnant output).",
+                                        signature=f"struct_{period}_{s_hist[-1]}",
+                                        loop_onset_turn=onset_turn,
+                                    )
+                                    break
 
             # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
             if not detected_event and err_sig is not None:

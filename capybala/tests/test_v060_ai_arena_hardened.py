@@ -152,5 +152,43 @@ class TestV060AIArenaHardened(unittest.TestCase):
         event = detector.check("run_tests()", "0 errors found in the last run.")
         self.assertFalse(event.is_deadlock)
 
+    def test_editor_navigation_exempt_from_static_output_deadlock(self):
+        """
+        SWE-bench Real-World Lesson (clean_03):
+        When an agent hits buffer ceiling (line 1) and calls scroll_up 3x in a row,
+        the static output must not trigger a false alarm deadlock.
+        """
+        detector = DeadlockDetector(repetition_threshold=3)
+        for _ in range(3):
+            ev = detector.check("scroll_up", "[File: /repo/dispatcher.py (717 lines)]\n1:# Top of file")
+            self.assertFalse(ev.is_deadlock, "scroll_up at buffer ceiling must not trigger false positive")
+
+    def test_structural_oscillation_trial_and_error_detected(self):
+        """
+        SWE-bench Real-World Lesson (failed_20, failed_04):
+        When an agent oscillates across tests and edits with shifting line numbers:
+        goto 434 -> edit 422:422 -> pytest -> goto 441 -> edit 422:423 -> pytest
+        structural oscillation must catch the trial-and-error thrashing.
+        """
+        detector = DeadlockDetector()
+        actions_and_obs = [
+            ("goto 434", "[File: app.py]"),
+            ("edit 422:422\nx = 1", "[File: app.py]"),
+            ("pytest tests/test_app.py", "FAILED tests/test_app.py - AssertionError"),
+            ("goto 441", "[File: app.py]"),
+            ("edit 422:423\nx = 2", "[File: app.py]"),
+            ("pytest tests/test_app.py", "FAILED tests/test_app.py - AssertionError"),
+        ]
+        detected = False
+        event = None
+        for a, o in actions_and_obs:
+            event = detector.check(a, o)
+            if event.is_deadlock:
+                detected = True
+                break
+
+        self.assertTrue(detected, "Structural trial-and-error oscillation loop must be detected")
+        self.assertEqual(event.pattern_type, "structural_oscillation")
+
 if __name__ == "__main__":
     unittest.main()
