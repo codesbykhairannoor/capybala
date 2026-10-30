@@ -84,7 +84,7 @@ class ContextPruner:
         4. Returns a deep-copied history with injected recovery guidance.
         """
         with self._lock:
-            if not messages:
+            if not isinstance(messages, (list, tuple)) or not messages:
                 return PruneResult(
                     pruned_messages=[],
                     messages_removed_count=0,
@@ -93,103 +93,103 @@ class ContextPruner:
                     tombstone="",
                 )
 
-        # Defensive sanitization: ensure list of dicts
-        valid_messages = [m for m in messages if isinstance(m, dict)]
-        if not valid_messages:
-            return PruneResult(
-                pruned_messages=[],
-                messages_removed_count=0,
-                characters_saved=0,
-                tokens_saved_estimate=0,
-                tombstone="",
-            )
+            # Defensive sanitization: ensure list of dicts
+            valid_messages = [m for m in messages if isinstance(m, dict)]
+            if not valid_messages:
+                return PruneResult(
+                    pruned_messages=[],
+                    messages_removed_count=0,
+                    characters_saved=0,
+                    tokens_saved_estimate=0,
+                    tombstone="",
+                )
 
-        # 1. Protect Root Context: System instruction (turn 0) and first user prompt
-        protected_prefix_count = 1
-        for i, msg in enumerate(valid_messages[:4]):
-            if msg.get("role") == "user":
-                protected_prefix_count = i + 1
-                break
-
-        # Calculate initial target rollback boundary
-        target_idx = max(protected_prefix_count, len(valid_messages) - rollback_turns)
-
-        # 2. STRICT PROTOCOL SCHEMA ADJACENCY ALIGNMENT
-        # (Prevents OpenAI, Anthropic & Gemini 400 Bad Request on incomplete tool batches)
-        while target_idx > protected_prefix_count:
-            curr = valid_messages[target_idx - 1]
-            if self._is_tool_response(curr):
-                target_idx -= 1
-                continue
-            if self._has_tool_calls(curr):
-                target_idx -= 1
-                continue
-            break
-
-        # Also ensure target_idx itself is not in the middle of an unfulfilled tool batch
-        if target_idx < len(valid_messages) and self._is_tool_response(valid_messages[target_idx]):
-            while target_idx > protected_prefix_count:
-                target_idx -= 1
-                if self._has_tool_calls(valid_messages[target_idx]):
-                    target_idx -= 1
+            # 1. Protect Root Context: System instruction (turn 0) and first user prompt
+            protected_prefix_count = 1
+            for i, msg in enumerate(valid_messages[:4]):
+                if msg.get("role") == "user":
+                    protected_prefix_count = i + 1
                     break
 
-        target_idx = max(protected_prefix_count, target_idx)
+            # Calculate initial target rollback boundary
+            target_idx = max(protected_prefix_count, len(valid_messages) - rollback_turns)
 
-        # Deep-copy to prevent mutating caller message objects
-        clean_history = copy.deepcopy(valid_messages[:target_idx])
-        discarded_slice = valid_messages[target_idx:]
+            # 2. STRICT PROTOCOL SCHEMA ADJACENCY ALIGNMENT
+            # (Prevents OpenAI, Anthropic & Gemini 400 Bad Request on incomplete tool batches)
+            while target_idx > protected_prefix_count:
+                curr = valid_messages[target_idx - 1]
+                if self._is_tool_response(curr):
+                    target_idx -= 1
+                    continue
+                if self._has_tool_calls(curr):
+                    target_idx -= 1
+                    continue
+                break
 
-        # Calculate token savings
-        chars_saved = sum(len(str(m.get("content", ""))) for m in discarded_slice)
-        tokens_saved = max(1, int(chars_saved / 4))
+            # Also ensure target_idx itself is not in the middle of an unfulfilled tool batch
+            if target_idx < len(valid_messages) and self._is_tool_response(valid_messages[target_idx]):
+                while target_idx > protected_prefix_count:
+                    target_idx -= 1
+                    if self._has_tool_calls(valid_messages[target_idx]):
+                        target_idx -= 1
+                        break
 
-        # 3. SYNTHESIZED RECOVERY GUIDANCE
-        guidance = (
-            reflection_guidance.strip()
-            if reflection_guidance
-            else "Formulate an alternative hypothesis. Avoid repeating the exact failing command."
-        )
-        reflection_text = (
-            f"[🦫 CAPYBALA STATE ROLLBACK & RECOVERY GUIDANCE (CAPYBALA DOCTOR INTERVENTION)]\n"
-            f"• Execution Status: Cognitive deadlock detected ({deadlock_details}).\n"
-            f"• Rolled Back: Reverted {len(discarded_slice)} redundant turns (saved ~{tokens_saved:,} tokens).\n"
-            f"• Failed Action: '{failing_action[:70]}'\n"
-            f"• Strategic Directive:\n{guidance}\n"
-            f"Resume task execution from this clean checkpoint."
-        )
+            target_idx = max(protected_prefix_count, target_idx)
 
-        # 4. UNIVERSAL PROVIDER SCHEMA COMPLIANCE
-        # Mid-stream role: 'system' is rejected with 400 Bad Request by Anthropic, Mistral, and Llama-3!
-        # Inject recovery directive as role: 'user'.
-        # For Anthropic, merge into the existing user turn if present to strictly enforce Claude turn-alternation schema.
-        is_anthropic = (provider.lower() == "anthropic") or (
-            provider.lower() == "auto"
-            and any(("tool_use_id" in str(m) or "tool_use" in str(m) or "tool_result" in str(m)) for m in valid_messages)
-        )
+            # Deep-copy to prevent mutating caller message objects
+            clean_history = copy.deepcopy(valid_messages[:target_idx])
+            discarded_slice = valid_messages[target_idx:]
 
-        if is_anthropic:
-            if clean_history and clean_history[-1].get("role") == "user":
-                prev_content = clean_history[-1].get("content")
-                if isinstance(prev_content, list):
-                    clean_history[-1]["content"] = prev_content + [{"type": "text", "text": f"\n\n{reflection_text}"}]
+            # Calculate token savings
+            chars_saved = sum(len(str(m.get("content", ""))) for m in discarded_slice)
+            tokens_saved = max(1, int(chars_saved / 4))
+
+            # 3. SYNTHESIZED RECOVERY GUIDANCE
+            guidance = (
+                reflection_guidance.strip()
+                if reflection_guidance
+                else "Formulate an alternative hypothesis. Avoid repeating the exact failing command."
+            )
+            reflection_text = (
+                f"[🦫 CAPYBALA STATE ROLLBACK & RECOVERY GUIDANCE (CAPYBALA DOCTOR INTERVENTION)]\n"
+                f"• Execution Status: Cognitive deadlock detected ({deadlock_details}).\n"
+                f"• Rolled Back: Reverted {len(discarded_slice)} redundant turns (saved ~{tokens_saved:,} tokens).\n"
+                f"• Failed Action: '{failing_action[:70]}'\n"
+                f"• Strategic Directive:\n{guidance}\n"
+                f"Resume task execution from this clean checkpoint."
+            )
+
+            # 4. UNIVERSAL PROVIDER SCHEMA COMPLIANCE
+            # Mid-stream role: 'system' is rejected with 400 Bad Request by Anthropic, Mistral, and Llama-3!
+            # Inject recovery directive as role: 'user'.
+            # For Anthropic, merge into the existing user turn if present to strictly enforce Claude turn-alternation schema.
+            is_anthropic = (provider.lower() == "anthropic") or (
+                provider.lower() == "auto"
+                and any(("tool_use_id" in str(m) or "tool_use" in str(m) or "tool_result" in str(m)) for m in valid_messages)
+            )
+
+            if is_anthropic:
+                if clean_history and clean_history[-1].get("role") == "user":
+                    prev_content = clean_history[-1].get("content")
+                    if isinstance(prev_content, list):
+                        clean_history[-1]["content"] = prev_content + [{"type": "text", "text": f"\n\n{reflection_text}"}]
+                    else:
+                        clean_history[-1]["content"] = f"{prev_content or ''}\n\n{reflection_text}"
                 else:
-                    clean_history[-1]["content"] = f"{prev_content or ''}\n\n{reflection_text}"
+                    clean_history.append({"role": "user", "content": reflection_text})
             else:
                 clean_history.append({"role": "user", "content": reflection_text})
-        else:
-            clean_history.append({"role": "user", "content": reflection_text})
 
-        self.total_tokens_saved += tokens_saved
-        self.total_prune_operations += 1
+            self.total_tokens_saved += tokens_saved
+            self.total_prune_operations += 1
 
-        return PruneResult(
-            pruned_messages=clean_history,
-            messages_removed_count=len(discarded_slice),
-            characters_saved=chars_saved,
-            tokens_saved_estimate=tokens_saved,
-            tombstone=reflection_text,
-        )
+            return PruneResult(
+                pruned_messages=clean_history,
+                messages_removed_count=len(discarded_slice),
+                characters_saved=chars_saved,
+                tokens_saved_estimate=tokens_saved,
+                tombstone=reflection_text,
+            )
 
     def prune(
         self,
@@ -224,9 +224,9 @@ class ContextPruner:
         Preserves message roles, turn alternation, and schema structure.
         """
         with self._lock:
-            if not messages or len(messages) <= max_age_turns:
+            if not isinstance(messages, (list, tuple)) or not messages or len(messages) <= max_age_turns:
                 return PruneResult(
-                    pruned_messages=copy.deepcopy(messages),
+                    pruned_messages=copy.deepcopy(messages) if isinstance(messages, list) else [],
                     messages_removed_count=0,
                     characters_saved=0,
                     tokens_saved_estimate=0,

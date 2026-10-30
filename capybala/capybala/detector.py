@@ -358,15 +358,28 @@ class DeadlockDetector:
             return False
         act_clean = str(action).strip().lower()
 
-        # 1. Unpack tool call wrapper if present
-        # e.g. bash({"command": "grep write ..."}) or run_shell("find ...")
-        cmd_match = re.search(r"['\"](?:command|cmd|input|script)['\"]\s*:\s*['\"]([^'\"]+)['\"]", act_clean)
-        if cmd_match:
-            act_clean = cmd_match.group(1).strip()
-        else:
-            sub_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", act_clean)
-            if sub_match:
-                act_clean = sub_match.group(1).strip()
+        # 1. Inspect tool call wrappers and high-level tool names
+        # e.g. edit_file(...), str_replace_editor(...), bash({"command": "grep write ..."})
+        tool_call_match = re.match(r"^([a-zA-Z0-9_]+)\s*\(", act_clean)
+        if tool_call_match:
+            tool_name = tool_call_match.group(1).lower()
+            # If tool is a shell wrapper (bash, run_shell, etc.), unwrap its inner command
+            if tool_name in ("bash", "run_shell", "execute_command", "run_command", "terminal", "exec", "shell"):
+                cmd_match = re.search(r"['\"](?:command|cmd|input|script)['\"]\s*:\s*['\"]([^'\"]+)['\"]", act_clean)
+                if cmd_match:
+                    act_clean = cmd_match.group(1).strip()
+                else:
+                    inner_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", act_clean)
+                    if inner_match:
+                        act_clean = inner_match.group(1).strip()
+            elif any(m in tool_name for m in ("edit", "write", "patch", "replace", "create", "delete", "modify", "save", "update", "insert")):
+                return True
+            elif any(ro in tool_name for ro in ("view", "read", "grep", "search", "list", "cat", "find", "show", "inspect")):
+                return False
+            else:
+                inner_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", act_clean)
+                if inner_match:
+                    act_clean = inner_match.group(1).strip()
 
         # Strip command prefixes like sudo, nohup, timeout
         act_clean = re.sub(r"^(?:sudo|nohup|timeout\s+\d+|watch\s+-n\s+\d+)\s+", "", act_clean).strip()
@@ -406,8 +419,11 @@ class DeadlockDetector:
         """
         if len(self.full_action_sha_history) < 2:
             return False
-        # Check if recent action is an edit command
-        is_edit_cmd = any(re.search(r"^(?:edit|patch|replace|write_file|create)\b", str(a).strip().lower()) for a in recent_actions)
+        # Check if recent action is an edit command (including edit_file, str_replace_editor, write_file)
+        is_edit_cmd = any(
+            re.search(r"(?:^|[\W_])(?:edit|editor|patch|replace|write|str_replace|create|modify|save)(?:[\W_]|$)", str(a).strip().lower())
+            for a in recent_actions
+        )
         if not is_edit_cmd:
             return False
         # Check if failure is an editor syntax warning
@@ -558,7 +574,7 @@ class DeadlockDetector:
                                 loop_onset_turn=onset_turn,
                             )
 
-            # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong)
+            # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong & multi-hop loops)
             if not detected_event and self.enable_delegation:
                 valid_del = [t for t in self.delegation_history if t]
                 if len(valid_del) >= 4:
@@ -574,22 +590,27 @@ class DeadlockDetector:
                             loop_onset_turn=onset_turn,
                         )
                     # 3-agent cycle: A -> B -> C -> A -> B -> C
-                    elif len(valid_del) >= 6:
-                        if (
-                            valid_del[-1] == valid_del[-4]
-                            and valid_del[-2] == valid_del[-5]
-                            and valid_del[-3] == valid_del[-6]
-                            and len({valid_del[-1], valid_del[-2], valid_del[-3]}) == 3
-                        ):
-                            onset_turn = max(1, self.turn_counter - 6 + 1)
-                            detected_event = DeadlockEvent(
-                                is_deadlock=True,
-                                pattern_type="delegation_cycle",
-                                repetition_count=2,
-                                details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
-                                signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
-                                loop_onset_turn=onset_turn,
-                            )
+                    elif len(valid_del) >= 6 and valid_del[-3:] == valid_del[-6:-3] and len(set(valid_del[-3:])) == 3:
+                        onset_turn = max(1, self.turn_counter - 6 + 1)
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="delegation_cycle",
+                            repetition_count=2,
+                            details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
+                            signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
+                            loop_onset_turn=onset_turn,
+                        )
+                    # 4-agent cycle: A -> B -> C -> D -> A -> B -> C -> D
+                    elif len(valid_del) >= 8 and valid_del[-4:] == valid_del[-8:-4] and len(set(valid_del[-4:])) == 4:
+                        onset_turn = max(1, self.turn_counter - 8 + 1)
+                        detected_event = DeadlockEvent(
+                            is_deadlock=True,
+                            pattern_type="delegation_cycle",
+                            repetition_count=2,
+                            details=f"Multi-agent delegation cycle detected: 4-agent loop ({valid_del[-4]} -> {valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
+                            signature=f"del_{valid_del[-4]}_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
+                            loop_onset_turn=onset_turn,
+                        )
 
             # 4. OSCILLATION LOOP CHECK
             if not detected_event:
@@ -627,6 +648,24 @@ class DeadlockDetector:
                                 repetition_count=2,
                                 details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C).",
                                 signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
+                                loop_onset_turn=onset_turn,
+                            )
+
+                # 4c. Period-4 Oscillation (A -> B -> C -> D -> A -> B -> C -> D)
+                if not detected_event:
+                    required_turns_p4 = 8
+                    if n >= required_turns_p4:
+                        if (
+                            hist[-4:] == hist[-8:-4]
+                            and len(set(hist[-4:])) == 4
+                        ):
+                            onset_turn = max(1, self.turn_counter - required_turns_p4 + 1)
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="oscillation",
+                                repetition_count=2,
+                                details="4-step oscillating action loop detected (2 cycles: A -> B -> C -> D -> A -> B -> C -> D).",
+                                signature=f"{hist[-4]}_{hist[-3]}_{hist[-2]}_{hist[-1]}",
                                 loop_onset_turn=onset_turn,
                             )
 
