@@ -12,6 +12,7 @@ Guarantees:
 - Thread-safe telemetry with internal reentrant mutex (threading.RLock).
 """
 
+import re
 import copy
 import threading
 from dataclasses import dataclass
@@ -187,3 +188,58 @@ class ContextPruner:
                 res.pruned_messages.append({"role": "user", "content": tombstone_marker})
             res.tombstone = tombstone_marker
             return res
+
+    def prune_dead_searches(
+        self,
+        messages: List[Dict[str, Any]],
+        max_age_turns: int = 6,
+    ) -> PruneResult:
+        """
+        Compresses ancient negative tool observations (e.g. '0 matches found', 'Directory not found')
+        older than `max_age_turns` to prevent low-information noise from polluting the LLM context.
+        Preserves message roles, turn alternation, and schema structure.
+        """
+        with self._lock:
+            if not messages or len(messages) <= max_age_turns:
+                return PruneResult(
+                    pruned_messages=copy.deepcopy(messages),
+                    messages_removed_count=0,
+                    characters_saved=0,
+                    tokens_saved_estimate=0,
+                    tombstone="",
+                )
+
+            cleaned_messages = copy.deepcopy(messages)
+            chars_saved = 0
+            compressed_count = 0
+
+            # Only inspect turns older than max_age_turns
+            boundary = len(cleaned_messages) - max_age_turns
+
+            neg_patterns = (
+                r"\b(?:no matches found|found 0 matches|0 matches found|directory [^\n]+ not found|file not found|no such file or directory)\b"
+            )
+
+            for i in range(1, boundary):
+                msg = cleaned_messages[i]
+                role = msg.get("role")
+                if role in ("tool", "tool_response", "user"):
+                    content = msg.get("content")
+                    if isinstance(content, str) and len(content) > 60:
+                        if re.search(neg_patterns, content, re.IGNORECASE):
+                            first_line = content.strip().splitlines()[0][:80]
+                            tombstone = f"[Search Result: 0 matches found ({first_line})]"
+                            chars_saved += (len(content) - len(tombstone))
+                            msg["content"] = tombstone
+                            compressed_count += 1
+
+            tokens_saved = max(0, int(chars_saved / 4))
+            self.total_tokens_saved += tokens_saved
+
+            return PruneResult(
+                pruned_messages=cleaned_messages,
+                messages_removed_count=compressed_count,
+                characters_saved=chars_saved,
+                tokens_saved_estimate=tokens_saved,
+                tombstone="[Pruned dead searches]",
+            )

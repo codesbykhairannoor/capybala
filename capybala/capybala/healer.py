@@ -77,6 +77,13 @@ class AgentHealer:
                 "2. Inspect the environment prerequisites (running services, network ports, installed packages).\n"
                 "3. Verify that previous modifications were actually applied and saved."
             )
+        elif pattern_type == "exploration_thrashing":
+            base = (
+                "Exploration thrashing detected: excessive read-only search/inspection without state mutation.\n"
+                "1. STOP inspecting files and searching the codebase.\n"
+                "2. Formulate a concrete code modification hypothesis based on information already gathered.\n"
+                "3. Create a minimal reproduction script or apply an initial candidate edit immediately."
+            )
         elif "importerror" in err_lower or "modulenotfounderror" in err_lower:
             base = (
                 "The current import path or dependency is unresolved.\n"

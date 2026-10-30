@@ -52,6 +52,13 @@ POLLING_COMMAND_PREFIXES = (
     "sleep", "ping", "tail -f", "tail -n", "journalctl", "watch"
 )
 
+# Commands that alter environment state or execute code, resetting exploration thrashing
+MUTATING_COMMAND_PATTERNS = (
+    r"\b(?:edit|write|create|replace|patch|rm|del|mkdir|touch|cp|mv)\b",
+    r"\b(?:python|pytest|unittest|node|npm|yarn|cargo|make|go|pip|bash|sh)\b",
+    r"\b(?:git\s+(?:commit|add|checkout|apply|revert|reset)|submit)\b"
+)
+
 # Volatile keys stripped from JSON tool call arguments to prevent hash divergence
 VOLATILE_JSON_KEYS: Set[str] = {
     "timestamp", "time", "ts", "nonce", "request_id", "req_id",
@@ -78,6 +85,8 @@ class DeadlockDetector:
         fuzzy_threshold: float = 0.65,
         enable_fuzzy: bool = True,
         enable_delegation: bool = True,
+        max_exploration_depth: int = 15,
+        enable_exploration_guard: bool = True,
     ):
         self.repetition_threshold = repetition_threshold
         self.oscillation_threshold = oscillation_threshold
@@ -87,6 +96,8 @@ class DeadlockDetector:
         self.fuzzy_threshold = fuzzy_threshold
         self.enable_fuzzy = enable_fuzzy
         self.enable_delegation = enable_delegation
+        self.max_exploration_depth = max_exploration_depth
+        self.enable_exploration_guard = enable_exploration_guard
 
         # Store ONLY compact fixed-size digests (16 bytes each), previews, and bounded buffers
         self.action_history: deque = deque(maxlen=history_window)
@@ -96,6 +107,9 @@ class DeadlockDetector:
         self.raw_actions: deque = deque(maxlen=history_window)
         self.delegation_history: deque = deque(maxlen=history_window)
         self.turn_counter = 0
+
+        # Exploration thrashing tracking
+        self.consecutive_exploration_turns = 0
 
         # Thread-safety lock
         self._lock = threading.RLock()
@@ -325,6 +339,38 @@ class DeadlockDetector:
 
         return False
 
+    def _is_mutating_or_execution(self, action: Optional[str]) -> bool:
+        """
+        Determines if an action modifies state, writes code, or executes verification.
+        Resets exploration thrashing counters.
+        """
+        if not action:
+            return False
+        act_clean = str(action).strip().lower()
+        for pat in MUTATING_COMMAND_PATTERNS:
+            if re.search(pat, act_clean):
+                return True
+        return False
+
+    def _is_active_code_refinement(self, recent_actions: List[str], safe_obs: str) -> bool:
+        """
+        Detects if the agent is actively iterating on code edits (e.g. fixing syntax errors)
+        where consecutive edit payloads differ, avoiding premature false alarms on interactive editor refinement.
+        """
+        if len(recent_actions) < 2:
+            return False
+        # Check if actions are edit/patch/write commands
+        is_edit_cmd = any(re.search(r"^(?:edit|patch|replace|write_file|create)\b", str(a).strip().lower()) for a in recent_actions)
+        if not is_edit_cmd:
+            return False
+        # Check if failure is an editor syntax warning
+        obs_lower = (safe_obs or "").lower()
+        is_syntax_issue = any(k in obs_lower for k in ("syntax error", "syntaxerror", "invalid syntax", "unexpected indent", "new syntax error"))
+        if not is_syntax_issue:
+            return False
+        # Check if payload changed between the last two attempts
+        return recent_actions[-1].strip() != recent_actions[-2].strip()
+
     def _hash(self, text: Optional[str]) -> str:
         return hashlib.sha256(self._normalize_text(text).encode("utf-8")).hexdigest()[:16]
 
@@ -425,34 +471,42 @@ class DeadlockDetector:
             # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
             if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= self.repetition_threshold:
                 recent_raw = list(self.raw_actions)[-self.repetition_threshold:]
-                recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                
+                # Adaptive threshold: if the agent is actively refining code following syntax warnings,
+                # give 1 extra iteration of grace period to prevent false alarms on interactive editing
+                is_refining = self._is_active_code_refinement(recent_raw, safe_obs)
+                effective_threshold = self.repetition_threshold + 1 if is_refining else self.repetition_threshold
 
-                # MUST have active error or failure indications (never flag successful variations)
-                has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
+                if len(self.raw_actions) >= effective_threshold:
+                    eval_raw = list(self.raw_actions)[-effective_threshold:]
+                    eval_errs = list(self.observation_signatures)[-effective_threshold:]
 
-                if has_error:
-                    # Check if all actions are variants of the anchor action (recent_raw[0])
-                    # OR all adjacent pairs have high fuzzy similarity
-                    is_anchor_loop = all(
-                        self._calculate_fuzzy_similarity(recent_raw[0], recent_raw[i]) >= self.fuzzy_threshold
-                        for i in range(1, len(recent_raw))
-                    )
-                    is_pairwise_loop = all(
-                        self._calculate_fuzzy_similarity(recent_raw[i], recent_raw[i + 1]) >= self.fuzzy_threshold
-                        for i in range(len(recent_raw) - 1)
-                    )
+                    # MUST have active error or failure indications (never flag successful variations)
+                    has_error = any(e is not None for e in eval_errs) or self._has_failure_indicator(safe_obs)
 
-                    if is_anchor_loop or is_pairwise_loop:
-                        onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
-                        preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
-                        detected_event = DeadlockEvent(
-                            is_deadlock=True,
-                            pattern_type="fuzzy_repetition",
-                            repetition_count=self.repetition_threshold,
-                            details=f"Polymorphic command loop ({self.repetition_threshold}x variants with persistent failure): '{preview}'",
-                            signature=f"fuzzy_{self._hash(recent_raw[-1])}",
-                            loop_onset_turn=onset_turn,
+                    if has_error:
+                        # Check if all actions are variants of the anchor action (eval_raw[0])
+                        # OR all adjacent pairs have high fuzzy similarity
+                        is_anchor_loop = all(
+                            self._calculate_fuzzy_similarity(eval_raw[0], eval_raw[i]) >= self.fuzzy_threshold
+                            for i in range(1, len(eval_raw))
                         )
+                        is_pairwise_loop = all(
+                            self._calculate_fuzzy_similarity(eval_raw[i], eval_raw[i + 1]) >= self.fuzzy_threshold
+                            for i in range(len(eval_raw) - 1)
+                        )
+
+                        if is_anchor_loop or is_pairwise_loop:
+                            onset_turn = max(1, self.turn_counter - effective_threshold + 1)
+                            preview = self.action_previews[-1] if self.action_previews else raw_action[:60]
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="fuzzy_repetition",
+                                repetition_count=effective_threshold,
+                                details=f"Polymorphic command loop ({effective_threshold}x variants with persistent failure): '{preview}'",
+                                signature=f"fuzzy_{self._hash(eval_raw[-1])}",
+                                loop_onset_turn=onset_turn,
+                            )
 
             # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong)
             if not detected_event and self.enable_delegation:
@@ -543,21 +597,45 @@ class DeadlockDetector:
 
             # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
             if not detected_event:
-                if len(self.obs_hash_history) >= self.repetition_threshold:
-                    recent_obs_hashes = list(self.obs_hash_history)[-self.repetition_threshold:]
+                is_refining = self._is_active_code_refinement(list(self.raw_actions)[-self.repetition_threshold:], safe_obs)
+                eff_obs_thresh = self.repetition_threshold + 1 if is_refining else self.repetition_threshold
+
+                if len(self.obs_hash_history) >= eff_obs_thresh:
+                    recent_obs_hashes = list(self.obs_hash_history)[-eff_obs_thresh:]
                     if len(set(recent_obs_hashes)) == 1 and safe_obs.strip():
-                        recent_errs = list(self.observation_signatures)[-self.repetition_threshold:]
+                        recent_errs = list(self.observation_signatures)[-eff_obs_thresh:]
                         has_error = any(e is not None for e in recent_errs) or self._has_failure_indicator(safe_obs)
                         if has_error:
-                            onset_turn = max(1, self.turn_counter - self.repetition_threshold + 1)
+                            onset_turn = max(1, self.turn_counter - eff_obs_thresh + 1)
                             detected_event = DeadlockEvent(
                                 is_deadlock=True,
                                 pattern_type="output_stagnation",
-                                repetition_count=self.repetition_threshold,
-                                details=f"Observation stagnation deadlock: Environment produced identical failing output {self.repetition_threshold} times in a row.",
+                                repetition_count=eff_obs_thresh,
+                                details=f"Observation stagnation deadlock: Environment produced identical failing output {eff_obs_thresh} times in a row.",
                                 signature=recent_obs_hashes[-1],
                                 loop_onset_turn=onset_turn,
                             )
+
+            # 7. EXPLORATION THRASHING CHECK (Excessive read-only queries without code mutation/testing)
+            if self.enable_exploration_guard:
+                if self._is_mutating_or_execution(raw_action):
+                    self.consecutive_exploration_turns = 0
+                else:
+                    self.consecutive_exploration_turns += 1
+
+                if not detected_event and self.consecutive_exploration_turns >= self.max_exploration_depth:
+                    onset_turn = max(1, self.turn_counter - self.consecutive_exploration_turns + 1)
+                    detected_event = DeadlockEvent(
+                        is_deadlock=True,
+                        pattern_type="exploration_thrashing",
+                        repetition_count=self.consecutive_exploration_turns,
+                        details=(
+                            f"Exploration thrashing detected: Agent executed {self.consecutive_exploration_turns} "
+                            f"consecutive read-only search/inspect operations without modifying code or executing verification."
+                        ),
+                        signature=f"thrash_{self.consecutive_exploration_turns}",
+                        loop_onset_turn=onset_turn,
+                    )
 
             # CIRCUIT BREAKER & PROGRESSION EVALUATION
             if detected_event and detected_event.is_deadlock:
@@ -590,6 +668,7 @@ class DeadlockDetector:
             self.raw_actions.clear()
             self.delegation_history.clear()
             self.turn_counter = 0
+            self.consecutive_exploration_turns = 0
             self.consecutive_deadlocks = 0
             self.total_deadlocks_detected = 0
             self.healthy_turns_since_deadlock = 0

@@ -46,6 +46,8 @@ def heal(
     circuit_breaker: bool = True,
     raise_on_circuit_break: bool = False,
     fuzzy_threshold: float = 0.65,
+    max_exploration_depth: int = 15,
+    enable_exploration_guard: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     1-Line Functional Healer.
@@ -150,6 +152,8 @@ def heal(
         max_interventions=max_interventions,
         circuit_breaker_enabled=circuit_breaker,
         fuzzy_threshold=fuzzy_threshold,
+        max_exploration_depth=max_exploration_depth,
+        enable_exploration_guard=enable_exploration_guard,
     )
     last_action = ""
     last_obs = ""
