@@ -83,7 +83,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 @app.get("/", response_class=HTMLResponse)
 async def serve_index(request: Request):
     """Renders the modular, developer-grade UI template."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html", context={"request": request})
 
 
 @app.get("/api/presets")
