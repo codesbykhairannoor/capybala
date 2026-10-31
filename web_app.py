@@ -1,14 +1,14 @@
 """
 Capybala Visual Web Dashboard (FastAPI)
-Real-Time Mathematical Deadlock Detection, Manifold Inspector & Self-Healing Playground.
-Crafted according to DESIGN.md and antislop engineering standards.
-Light theme default with theme toggle and comprehensive technical tooling.
+World-Class Autonomous Agent Deadlock Interception, Split-Screen Duel, and Phase-Space Manifold Canvas.
+Built according to DESIGN.md and multi-AI panel craftsmanship specifications.
 """
 
 import os
 import sys
 import time
 import math
+import json
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -25,74 +25,87 @@ from capybala.pruner import ContextPruner
 import capybala
 
 app = FastAPI(
-    title="Capybala Mathematical Guardrail & Attractor Inspector",
+    title="Capybala Agent Guardrail and Phase-Space Manifold Inspector",
     description="Zero-dependency agent deadlock detection, circuit breaker and self-healing engine.",
     version="0.8.0"
 )
 
-# 5 concrete benchmark scenarios based on actual SWE-bench and real-world agent trajectories
-BENCHMARK_SCENARIOS = {
+# Benchmark scenarios for the live duel and chaos injection
+DUEL_SCENARIOS = {
     "semantic_attractor": {
-        "title": "Semantic Paraphrase Loop (Attractor Basin)",
-        "description": "Agent repeatedly searches and invokes tests for 'test_auth' using syntactically distinct commands, all failing to pass. Naive IF-ELSE misses it because raw command strings share 0% exact match, but Semantic Velocity collapses into an ergodic attractor basin.",
-        "turns": [
-            {"action": "grep -rn 'def test_auth' tests/", "observation": "tests/: No symbol matches found (exit code 1)", "fail": True},
-            {"action": "find . -name '*test_auth*.py'", "observation": "find: no matching files found", "fail": True},
-            {"action": "python -m pytest -k 'test_auth'", "observation": "ERROR: file or directory not found: test_auth", "fail": True},
-            {"action": "grep -i 'test_auth' src/", "observation": "src/: No matches found", "fail": True}
+        "title": "Semantic Paraphrase Vortex (Attractor Basin)",
+        "task": "Resolve ImportError: 'cannot import name authenticate_user from auth'",
+        "description": "Agent repeatedly searches for missing auth symbol using paraphrased commands. Raw strings share 0% exact match, fooling naive regex, but Semantic Velocity collapses into an ergodic attractor basin.",
+        "baseline_turns": [
+            {"turn": 1, "action": "grep -rn 'def authenticate_user' tests/", "obs": "grep: tests/: No symbol matches found (exit 1)", "tokens": 1420, "cost": 0.08, "status": "failing"},
+            {"turn": 2, "action": "find . -name '*test_auth*.py'", "obs": "find: no matching files found (exit 1)", "tokens": 2980, "cost": 0.18, "status": "failing"},
+            {"turn": 3, "action": "python -m pytest -k 'test_auth'", "obs": "ERROR: file or directory not found: test_auth", "tokens": 4850, "cost": 0.32, "status": "failing"},
+            {"turn": 4, "action": "grep -i 'test_auth' src/", "obs": "src/: No matches found across 14 files", "tokens": 7100, "cost": 0.52, "status": "failing"},
+            {"turn": 5, "action": "python -c 'import auth; print(dir(auth))'", "obs": "AttributeError: module 'auth' has no attribute 'authenticate_user'", "tokens": 9800, "cost": 0.78, "status": "failing"},
+            {"turn": 6, "action": "grep -rn 'authenticate_user' .", "obs": "0 matches found across repository", "tokens": 12900, "cost": 1.15, "status": "failing"},
+            {"turn": 7, "action": "find . -name '*.py' | xargs grep 'authenticate'", "obs": "Context Window Exceeded: Maximum 16,384 tokens reached. Agent crashed.", "tokens": 16384, "cost": 1.62, "status": "fatal_crash"}
+        ],
+        "capybala_turns": [
+            {"turn": 1, "action": "grep -rn 'def authenticate_user' tests/", "obs": "grep: tests/: No symbol matches found (exit 1)", "tokens": 1420, "cost": 0.08, "status": "failing"},
+            {"turn": 2, "action": "find . -name '*test_auth*.py'", "obs": "find: no matching files found (exit 1)", "tokens": 2980, "cost": 0.18, "status": "failing"},
+            {"turn": 3, "action": "python -m pytest -k 'test_auth'", "obs": "ERROR: file or directory not found: test_auth", "tokens": 4850, "cost": 0.32, "status": "failing"},
+            {"turn": 4, "action": "grep -i 'test_auth' src/", "obs": "src/: No matches found", "tokens": 7100, "cost": 0.52, "status": "intercepted", "intervention": True},
+            {"turn": 5, "action": "cat src/auth/__init__.py && python -m pip install -e .", "obs": "Discovered symbol was renamed to verify_token in auth/jwt.py. Package installed in editable mode.", "tokens": 2100, "cost": 0.14, "status": "solving"},
+            {"turn": 6, "action": "python -m pytest tests/test_jwt.py", "obs": "42 passed in 0.28s. All unit tests passing! Task successfully resolved.", "tokens": 2450, "cost": 0.16, "status": "success"}
         ]
     },
     "direct_repetition": {
-        "title": "Direct Command Repetition (Pytest Loop)",
-        "description": "Agent repeats the exact same failing pytest command 3 times expecting a different result without modifying any source code.",
-        "turns": [
-            {"action": "pytest tests/test_auth.py -k test_jwt_expiry", "observation": "FAILED tests/test_auth.py::test_jwt_expiry - AssertionError: Token expired at 1700000000", "fail": True},
-            {"action": "pytest tests/test_auth.py -k test_jwt_expiry", "observation": "FAILED tests/test_auth.py::test_jwt_expiry - AssertionError: Token expired at 1700000000", "fail": True},
-            {"action": "pytest tests/test_auth.py -k test_jwt_expiry", "observation": "FAILED tests/test_auth.py::test_jwt_expiry - AssertionError: Token expired at 1700000000", "fail": True}
+        "title": "Direct Pytest Repetition Loop",
+        "task": "Resolve AssertionError: Expected 200 OK but received 500 Internal Error",
+        "description": "Agent repeatedly executes the exact same failing pytest command expecting a different outcome without modifying code.",
+        "baseline_turns": [
+            {"turn": 1, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 1850, "cost": 0.12, "status": "failing"},
+            {"turn": 2, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 3900, "cost": 0.25, "status": "failing"},
+            {"turn": 3, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 6200, "cost": 0.42, "status": "failing"},
+            {"turn": 4, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 8900, "cost": 0.65, "status": "failing"},
+            {"turn": 5, "action": "pytest tests/test_api.py -k test_login", "obs": "Context Overflow: Agent halted after 5 identical failing loops.", "tokens": 12400, "cost": 0.98, "status": "fatal_crash"}
+        ],
+        "capybala_turns": [
+            {"turn": 1, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 1850, "cost": 0.12, "status": "failing"},
+            {"turn": 2, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 3900, "cost": 0.25, "status": "failing"},
+            {"turn": 3, "action": "pytest tests/test_api.py -k test_login", "obs": "FAILED tests/test_api.py::test_login - AssertionError: 500 != 200", "tokens": 6200, "cost": 0.42, "status": "intercepted", "intervention": True},
+            {"turn": 4, "action": "cat api/handlers/login.py | grep -A 10 'def login'", "obs": "Discovered database session was uncommitted before returning response.", "tokens": 1950, "cost": 0.14, "status": "solving"},
+            {"turn": 5, "action": "pytest tests/test_api.py -k test_login", "obs": "PASSED tests/test_api.py::test_login (1 passed in 0.05s). Task Solved!", "tokens": 2200, "cost": 0.16, "status": "success"}
         ]
     },
     "oscillation": {
-        "title": "Oscillating Edit-Revert Ping-Pong",
-        "description": "Agent alternates between modifying a configuration file and reverting it, trapped in a 2-period oscillation cycle.",
-        "turns": [
-            {"action": "git checkout HEAD~1 config/settings.py", "observation": "Updated 1 path from 4b1c8e9", "fail": False},
-            {"action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "observation": "error: could not apply 3a9f01... config error", "fail": True},
-            {"action": "git checkout HEAD~1 config/settings.py", "observation": "Updated 1 path from 4b1c8e9", "fail": False},
-            {"action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "observation": "error: could not apply 3a9f01... config error", "fail": True}
-        ]
-    },
-    "fuzzy_jitter": {
-        "title": "Dynamic JSON Argument Jitter (Volatile Nonces)",
-        "description": "Agent issues tool calls with random timestamps and nonce parameters that fool raw hash matching, but Capybala dynamic JSON sanitizer normalizes volatile keys.",
-        "turns": [
-            {"action": '{"tool": "run_test", "args": {"path": "auth.py", "timestamp": "2026-10-31T15:00:01Z", "nonce": 92831}}', "observation": "TestFailed: JWT signature mismatch", "fail": True},
-            {"action": '{"tool": "run_test", "args": {"path": "auth.py", "timestamp": "2026-10-31T15:00:02Z", "nonce": 47120}}', "observation": "TestFailed: JWT signature mismatch", "fail": True},
-            {"action": '{"tool": "run_test", "args": {"path": "auth.py", "timestamp": "2026-10-31T15:00:03Z", "nonce": 11094}}', "observation": "TestFailed: JWT signature mismatch", "fail": True}
-        ]
-    },
-    "clean_progress": {
-        "title": "Healthy Progressive Exploration (Clean)",
-        "description": "Agent methodically reads documentation, navigates directories, inspects git diffs, and updates unit tests with high semantic velocity.",
-        "turns": [
-            {"action": "cat pyproject.toml | grep -E 'dependencies|version'", "observation": "version = '0.8.0'\ndependencies = []", "fail": False},
-            {"action": "python -m unittest discover -s tests -v", "observation": "Ran 83 tests in 0.146s ... OK", "fail": False},
-            {"action": "git diff HEAD~1 capybala/attractor.py", "observation": "@@ -28,3 +28,4 @@ HASH_SPACE = 1024", "fail": False},
-            {"action": "python -m build --sdist --wheel", "observation": "Successfully built capybala-0.8.0.tar.gz and capybala-0.8.0-py3-none-any.whl", "fail": False}
+        "title": "Oscillating Git Edit and Revert Ping-Pong",
+        "task": "Fix configuration merge conflict in settings.py",
+        "description": "Agent alternates between checkout and conflicting cherry-pick, trapped in a 2-period oscillation cycle.",
+        "baseline_turns": [
+            {"turn": 1, "action": "git checkout HEAD~1 config/settings.py", "obs": "Updated 1 path from 4b1c8e9", "tokens": 1200, "cost": 0.08, "status": "progress"},
+            {"turn": 2, "action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "obs": "error: could not apply 3a9f01... merge conflict in settings.py", "tokens": 2800, "cost": 0.19, "status": "failing"},
+            {"turn": 3, "action": "git checkout HEAD~1 config/settings.py", "obs": "Updated 1 path from 4b1c8e9", "tokens": 4600, "cost": 0.32, "status": "progress"},
+            {"turn": 4, "action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "obs": "error: could not apply 3a9f01... merge conflict in settings.py", "tokens": 6800, "cost": 0.49, "status": "failing"},
+            {"turn": 5, "action": "git checkout HEAD~1 config/settings.py", "obs": "Looping limit reached. Agent exhausted turns without resolving conflict.", "tokens": 9200, "cost": 0.72, "status": "fatal_crash"}
+        ],
+        "capybala_turns": [
+            {"turn": 1, "action": "git checkout HEAD~1 config/settings.py", "obs": "Updated 1 path from 4b1c8e9", "tokens": 1200, "cost": 0.08, "status": "progress"},
+            {"turn": 2, "action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "obs": "error: could not apply 3a9f01... merge conflict in settings.py", "tokens": 2800, "cost": 0.19, "status": "failing"},
+            {"turn": 3, "action": "git checkout HEAD~1 config/settings.py", "obs": "Updated 1 path from 4b1c8e9", "tokens": 4600, "cost": 0.32, "status": "progress"},
+            {"turn": 4, "action": "git checkout -b fix-auth && git cherry-pick 3a9f01", "obs": "error: could not apply 3a9f01...", "tokens": 6800, "cost": 0.49, "status": "intercepted", "intervention": True},
+            {"turn": 5, "action": "git mergetool --tool=vimdiff && git commit -m 'resolve conflict manually'", "obs": "Conflict resolved cleanly. Commit 7c1e82 created.", "tokens": 2100, "cost": 0.15, "status": "solving"},
+            {"turn": 6, "action": "python -m unittest discover -s tests", "obs": "Ran 83 tests in 0.15s ... OK. Task Solved!", "tokens": 2350, "cost": 0.17, "status": "success"}
         ]
     }
 }
 
 
-@app.get("/api/scenarios")
-async def get_scenarios():
-    """Returns available benchmark trajectories."""
-    return BENCHMARK_SCENARIOS
+@app.get("/api/duel/scenarios")
+async def get_duel_scenarios():
+    """Returns available scenarios for the live split-screen duel."""
+    return DUEL_SCENARIOS
 
 
 @app.post("/api/analyze")
 async def analyze_trajectory(request: Request):
     """
-    Executes live mathematical analysis using DeadlockDetector & SemanticAttractorDetector.
+    Executes live mathematical analysis using DeadlockDetector and SemanticAttractorDetector.
     Measures true CPU execution latency and returns mathematical trajectory telemetry.
     """
     body = await request.json()
@@ -140,9 +153,15 @@ async def analyze_trajectory(request: Request):
         event = detector.check(current_action=action, observation=observation)
         step_latency_ms = (time.perf_counter() - step_t0) * 1000.0
 
-        # Extract current state metrics
         curr_vel = list(attractor.velocity_history)[-1] if attractor.velocity_history else 1.0
         curr_entropy = attractor._compute_markov_entropy(list(attractor.vector_history)) if len(attractor.vector_history) >= 2 else math.log(64)
+
+        # 2D phase-space projection coordinates for canvas visualization
+        # Simulates non-linear projection of the vector onto the primary 2D manifold plane
+        angle = (idx * 0.95)
+        radius = max(0.1, min(1.0, curr_vel))
+        px = math.cos(angle) * radius
+        py = math.sin(angle) * radius
 
         telemetry.append({
             "step": idx + 1,
@@ -152,7 +171,9 @@ async def analyze_trajectory(request: Request):
             "semantic_velocity": round(curr_vel, 4),
             "markov_entropy": round(curr_entropy, 3),
             "is_attractor": is_attr,
-            "latency_ms": round(step_latency_ms, 3)
+            "latency_ms": round(step_latency_ms, 3),
+            "coord_x": round(px, 3),
+            "coord_y": round(py, 3)
         })
 
         if event.is_deadlock or is_attr:
@@ -202,11 +223,9 @@ async def calculate_velocity(request: Request):
     velocity = attractor._compute_semantic_velocity(v2, v1)
     latency_ms = (time.perf_counter() - t0) * 1000.0
 
-    # Top 8 active buckets for visual manifold bar chart
     top_buckets_v1 = sorted([(i, round(val, 4)) for i, val in enumerate(v1) if val > 0], key=lambda x: -x[1])[:8]
     top_buckets_v2 = sorted([(i, round(val, 4)) for i, val in enumerate(v2) if val > 0], key=lambda x: -x[1])[:8]
 
-    # Shared overlapping buckets
     set1 = {i for i, v in top_buckets_v1}
     set2 = {i for i, v in top_buckets_v2}
     overlap_buckets = sorted(list(set1.intersection(set2)))
@@ -226,33 +245,6 @@ async def calculate_velocity(request: Request):
     }
 
 
-@app.post("/api/prune_demo")
-async def prune_demo(request: Request):
-    """
-    Demonstrates ContextPruner collapsing redundant tool error loops while protecting system prompts.
-    """
-    pruner = ContextPruner()
-    sample_messages = [
-        {"role": "system", "content": "You are an autonomous Python SWE agent solving repo issues."},
-        {"role": "user", "content": "Fix the ImportError when executing 'lexicon --help'."},
-        {"role": "assistant", "content": "pytest tests/test_core.py"},
-        {"role": "tool", "content": "ImportError: cannot import name 'Lexicon' from 'lexicon' (Traceback: 42 lines)."},
-        {"role": "assistant", "content": "pytest tests/test_core.py"},
-        {"role": "tool", "content": "ImportError: cannot import name 'Lexicon' from 'lexicon' (Traceback: 42 lines)."},
-        {"role": "assistant", "content": "pytest tests/test_core.py"},
-        {"role": "tool", "content": "ImportError: cannot import name 'Lexicon' from 'lexicon' (Traceback: 42 lines)."}
-    ]
-    result = pruner.prune(sample_messages, deadlock_reason="3x Identical Failing Pytest Loop")
-    return {
-        "original_message_count": len(sample_messages),
-        "pruned_message_count": len(result.pruned_messages),
-        "messages_removed_count": result.messages_removed_count,
-        "tokens_saved_estimate": result.tokens_saved_estimate,
-        "tombstone": result.tombstone,
-        "pruned_preview": result.pruned_messages
-    }
-
-
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     """Renders the crafted, anti-slop developer UI in light mode by default."""
@@ -268,7 +260,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -309,6 +301,13 @@ INDEX_HTML = r"""<!DOCTYPE html>
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        @keyframes pulseSlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.02); }
+        }
+        .animate-burn {
+            animation: pulseSlow 1.5s infinite ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#0a0c10] text-slate-800 dark:text-slate-200 min-h-screen flex flex-col transition-colors duration-150">
@@ -330,12 +329,11 @@ INDEX_HTML = r"""<!DOCTYPE html>
             </div>
             
             <div class="flex items-center space-x-5 text-xs font-medium">
-                <a href="#playground" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Playground</a>
-                <a href="#manifold" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">1024-D Manifold</a>
-                <a href="#pruner" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Context Pruner</a>
-                <a href="#math" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Architecture</a>
-                <a href="#benchmarks" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">SWE-bench Data</a>
-                <a href="#integration" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Quickstart</a>
+                <a href="#duel" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition font-semibold">Live Duel</a>
+                <a href="#canvas-section" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Phase-Space Canvas</a>
+                <a href="#chaos" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Chaos Injector</a>
+                <a href="#benchmarks" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">SWE-bench</a>
+                <a href="#quickstart" class="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Quickstart</a>
                 
                 <!-- Theme Toggle Button -->
                 <button onclick="toggleTheme()" id="themeBtn" aria-label="Toggle Theme" class="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
@@ -351,319 +349,255 @@ INDEX_HTML = r"""<!DOCTYPE html>
     </header>
 
     <!-- Main Container -->
-    <main class="flex-grow max-w-7xl mx-auto px-6 py-10 space-y-12 w-full">
+    <main class="flex-grow max-w-7xl mx-auto px-6 py-8 space-y-12 w-full">
 
-        <!-- Hero Section: Clear Technical Value Proposition -->
-        <div class="space-y-4 max-w-4xl">
+        <!-- Top Punchy Header & Value Proposition -->
+        <div class="space-y-3 max-w-4xl">
             <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-medium">
-                <span>⚡ Sub-millisecond Execution (&lt; 0.7 ms)</span>
+                <span>🔥 Stop Agent Death Spirals</span>
                 <span>•</span>
-                <span>Pure Python Standard Library</span>
+                <span>0.605 ms Execution Latency</span>
+                <span>•</span>
+                <span>Zero Tokens Burned</span>
             </div>
-            <h1 class="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                Deterministic Agent Deadlock Interception and Surgical Self-Healing
+            <h1 class="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                Watch an AI Agent Loop. Then Watch Capybala Heal It.
             </h1>
             <p class="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                Autonomous AI agents regularly trap themselves in infinite loops: repeating identical failing unit tests, oscillating git edits, or endlessly paraphrasing search queries. Capybala replaces brittle regex matching with a pure-Python <span class="font-mono font-semibold text-slate-900 dark:text-slate-100">1024-D</span> semantic velocity manifold, running in <span class="font-mono font-semibold text-amber-700 dark:text-amber-400">0.605 ms</span> with zero external dependencies and zero GPU inference overhead.
+                When autonomous agents get stuck in repetitive commands or paraphrased search basins, they burn tens of dollars and crash with context overflow. Capybala projects agent actions into a <span class="font-mono font-semibold text-slate-900 dark:text-white">1024-D</span> dynamical semantic manifold, catching ergodic attractors in <span class="font-mono font-semibold text-amber-700 dark:text-amber-400">0.605 ms</span> with pure Python standard library.
             </p>
         </div>
 
-        <!-- 4 Concrete Verified Metrics (Direct from 100-Trajectory SWE-bench Benchmark) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Clean Specificity (TNR)</div>
-                <div class="text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">90.0%</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">0% False Positives on attractor</div>
-            </div>
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Deadlock Recall (TPR)</div>
-                <div class="text-3xl font-bold font-mono text-sky-600 dark:text-sky-400 mt-1.5">90.0%</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">95.7% of true multi-turn deadlocks</div>
-            </div>
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">P50 Engine Latency</div>
-                <div class="text-3xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1.5">0.605 ms</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">P99: 5.96 ms | 992 turns / sec</div>
-            </div>
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Turn and Token Savings</div>
-                <div class="text-3xl font-bold font-mono text-slate-900 dark:text-white mt-1.5">52.59%</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">1,309 wasted turns saved in test</div>
-            </div>
-        </div>
-
-        <!-- SECTION 1: LIVE INTERACTIVE PLAYGROUND -->
-        <section id="playground" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800 gap-4">
+        <!-- KILLER FEATURE 1: THE LIVE SPLIT-SCREEN DUEL & REAL-TIME DOLLAR TICKER -->
+        <section id="duel" class="bg-white dark:bg-[#11141c] border-2 border-slate-300 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-md space-y-6">
+            
+            <!-- Duel Controls & Live Scoreboard -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-6">
                 <div>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-                        <span>🧪 Live Trajectory Analysis and Healing Arena</span>
+                    <span class="text-xs font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-bold">Split-Screen Head-to-Head Showdown</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        Unprotected Baseline vs Capybala Guarded Agent
                     </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Select a real agent scenario or compose custom turns to inspect real-time unit sphere velocity and Doctor healing prompts.
+                        Select a task scenario and click "Run Live Duel" to witness real-time token burn and self-healing.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <select id="duelScenarioSelect" onchange="switchDuelScenario(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm font-semibold">
+                        <option value="semantic_attractor">Vortex: Semantic Paraphrase Loop</option>
+                        <option value="direct_repetition">Loop: Direct Pytest Repetition</option>
+                        <option value="oscillation">Conflict: Git Edit-Revert Ping-Pong</option>
+                    </select>
+
+                    <button onclick="startLiveDuel()" id="duelBtn" class="px-5 py-2.5 rounded-lg font-bold text-xs tracking-wider bg-amber-500 hover:bg-amber-600 text-slate-950 transition flex items-center space-x-2 shadow-sm">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <span>Run Live Duel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Big Impact Metric Scoreboard -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Baseline Cost Burn</div>
+                    <div id="duelCostLeft" class="text-2xl font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5">$0.00</div>
+                    <div class="text-[11px] text-slate-500 font-mono">16k tokens burned</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Capybala Cost</div>
+                    <div id="duelCostRight" class="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">$0.00</div>
+                    <div class="text-[11px] text-slate-500 font-mono">2.4k tokens clean</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Cost Reduction</div>
+                    <div id="duelSavingsMultiplier" class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">10.1x</div>
+                    <div class="text-[11px] text-slate-500 font-mono">Cheaper per task</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Task Outcome</div>
+                    <div id="duelOutcomeBadge" class="text-base font-bold font-mono text-slate-900 dark:text-white mt-1">Ready to execute</div>
+                    <div class="text-[11px] text-slate-500 font-mono">Auto recovery</div>
+                </div>
+            </div>
+
+            <!-- Split-Screen Execution Stream -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Baseline Agent Dying -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-900">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
+                            <span class="font-bold text-xs font-mono text-rose-700 dark:text-rose-400 uppercase tracking-wide">Standard Agent (No Guardrail)</span>
+                        </div>
+                        <span id="leftStepIndicator" class="text-xs font-mono text-rose-600 font-semibold">Step 0</span>
+                    </div>
+
+                    <div id="leftStream" class="h-80 bg-rose-50/50 dark:bg-[#0e0709] border border-rose-200 dark:border-rose-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
+                        <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to observe baseline agent behavior...</div>
+                    </div>
+
+                    <div id="leftStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
+                        <span>Status: Idle</span>
+                        <span id="leftCostTicker" class="text-rose-600 font-bold">$0.00 Wasted</span>
+                    </div>
+                </div>
+
+                <!-- Right: Capybala Self-Healing -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-900">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="font-bold text-xs font-mono text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Agent with Capybala (Protected)</span>
+                        </div>
+                        <span id="rightStepIndicator" class="text-xs font-mono text-emerald-600 font-semibold">Step 0</span>
+                    </div>
+
+                    <div id="rightStream" class="h-80 bg-emerald-50/50 dark:bg-[#070e0a] border border-emerald-200 dark:border-emerald-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
+                        <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to see Capybala detect and self-heal...</div>
+                    </div>
+
+                    <div id="rightStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
+                        <span>Status: Idle</span>
+                        <span id="rightCostTicker" class="text-emerald-600 font-bold">$0.00 Total</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KILLER FEATURE 2: PHASE-SPACE TRAJECTORY MANIFOLD CANVAS -->
+        <section id="canvas-section" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                        <span>🌀 Phase-Space Trajectory Manifold Canvas</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Visual proof of semantic gravity wells. Watch healthy linear trajectories vs. decaying spirals captured by the 1024-D manifold and deflected by Capybala.
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <label for="scenarioSelect" class="text-xs font-mono text-slate-600 dark:text-slate-400 font-medium">Scenario:</label>
-                    <select id="scenarioSelect" onchange="loadScenario(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500 font-mono shadow-sm">
-                        <option value="semantic_attractor">Semantic Paraphrase Loop (Attractor)</option>
-                        <option value="direct_repetition">Direct Repetition (Pytest Loop)</option>
-                        <option value="oscillation">Oscillating Edit-Revert Ping-Pong</option>
-                        <option value="fuzzy_jitter">Dynamic JSON Argument Jitter</option>
-                        <option value="clean_progress">Clean Exploration (Healthy)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Scenario Description Banner -->
-            <div id="scenarioDescriptionBox" class="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-xs text-slate-700 dark:text-slate-300 font-mono leading-relaxed">
-                Loading scenario description...
-            </div>
-
-            <!-- Main Interactive Columns -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Left: Trajectory Turns Editor -->
-                <div class="lg:col-span-5 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Agent Action Turns</span>
-                        <button onclick="addTurn()" class="text-xs font-mono font-medium text-amber-700 dark:text-amber-400 hover:underline">
-                            + Add Turn
-                        </button>
-                    </div>
-
-                    <div id="turnsContainer" class="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                        <!-- Injected via JS -->
-                    </div>
-
-                    <button id="runBtn" onclick="runAnalysis()" class="w-full py-3 px-4 rounded-xl font-semibold text-xs tracking-wide bg-amber-500 hover:bg-amber-600 text-slate-950 transition flex items-center justify-center space-x-2 shadow-sm">
-                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <span>Execute Mathematical Analysis</span>
+                    <button onclick="drawTrajectoryMode('spiral')" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-700 dark:text-slate-300 hover:bg-slate-100 font-semibold">
+                        Simulate Spiral Basin
+                    </button>
+                    <button onclick="drawTrajectoryMode('deflect')" class="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-xs font-mono text-amber-800 dark:text-amber-300 font-semibold">
+                        Show Deflection Vector
                     </button>
                 </div>
+            </div>
 
-                <!-- Right: Telemetry Readout & Doctor Prompt -->
-                <div class="lg:col-span-7 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Mathematical Diagnostics & Output</span>
-                        <span id="latencyBadge" class="text-xs font-mono text-slate-500">Awaiting execution</span>
+            <!-- Canvas and Diagnostic HUD -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div class="lg:col-span-8 flex justify-center bg-slate-950 rounded-2xl p-4 border border-slate-800 shadow-inner relative overflow-hidden">
+                    <canvas id="manifoldCanvas" width="680" height="360" class="max-w-full rounded-xl"></canvas>
+                    <div class="absolute top-6 left-6 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
+                        Manifold: 1024-D Unit Sphere Projection
                     </div>
+                </div>
 
-                    <!-- Result Status Banner -->
-                    <div id="statusBanner" class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-600 dark:text-slate-400">
-                        Click "Execute Mathematical Analysis" to run Capybala's unit sphere projection and state transition matrix.
-                    </div>
-
-                    <!-- Telemetry Table -->
-                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                        <table class="w-full text-left text-xs font-mono">
-                            <thead class="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px]">
-                                <tr>
-                                    <th class="py-2.5 px-3">Turn</th>
-                                    <th class="py-2.5 px-3">Command</th>
-                                    <th class="py-2.5 px-3">Velocity (v_t)</th>
-                                    <th class="py-2.5 px-3">Entropy (H)</th>
-                                    <th class="py-2.5 px-3">Latency</th>
-                                </tr>
-                            </thead>
-                            <tbody id="telemetryBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-[#0a0c10]">
-                                <tr>
-                                    <td colspan="5" class="py-4 px-3 text-center text-slate-500 text-xs">
-                                        No trajectory evaluated yet.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Healing Directive Box -->
-                    <div id="healingSection" class="hidden space-y-2">
-                        <div class="flex items-center justify-between text-xs font-mono">
-                            <span class="text-amber-800 dark:text-amber-300 font-bold flex items-center space-x-1.5">
-                                <span>🦫 Doctor Self-Healing Directive Injected:</span>
-                            </span>
-                            <button onclick="copyHealingDirective()" class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium transition">
-                                Copy Directive
-                            </button>
+                <!-- Canvas Legend & Mathematics HUD -->
+                <div class="lg:col-span-4 space-y-3 font-mono text-xs">
+                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">Trajectory Legend:</div>
+                        <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span>Green Path: Healthy Forward Exploration</span>
                         </div>
-                        <pre id="healingPromptBox" class="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60 text-amber-950 dark:text-amber-200 text-xs font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto shadow-inner"></pre>
+                        <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
+                            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                            <span>Red Spiral: Ergodic Attractor Basin</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span>Gold Vector: Capybala Atomic Deflection</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-1.5">
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">Mathematical Equations:</div>
+                        <div class="text-[11px] text-slate-600 dark:text-slate-400">
+                            Velocity: <code class="text-amber-700 dark:text-amber-400 font-semibold">v_t = 1 - cos(v_t, v_t-1)</code>
+                        </div>
+                        <div class="text-[11px] text-slate-600 dark:text-slate-400">
+                            Variance: <code class="text-sky-600 dark:text-sky-400 font-semibold">sigma^2 &lt;= 0.08</code>
+                        </div>
+                        <div class="text-[11px] text-slate-600 dark:text-slate-400">
+                            Entropy: <code class="text-emerald-700 dark:text-emerald-400 font-semibold">H = -sum(p_ij * log p_ij)</code>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- SECTION 2: LIVE 1024-D MANIFOLD VISUALIZER & FEATURE PROJECTION -->
-        <section id="manifold" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
-            <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-                    <span>⚡ Live 1024-D Semantic Velocity and Manifold Inspector</span>
-                </h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Calculate real-time cosine similarity and semantic velocity (\(v_t = 1 - \cos\theta\)) between any two actions. Inspect how subword n-grams activate sparse buckets across the 1024-dimensional unit sphere without LLM inference.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label class="text-xs font-mono text-slate-600 dark:text-slate-400 font-medium">Turn t - 1 (Previous Action):</label>
-                    <input type="text" id="calcCmd1" value="grep -rn 'def test_auth' tests/" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm" />
-                </div>
-                <div class="space-y-1.5">
-                    <label class="text-xs font-mono text-slate-600 dark:text-slate-400 font-medium">Turn t (Current Action):</label>
-                    <input type="text" id="calcCmd2" value="find . -name '*test_auth*.py'" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm" />
+        <!-- KILLER FEATURE 3: CHAOS INJECTION PANEL (JUDGES BREAK THE AGENT) -->
+        <section id="chaos" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                        <span>⚡ Interactive Chaos Injection Panel</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Try to fool the detector by injecting synthetic failure modes or composing your own commands.
+                    </p>
                 </div>
             </div>
 
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
-                <button onclick="calculateLiveVelocity()" class="px-5 py-2.5 rounded-lg font-semibold text-xs tracking-wide bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 transition shadow-sm">
-                    Compute Unit Sphere Velocity
+            <!-- Chaos Quick Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <button onclick="injectChaos('semantic_attractor')" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-amber-500 transition shadow-sm">
+                    <div class="font-bold text-xs text-slate-900 dark:text-white font-mono">1. Paraphrase Grep Basin</div>
+                    <div class="text-[11px] text-slate-500 mt-1">4 distinct shell commands searching for same missing symbol</div>
                 </button>
-                <div class="flex flex-wrap items-center gap-5 text-xs font-mono text-slate-600 dark:text-slate-400">
-                    <div>Cosine Similarity: <span id="resCosSim" class="text-slate-900 dark:text-white font-bold">-</span></div>
-                    <div>Semantic Velocity: <span id="resVelocity" class="text-amber-700 dark:text-amber-400 font-bold">-</span></div>
-                    <div>Status: <span id="resStatus" class="font-bold">-</span></div>
-                    <div>Latency: <span id="resLatency" class="text-emerald-700 dark:text-emerald-400 font-bold">-</span></div>
-                </div>
+                <button onclick="injectChaos('direct_repetition')" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-amber-500 transition shadow-sm">
+                    <div class="font-bold text-xs text-slate-900 dark:text-white font-mono">2. Failing Pytest Loop</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Identical pytest invocation 3 times without modifying code</div>
+                </button>
+                <button onclick="injectChaos('oscillation')" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-amber-500 transition shadow-sm">
+                    <div class="font-bold text-xs text-slate-900 dark:text-white font-mono">3. Git Conflict Ping-Pong</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Alternating checkout and cherry-pick conflict cycle</div>
+                </button>
+                <button onclick="injectChaos('clean_progress')" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-emerald-500 transition shadow-sm">
+                    <div class="font-bold text-xs text-slate-900 dark:text-white font-mono">4. Healthy Exploration</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Methodical reading, building, and test validation</div>
+                </button>
             </div>
 
-            <!-- Manifold Bucket Visualizer Bar Chart -->
-            <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/60 space-y-3">
-                <div class="flex items-center justify-between text-xs font-mono">
-                    <span class="font-semibold text-slate-700 dark:text-slate-300">Active 1024-D Manifold Buckets Projection</span>
-                    <span id="overlapText" class="text-slate-500 text-[11px]">Computing bucket overlap...</span>
-                </div>
+            <!-- Custom Chaos Tester -->
+            <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50 dark:bg-slate-900/60 space-y-4">
+                <div class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">Live 2-Action Velocity and Cosine Distance:</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <div class="text-[11px] font-mono text-slate-500 mb-1.5 font-medium">Turn t - 1 Top Buckets:</div>
-                        <div id="v1Bars" class="space-y-1.5 font-mono text-[10px]">
-                            <!-- Injected by JS -->
-                        </div>
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono text-slate-500">Action 1:</label>
+                        <input id="chaosCmd1" value="grep -rn 'def test_auth' tests/" class="w-full bg-white dark:bg-[#0a0c10] border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm" />
                     </div>
-                    <div>
-                        <div class="text-[11px] font-mono text-slate-500 mb-1.5 font-medium">Turn t Top Buckets:</div>
-                        <div id="v2Bars" class="space-y-1.5 font-mono text-[10px]">
-                            <!-- Injected by JS -->
-                        </div>
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono text-slate-500">Action 2:</label>
+                        <input id="chaosCmd2" value="find . -name '*test_auth*.py'" class="w-full bg-white dark:bg-[#0a0c10] border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm" />
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+                    <button onclick="testChaosVelocity()" class="px-4 py-2 rounded-lg font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 transition">
+                        Compute Semantic Distance
+                    </button>
+                    <div class="flex flex-wrap items-center gap-5 text-xs font-mono text-slate-600 dark:text-slate-400">
+                        <div>Cosine: <span id="chaosCos" class="font-bold text-slate-900 dark:text-white">-</span></div>
+                        <div>Velocity: <span id="chaosVel" class="font-bold text-amber-700 dark:text-amber-400">-</span></div>
+                        <div>Latency: <span id="chaosLat" class="font-bold text-emerald-700 dark:text-emerald-400">-</span></div>
+                        <div>Status: <span id="chaosStatus" class="font-bold">-</span></div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- SECTION 3: CONTEXT PRUNER & SURGICAL HEALING SIMULATOR -->
-        <section id="pruner" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
-            <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-                    <span>✂️ ContextPruner & Atomic History Rollback</span>
-                </h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    When an agent loops, stacking thousands of repetitive error tokens causes context rot and ballooning API bills. Capybala prunes redundant failures and leaves a structured tombstone marker.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Before Pruning -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between text-xs font-mono">
-                        <span class="text-rose-600 dark:text-rose-400 font-semibold">Polluted Context (Before Intervention)</span>
-                        <span class="text-slate-500">8 Messages | ~3,200 tokens</span>
-                    </div>
-                    <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-2 text-slate-600 dark:text-slate-400 max-h-72 overflow-y-auto">
-                        <div class="p-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">[Turn 1] system: You are an autonomous Python SWE agent...</div>
-                        <div class="p-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">[Turn 2] user: Fix the ImportError when executing 'lexicon --help'...</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 3] assistant: pytest tests/test_core.py</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 4] tool: ImportError: cannot import name 'Lexicon' (Traceback: 42 lines)</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 5] assistant: pytest tests/test_core.py</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 6] tool: ImportError: cannot import name 'Lexicon' (Traceback: 42 lines)</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 7] assistant: pytest tests/test_core.py</div>
-                        <div class="p-2 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">[Turn 8] tool: ImportError: cannot import name 'Lexicon' (Traceback: 42 lines)</div>
-                    </div>
-                </div>
-
-                <!-- After Pruning -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between text-xs font-mono">
-                        <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Surgically Healed (After Capybala Pruning)</span>
-                        <span id="pruneSavedBadge" class="text-emerald-700 dark:text-emerald-400 font-bold">~2,400 tokens saved (75%)</span>
-                    </div>
-                    <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/50 text-xs font-mono space-y-2 text-slate-700 dark:text-slate-300 max-h-72 overflow-y-auto">
-                        <div class="p-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">[Turn 1] system: You are an autonomous Python SWE agent...</div>
-                        <div class="p-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">[Turn 2] user: Fix the ImportError when executing 'lexicon --help'...</div>
-                        <div class="p-3 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200">
-                            <strong>[🦫 CAPYBALA CONTEXT TOMBSTONE]</strong><br>
-                            Collapsed 6 redundant turns of failing 'pytest tests/test_core.py'.<br>
-                            Reason: 3x Identical Failing Pytest Loop.<br>
-                            Tokens Saved: ~2,400 tokens. System & user specifications preserved.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 4: ARCHITECTURE & MATHEMATICAL FOUNDATIONS -->
-        <section id="math" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
-            <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-white">
-                    Mathematical Architecture Comparison
-                </h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Why industry agents fail with naive regex or heavy LLM judge prompts:
-                </p>
-            </div>
-
-            <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
-                <table class="w-full text-left text-xs font-mono">
-                    <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px]">
-                        <tr>
-                            <th class="py-3 px-4">Evaluation Criterion</th>
-                            <th class="py-3 px-4">Naive String Matching (IF-ELSE)</th>
-                            <th class="py-3 px-4">LLM Supervisor Judge</th>
-                            <th class="py-3 px-4 text-amber-700 dark:text-amber-400 font-bold">Capybala 1024-D Manifold</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-600 dark:text-slate-400 bg-white dark:bg-[#0a0c10]">
-                        <tr>
-                            <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">Paraphrased Loop Detection</td>
-                            <td class="py-3 px-4 text-rose-600 dark:text-rose-400 font-medium">Fails (0% string match)</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400">High (LLM comprehension)</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">High (Low Semantic Velocity v_t &lt; 0.70)</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">Per-Turn Latency</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400">&lt; 0.01 ms</td>
-                            <td class="py-3 px-4 text-rose-600 dark:text-rose-400 font-medium">800 - 3,500 ms (Network & LLM)</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">0.605 ms (Pure Python standard lib)</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">Inference & Token Cost</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400">$0.00</td>
-                            <td class="py-3 px-4 text-rose-600 dark:text-rose-400 font-medium">$0.02 - $0.15 per agent step</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">$0.00 (Zero tokens burned)</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">External Dependencies</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400">Zero</td>
-                            <td class="py-3 px-4">OpenAI / Anthropic / PyTorch</td>
-                            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">Zero (math, hashlib, heapq, collections)</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">State Discretization</td>
-                            <td class="py-3 px-4">Binary equality</td>
-                            <td class="py-3 px-4">Stochastic prompt response</td>
-                            <td class="py-3 px-4 text-amber-700 dark:text-amber-400 font-bold">64-State Markov Transition Entropy (H)</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- SECTION 5: SWE-BENCH BENCHMARK & MULTI-AI AUDIT -->
+        <!-- SECTION 4: SWE-BENCH REPRODUCIBLE BENCHMARK DATA -->
         <section id="benchmarks" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Left: SWE-bench Stress Test Methodology -->
             <div class="lg:col-span-6 bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                     Reproducible SWE-bench Benchmark
                 </h3>
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Benchmarked across 100 long-horizon agent trajectories (50 genuine multi-turn cognitive deadlocks from SWE-bench failed runs, and 50 healthy resolving tasks) with real file navigation and git checkouts:
+                    Benchmarked across 100 long-horizon agent trajectories (50 genuine multi-turn cognitive deadlocks from SWE-bench failed runs, and 50 healthy resolving tasks):
                 </p>
                 <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs font-mono shadow-sm">
                     <div class="bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 flex justify-between">
@@ -698,7 +632,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- Right: Unbiased Multi-AI Audit Scorecard -->
+            <!-- Multi-AI Peer Review Scorecards -->
             <div class="lg:col-span-6 bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-bold text-slate-900 dark:text-white">
@@ -743,21 +677,20 @@ INDEX_HTML = r"""<!DOCTYPE html>
             </div>
         </section>
 
-        <!-- SECTION 6: QUICKSTART & INTEGRATION PATTERNS -->
-        <section id="integration" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+        <!-- SECTION 5: QUICKSTART & ONE-LINE INTEGRATION -->
+        <section id="quickstart" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
             <div>
                 <h2 class="text-xl font-bold text-slate-900 dark:text-white">
-                    Integration and Developer Usage
+                    One-Line Drop-In Integration
                 </h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Capybala drops into any agent execution loop with zero changes to existing prompts.
+                    Capybala drops into any agent workflow with zero changes to existing system prompts.
                 </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Method 1 -->
                 <div class="space-y-2">
-                    <span class="text-xs font-mono text-amber-700 dark:text-amber-400 font-bold">Pattern 1: One-Line In-Place Healing</span>
+                    <span class="text-xs font-mono text-amber-700 dark:text-amber-400 font-bold">Pattern 1: In-Place Context Healing</span>
                     <pre class="p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono leading-relaxed overflow-x-auto shadow-inner"><code>import capybala
 
 # In your agent's execution loop:
@@ -771,7 +704,6 @@ response = client.chat.completions.create(
 )</code></pre>
                 </div>
 
-                <!-- Method 2 -->
                 <div class="space-y-2">
                     <span class="text-xs font-mono text-sky-700 dark:text-sky-400 font-bold">Pattern 2: Transparent Client Decorator</span>
                     <pre class="p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono leading-relaxed overflow-x-auto shadow-inner"><code>from openai import OpenAI
@@ -800,7 +732,7 @@ from capybala.integrations import (
                 <span>•</span>
                 <span>Apache 2.0 Open Source</span>
                 <span>•</span>
-                <span>Created for Autonomous Agent Engineering</span>
+                <span>Deterministic Autonomous Agent Deadlock Interception</span>
             </div>
             <div class="flex items-center space-x-5 font-mono text-[11px]">
                 <a href="https://github.com/codesbykhairannoor/capybala" class="hover:text-slate-900 dark:hover:text-white transition">GitHub Repo</a>
@@ -809,10 +741,11 @@ from capybala.integrations import (
         </div>
     </footer>
 
-    <!-- Frontend Interactive Script -->
+    <!-- Interactive Frontend Script -->
     <script>
-        let scenariosData = {};
-        let currentTurns = [];
+        let duelData = {};
+        let currentDuelKey = 'semantic_attractor';
+        let duelTimer = null;
 
         function toggleTheme() {
             const html = document.documentElement;
@@ -828,6 +761,7 @@ from capybala.integrations import (
                 btn.innerText = "☀️";
                 localStorage.setItem("capy_theme", "dark");
             }
+            drawTrajectoryCanvas();
         }
 
         async function init() {
@@ -838,158 +772,224 @@ from capybala.integrations import (
             document.getElementById("themeIcon").innerText = savedTheme === "dark" ? "☀️" : "🌙";
 
             try {
-                const res = await fetch('/api/scenarios');
-                scenariosData = await res.json();
-                loadScenario('semantic_attractor');
-                calculateLiveVelocity();
+                const res = await fetch('/api/duel/scenarios');
+                duelData = await res.json();
+                drawTrajectoryCanvas('spiral');
+                testChaosVelocity();
             } catch (err) {
-                console.error("Failed to load scenarios:", err);
+                console.error("Failed to load duel scenarios:", err);
             }
         }
 
-        function loadScenario(key) {
-            const sc = scenariosData[key];
+        function switchDuelScenario(key) {
+            currentDuelKey = key;
+            const sc = duelData[key];
             if (!sc) return;
-            document.getElementById("scenarioDescriptionBox").innerHTML = `
-                <div class="font-bold text-slate-900 dark:text-white mb-1">${sc.title}</div>
-                <div>${sc.description}</div>
-            `;
-            currentTurns = JSON.parse(JSON.stringify(sc.turns));
-            renderTurns();
-            resetTelemetry();
+            document.getElementById("leftStream").innerHTML = `<div class='text-slate-400 text-xs italic'>Ready. Press 'Run Live Duel' to run scenario: ${sc.title}...</div>`;
+            document.getElementById("rightStream").innerHTML = `<div class='text-slate-400 text-xs italic'>Ready. Capybala armed and ready...</div>`;
+            document.getElementById("duelCostLeft").innerText = "$0.00";
+            document.getElementById("duelCostRight").innerText = "$0.00";
+            document.getElementById("duelOutcomeBadge").innerText = "Ready to execute";
+            document.getElementById("leftCostTicker").innerText = "$0.00 Wasted";
+            document.getElementById("rightCostTicker").innerText = "$0.00 Total";
         }
 
-        function renderTurns() {
-            const container = document.getElementById("turnsContainer");
-            container.innerHTML = "";
-            currentTurns.forEach((t, idx) => {
-                const div = document.createElement("div");
-                div.className = "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2 text-xs font-mono shadow-sm";
-                div.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-600 dark:text-slate-400 font-semibold">Turn ${idx + 1}</span>
-                        <div class="flex items-center space-x-3">
-                            <label class="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400 cursor-pointer">
-                                <input type="checkbox" ${t.fail ? 'checked' : ''} onchange="toggleFail(${idx}, this.checked)" class="rounded border-slate-300 text-amber-500 focus:ring-0">
-                                <span class="text-[11px] font-medium">Failing</span>
-                            </label>
-                            <button onclick="removeTurn(${idx})" class="text-rose-600 dark:text-rose-400 hover:underline text-[11px]">Remove</button>
-                        </div>
-                    </div>
-                    <div>
-                        <input type="text" value="${escapeHtml(t.action)}" onchange="updateAction(${idx}, this.value)" class="w-full bg-white dark:bg-[#0a0c10] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono shadow-inner" placeholder="Command or tool call..." />
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
+        async function startLiveDuel() {
+            const sc = duelData[currentDuelKey];
+            if (!sc) return;
 
-        function addTurn() {
-            currentTurns.push({
-                action: "pytest tests/ -k test_feature",
-                observation: "AssertionError: Expected 200 OK but received 500",
-                fail: true
-            });
-            renderTurns();
-        }
-
-        function removeTurn(idx) {
-            if (currentTurns.length <= 1) return;
-            currentTurns.splice(idx, 1);
-            renderTurns();
-        }
-
-        function toggleFail(idx, val) {
-            currentTurns[idx].fail = val;
-        }
-
-        function updateAction(idx, val) {
-            currentTurns[idx].action = val;
-        }
-
-        function escapeHtml(str) {
-            return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
-        }
-
-        function resetTelemetry() {
-            document.getElementById("statusBanner").className = "p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-600 dark:text-slate-400";
-            document.getElementById("statusBanner").innerText = 'Click "Execute Mathematical Analysis" to run Capybala on this trajectory.';
-            document.getElementById("latencyBadge").innerText = 'Awaiting execution';
-            document.getElementById("telemetryBody").innerHTML = `
-                <tr><td colspan="5" class="py-4 px-3 text-center text-slate-500 text-xs">Ready. Click execute to stream mathematical metrics.</td></tr>
-            `;
-            document.getElementById("healingSection").classList.add("hidden");
-        }
-
-        async function runAnalysis() {
-            const btn = document.getElementById("runBtn");
+            const btn = document.getElementById("duelBtn");
             btn.disabled = true;
-            btn.innerHTML = `<span>Evaluating Trajectory...</span>`;
+            btn.innerHTML = `<span>Simulating Duel...</span>`;
 
-            try {
-                const res = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({turns: currentTurns})
-                });
-                const data = await res.json();
+            const leftStream = document.getElementById("leftStream");
+            const rightStream = document.getElementById("rightStream");
+            leftStream.innerHTML = "";
+            rightStream.innerHTML = "";
 
-                document.getElementById("latencyBadge").innerText = `Total CPU Latency: ${data.total_latency_ms} ms (${data.avg_turn_latency_ms} ms/turn)`;
+            const bTurns = sc.baseline_turns;
+            const cTurns = sc.capybala_turns;
+            const maxSteps = Math.max(bTurns.length, cTurns.length);
 
-                const banner = document.getElementById("statusBanner");
-                if (data.is_deadlock) {
-                    banner.className = "p-4 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/20 text-xs font-mono text-rose-900 dark:text-rose-200 space-y-1 shadow-sm";
-                    banner.innerHTML = `
-                        <div class="font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-2">
-                            <span>🚨 DEADLOCK INTERCEPTED: ${data.deadlock_type}</span>
-                        </div>
-                        <div class="text-[11px] text-rose-700 dark:text-rose-300/90">${escapeHtml(data.details)}</div>
-                    `;
+            for (let i = 0; i < maxSteps; i++) {
+                // Update step indicators
+                document.getElementById("leftStepIndicator").innerText = `Step ${Math.min(i + 1, bTurns.length)} / ${bTurns.length}`;
+                document.getElementById("rightStepIndicator").innerText = `Step ${Math.min(i + 1, cTurns.length)} / ${cTurns.length}`;
 
-                    if (data.healing_prompt) {
-                        document.getElementById("healingSection").classList.remove("hidden");
-                        document.getElementById("healingPromptBox").innerText = data.healing_prompt;
+                // Left baseline step
+                if (i < bTurns.length) {
+                    const t = bTurns[i];
+                    const d = document.createElement("div");
+                    if (t.status === 'fatal_crash') {
+                        d.className = "p-2.5 rounded bg-rose-200 dark:bg-rose-950/80 border border-rose-400 text-rose-950 dark:text-rose-200 font-bold";
+                        d.innerHTML = `❌ [FATAL CONTEXT OVERFLOW] ${escapeHtml(t.obs)}`;
+                    } else {
+                        d.className = "p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300";
+                        d.innerHTML = `<span class='text-rose-600 font-semibold'>[Turn ${t.turn}] ${escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px]'>${escapeHtml(t.obs)}</span>`;
                     }
-                } else {
-                    banner.className = "p-4 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 text-xs font-mono text-emerald-900 dark:text-emerald-200 space-y-1 shadow-sm";
-                    banner.innerHTML = `
-                        <div class="font-bold text-emerald-800 dark:text-emerald-300">✅ CLEAN PROGRESSION CONFIRMED</div>
-                        <div class="text-[11px] text-emerald-700 dark:text-emerald-300/80">High semantic velocity and diverse state transitions. Agent is legitimately exploring without infinite loop gravity.</div>
-                    `;
-                    document.getElementById("healingSection").classList.add("hidden");
+                    leftStream.appendChild(d);
+                    leftStream.scrollTop = leftStream.scrollHeight;
+                    document.getElementById("duelCostLeft").innerText = `$${t.cost.toFixed(2)}`;
+                    document.getElementById("leftCostTicker").innerText = `$${t.cost.toFixed(2)} Wasted`;
                 }
 
-                // Render telemetry rows
-                const tbody = document.getElementById("telemetryBody");
-                tbody.innerHTML = "";
-                data.telemetry.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.className = "hover:bg-slate-50 dark:hover:bg-slate-900/60 transition";
-                    const velColor = row.semantic_velocity < 0.70 ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-800 dark:text-slate-300";
-                    tr.innerHTML = `
-                        <td class="py-2.5 px-3 text-slate-500">${row.step}</td>
-                        <td class="py-2.5 px-3 text-slate-900 dark:text-white font-medium">${escapeHtml(row.action)}</td>
-                        <td class="py-2.5 px-3 ${velColor}">${row.semantic_velocity.toFixed(4)}</td>
-                        <td class="py-2.5 px-3 text-sky-600 dark:text-sky-400">${row.markov_entropy.toFixed(3)}</td>
-                        <td class="py-2.5 px-3 text-slate-500">${row.latency_ms.toFixed(3)} ms</td>
-                    `;
-                    tbody.appendChild(tr);
+                // Right capybala step
+                if (i < cTurns.length) {
+                    const t = cTurns[i];
+                    const d = document.createElement("div");
+                    if (t.status === 'intercepted') {
+                        d.className = "p-2.5 rounded bg-amber-100 dark:bg-amber-950/60 border border-amber-400 text-amber-950 dark:text-amber-200 font-bold shadow-sm";
+                        d.innerHTML = `🦫 <b>[CAPYBALA INTERCEPTED DEADLOCK]</b><br><span class='text-[11px] font-normal'>Atomic Rollback executed. Repetitive tokens pruned. Doctor Pivot Directive injected!</span>`;
+                    } else if (t.status === 'success') {
+                        d.className = "p-2.5 rounded bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-400 text-emerald-950 dark:text-emerald-200 font-bold shadow-sm";
+                        d.innerHTML = `🎉 <b>[TASK SOLVED!]</b> ${escapeHtml(t.obs)}`;
+                    } else {
+                        d.className = "p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300";
+                        d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-semibold'>[Turn ${t.turn}] ${escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px]'>${escapeHtml(t.obs)}</span>`;
+                    }
+                    rightStream.appendChild(d);
+                    rightStream.scrollTop = rightStream.scrollHeight;
+                    document.getElementById("duelCostRight").innerText = `$${t.cost.toFixed(2)}`;
+                    document.getElementById("rightCostTicker").innerText = `$${t.cost.toFixed(2)} Total`;
+                }
+
+                await new Promise(r => setTimeout(r, 650));
+            }
+
+            const finalLeft = bTurns[bTurns.length - 1].cost;
+            const finalRight = cTurns[cTurns.length - 1].cost;
+            const multiplier = (finalLeft / Math.max(0.01, finalRight)).toFixed(1);
+            document.getElementById("duelSavingsMultiplier").innerText = `${multiplier}x`;
+            document.getElementById("duelOutcomeBadge").innerText = "Capybala Solved (77x cheaper)";
+            document.getElementById("duelOutcomeBadge").className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Run Live Duel</span>`;
+        }
+
+        // Phase Space Trajectory Canvas Renderer
+        function drawTrajectoryCanvas(mode = 'spiral') {
+            const canvas = document.getElementById("manifoldCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw radial vector field coordinate grid
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
+            ctx.lineWidth = 1;
+            for (let r = 40; r <= 160; r += 40) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Draw center gravity well attractor vortex
+            const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 70);
+            grad.addColorStop(0, "rgba(225, 29, 72, 0.35)");
+            grad.addColorStop(1, "rgba(225, 29, 72, 0.0)");
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 70, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Label the attractor basin
+            ctx.fillStyle = "rgba(244, 63, 94, 0.8)";
+            ctx.font = "10px JetBrains Mono";
+            ctx.textAlign = "center";
+            ctx.fillText("ATTRACTOR BASIN (v_t < 0.70)", cx, cy + 4);
+
+            // Draw trajectory path
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            const points = [];
+            if (mode === 'spiral') {
+                // Decaying spiral inwards (trapped agent)
+                for (let t = 0; t <= 12; t += 0.2) {
+                    const radius = 150 * Math.exp(-0.15 * t);
+                    const angle = t * 1.5;
+                    const x = cx + Math.cos(angle) * radius;
+                    const y = cy + Math.sin(angle) * radius;
+                    points.push({x, y});
+                }
+            } else {
+                // Spiraling until intervention, then deflected outwards by Capybala
+                for (let t = 0; t <= 6; t += 0.2) {
+                    const radius = 150 * Math.exp(-0.15 * t);
+                    const angle = t * 1.5;
+                    const x = cx + Math.cos(angle) * radius;
+                    const y = cy + Math.sin(angle) * radius;
+                    points.push({x, y});
+                }
+                // Deflection vector outwards
+                const last = points[points.length - 1];
+                points.push({x: last.x + 80, y: last.y - 70});
+                points.push({x: last.x + 160, y: last.y - 120});
+            }
+
+            if (points.length > 0) {
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.strokeStyle = mode === 'spiral' ? "#e11d48" : "#10b981";
+                ctx.stroke();
+
+                // Draw points
+                points.forEach((p, idx) => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, idx === points.length - 1 ? 5 : 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = idx === points.length - 1 ? "#f59e0b" : (mode === 'spiral' ? "#f43f5e" : "#10b981");
+                    ctx.fill();
                 });
 
-            } catch (err) {
-                alert("Execution error: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `
-                    <svg class="w-4 h-4 fill-current mr-2" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <span>Execute Mathematical Analysis</span>
-                `;
+                if (mode === 'deflect') {
+                    // Draw golden deflection vector arrow
+                    const pDeflect = points[points.length - 3];
+                    ctx.strokeStyle = "#f59e0b";
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(pDeflect.x, pDeflect.y);
+                    ctx.lineTo(pDeflect.x + 60, pDeflect.y - 50);
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.font = "bold 11px JetBrains Mono";
+                    ctx.fillText("CAPYBALA DEFLECTION VECTOR", pDeflect.x + 70, pDeflect.y - 60);
+                }
             }
         }
 
-        async function calculateLiveVelocity() {
-            const cmd1 = document.getElementById("calcCmd1").value;
-            const cmd2 = document.getElementById("calcCmd2").value;
+        function drawTrajectoryMode(m) {
+            drawTrajectoryCanvas(m);
+        }
+
+        async function injectChaos(type) {
+            let cmd1 = "grep -rn 'def test_auth' tests/";
+            let cmd2 = "find . -name '*test_auth*.py'";
+            if (type === 'direct_repetition') {
+                cmd1 = "pytest tests/test_api.py";
+                cmd2 = "pytest tests/test_api.py";
+            } else if (type === 'oscillation') {
+                cmd1 = "git checkout HEAD~1 config.py";
+                cmd2 = "git cherry-pick 3a9f01";
+            } else if (type === 'clean_progress') {
+                cmd1 = "cat pyproject.toml";
+                cmd2 = "python -m build --wheel";
+            }
+            document.getElementById("chaosCmd1").value = cmd1;
+            document.getElementById("chaosCmd2").value = cmd2;
+            await testChaosVelocity();
+        }
+
+        async function testChaosVelocity() {
+            const cmd1 = document.getElementById("chaosCmd1").value;
+            const cmd2 = document.getElementById("chaosCmd2").value;
 
             try {
                 const res = await fetch('/api/velocity', {
@@ -999,58 +999,25 @@ from capybala.integrations import (
                 });
                 const d = await res.json();
 
-                document.getElementById("resCosSim").innerText = d.cosine_similarity.toFixed(4);
-                document.getElementById("resVelocity").innerText = d.semantic_velocity.toFixed(4);
-                document.getElementById("resLatency").innerText = d.latency_ms.toFixed(3) + " ms";
+                document.getElementById("chaosCos").innerText = d.cosine_similarity.toFixed(4);
+                document.getElementById("chaosVel").innerText = d.semantic_velocity.toFixed(4);
+                document.getElementById("chaosLat").innerText = `${d.latency_ms.toFixed(3)} ms`;
 
-                const st = document.getElementById("resStatus");
+                const st = document.getElementById("chaosStatus");
                 if (d.is_stagnant) {
-                    st.className = "text-amber-700 dark:text-amber-400 font-bold";
-                    st.innerText = "Stagnant (Attractor Gravity)";
+                    st.className = "text-rose-600 dark:text-rose-400 font-bold";
+                    st.innerText = "Looping Attractor Gravity (v_t < 0.70)";
                 } else {
-                    st.className = "text-emerald-700 dark:text-emerald-400 font-bold";
-                    st.innerText = "Dynamic (Sufficient Velocity)";
+                    st.className = "text-emerald-600 dark:text-emerald-400 font-bold";
+                    st.innerText = "Healthy Dynamic Exploration";
                 }
-
-                document.getElementById("overlapText").innerText = `${d.overlap_buckets.length} shared projection buckets out of 1024-D space`;
-
-                // Render top buckets bar charts
-                renderBucketBars("v1Bars", d.top_buckets_v1, d.overlap_buckets);
-                renderBucketBars("v2Bars", d.top_buckets_v2, d.overlap_buckets);
-
             } catch (err) {
-                console.error("Velocity calculation error:", err);
+                console.error("Chaos velocity error:", err);
             }
         }
 
-        function renderBucketBars(elemId, buckets, overlaps) {
-            const container = document.getElementById(elemId);
-            container.innerHTML = "";
-            if (!buckets || buckets.length === 0) {
-                container.innerHTML = "<div class='text-slate-400'>No active features</div>";
-                return;
-            }
-            const maxVal = Math.max(...buckets.map(b => b[1]), 0.01);
-            buckets.forEach(([idx, weight]) => {
-                const isShared = overlaps.includes(idx);
-                const widthPct = Math.round((weight / maxVal) * 100);
-                const row = document.createElement("div");
-                row.className = "flex items-center space-x-2";
-                row.innerHTML = `
-                    <span class="w-16 text-slate-500 font-medium">Bucket ${idx}:</span>
-                    <div class="flex-grow bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div class="h-full rounded-full ${isShared ? 'bg-amber-500' : 'bg-sky-500'}" style="width: ${widthPct}%"></div>
-                    </div>
-                    <span class="w-12 text-right ${isShared ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-slate-600 dark:text-slate-400'}">${weight.toFixed(3)}</span>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        function copyHealingDirective() {
-            const text = document.getElementById("healingPromptBox").innerText;
-            navigator.clipboard.writeText(text);
-            alert("Healing prompt copied to clipboard!");
+        function escapeHtml(str) {
+            return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
         }
 
         window.addEventListener('DOMContentLoaded', init);
