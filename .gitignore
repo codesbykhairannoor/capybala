@@ -9,22 +9,64 @@ build/
 *.egg-info/
 .eggs/
 
-# Environments
+# Environments & Private API Secrets
 .env
+.env.*
 .venv
 env/
 venv/
 ENV/
 
-# IDE / Editor
+# IDE / Editor / System
 .vscode/
 .idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Internal Research, AI Audits & Benchmark Archives
+_internal*/
+_archive*/
+internal_research/
+real_trajectories_cache/
+hf_dataset_cache/
+*.traj
+*.csv
+
+# Scratch & Temporary Debate Scripts (Prevent Accidental Leaks)
+audit_*.py
+debate_*.py
+consult_*.py
+benchmark_*.py
+roast_*.py
+run_claude_*.py
+run_ai_arena.py
+stress_test_*.py
+massive_concurrency_*.py
+test_live_*.py
+probe_*.py
+eda_*.py
+crawl_*.py
+download_*.py
+build_*.py
+find_*.py
+evaluate_*.py
+llama_*.py
+
+# Scratch Markdown Reports
+ai_*.md
+claude_*.md
+consultation_*.md
+debate_*.md
+naming_*.md
+openrouter_*.md
+capybala_benchmark_*.md
+CAPYBALA_MASTER_*.md
+README_DATASET.md
+README_FRESH_BUGS*.md
 
 # Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
-real_trajectories_cache/
-hf_dataset_cache/
-probe_hf_dataset.py
-
