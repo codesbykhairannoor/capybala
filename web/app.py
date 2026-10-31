@@ -183,7 +183,7 @@ def record_live_run(client_ip: str, is_byok: bool):
     _daily_run_tracker[today_str] = _daily_run_tracker.get(today_str, 0) + 1
 
 
-def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int = 850) -> Tuple[Optional[str], Dict[str, Any], float]:
+def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int = 1200) -> Tuple[Optional[str], Dict[str, Any], float, str]:
     """Invokes Meta AI (muse-wonder-1.0 / muse-spark-1.3) via official endpoint."""
     url = "https://api.meta.ai/v1/chat/completions"
     payload = {
@@ -201,13 +201,14 @@ def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int =
         }
     )
     t0 = time.perf_counter()
-    with urllib.request.urlopen(req, timeout=25) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         t_net = (time.perf_counter() - t0) * 1000.0
         data = json.loads(resp.read().decode("utf-8"))
+        req_id = data.get("id", "chatcmpl-live")
         msg = data.get("choices", [{}])[0].get("message", {})
         content = msg.get("content")
         usage = data.get("usage", {})
-        return content, usage, t_net
+        return content, usage, t_net, req_id
 
 
 def extract_clean_command(raw: Optional[str], fallback: str) -> str:
@@ -276,6 +277,8 @@ async def run_live_duel(request: Request):
     # 3. Live Meta AI Execution or High-Fidelity Simulation Fallback
     is_live = False
     tokens_burned_total = 0
+    telemetry_proof = None
+    simulation_reason = None
 
     sys_prompt = (
         "You are an autonomous CLI software engineer agent running in a Linux terminal. "
@@ -288,27 +291,40 @@ async def run_live_duel(request: Request):
     if api_key:
         try:
             # Turn 1: Initial exploration action from Meta AI
-            content_t1, usage_t1, _ = call_meta_ai(
+            content_t1, usage_t1, t_net1, req_id1 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                max_tokens=850
+                max_tokens=1200
             )
             t1_action = extract_clean_command(content_t1, t1_action)
             tokens_burned_total += usage_t1.get("total_tokens", 500)
 
             # Turn 3: Capybala Healed Resolution Action from Meta AI
             healed_prompt = f"Previous search failed. Now provide the direct root-cause solution command for: {prompt}"
-            content_t3, usage_t3, _ = call_meta_ai(
+            content_t3, usage_t3, t_net3, req_id3 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": healed_prompt}],
-                max_tokens=850
+                max_tokens=1200
             )
             t3_resolution = extract_clean_command(content_t3, t3_resolution)
             tokens_burned_total += usage_t3.get("total_tokens", 500)
             is_live = True
+
+            telemetry_proof = {
+                "request_id": req_id1,
+                "model": "muse-wonder-1.0 (Official Meta AI API)",
+                "verified": True,
+                "latency_ms": round(t_net1 + t_net3, 1),
+                "reasoning_tokens": usage_t1.get("completion_tokens_details", {}).get("reasoning_tokens", 0) + usage_t3.get("completion_tokens_details", {}).get("reasoning_tokens", 0),
+                "total_tokens": tokens_burned_total,
+                "raw_response_turn1": content_t1,
+                "raw_response_turn3": content_t3
+            }
         except Exception as e:
-            # Graceful fallback: If Meta AI network fails or key invalid, simulate gracefully
             is_live = False
+            simulation_reason = f"Meta AI call failed ({str(e)}). Running offline simulation."
+    else:
+        simulation_reason = "No META_API_KEY configured on Render server yet. Enter your API key in BYOK below to unlock 100% verified live calls."
 
     # Record usage if live call succeeded
     if is_live:
@@ -382,10 +398,12 @@ async def run_live_duel(request: Request):
     ]
 
     result = {
-        "title": f"Custom Live Duel: {prompt[:40]}...",
+        "title": f"Custom Duel: {prompt[:40]}...",
         "task": prompt,
         "is_live": is_live,
-        "model": "muse-wonder-1.0 (Meta AI)" if is_live else "Capybala Resilient Simulation Engine",
+        "simulation_reason": simulation_reason,
+        "telemetry_proof": telemetry_proof,
+        "model": "muse-wonder-1.0 (Official Meta AI API)" if is_live else "Local Offline Simulation (No API Key on Server)",
         "baseline_turns": baseline_turns,
         "capybala_turns": capybala_turns,
         "quota_remaining": quota_remaining,

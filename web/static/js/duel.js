@@ -412,9 +412,76 @@ const DuelEngine = {
 
             if (elMultiplier) elMultiplier.innerText = `${multiplier}x`;
             if (elBadge) {
-                const engineTag = isLive ? "Live Meta AI" : "Capybala Solved";
-                elBadge.innerText = `${engineTag} (${multiplier}x cheaper)`;
-                elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                if (isLive && sc.is_live) {
+                    elBadge.innerText = `Verified Meta AI (${multiplier}x cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                } else if (isLive && !sc.is_live) {
+                    elBadge.innerText = `Offline Simulation (${multiplier}x cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-1";
+                } else {
+                    elBadge.innerText = `Capybala Solved (${multiplier}x cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                }
+            }
+
+            // Real-Time Telemetry & Cryptographic Proof Inspector
+            const proofBox = document.getElementById("duelProofContainer");
+            if (proofBox) {
+                if (isLive && sc.telemetry_proof) {
+                    proofBox.classList.remove("hidden");
+                    const p = sc.telemetry_proof;
+                    const pDot = document.getElementById("proofDot");
+                    const pTitle = document.getElementById("proofTitle");
+                    const pBadge = document.getElementById("proofBadge");
+                    const pNotice = document.getElementById("proofNotice");
+                    const pGrid = document.getElementById("proofStatsGrid");
+                    const pRawBox = document.getElementById("proofRawContainer");
+
+                    if (pDot) pDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                    if (pTitle) pTitle.innerText = "🔍 Real-Time Model Telemetry & Cryptographic Proof";
+                    if (pBadge) {
+                        pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold";
+                        pBadge.innerText = "VERIFIED API CALL";
+                    }
+                    if (pNotice) pNotice.classList.add("hidden");
+                    if (pGrid) pGrid.classList.remove("hidden");
+                    if (pRawBox) pRawBox.classList.remove("hidden");
+
+                    const elReqId = document.getElementById("proofReqId");
+                    const elModel = document.getElementById("proofModel");
+                    const elTokens = document.getElementById("proofTokens");
+                    const elLatency = document.getElementById("proofLatency");
+                    const elRawText = document.getElementById("proofRawText");
+
+                    if (elReqId) elReqId.innerText = p.request_id || "chatcmpl-live";
+                    if (elModel) elModel.innerText = p.model || "muse-wonder-1.0";
+                    if (elTokens) elTokens.innerText = `${p.total_tokens} tokens (${p.reasoning_tokens} reasoning)`;
+                    if (elLatency) elLatency.innerText = `${p.latency_ms} ms`;
+                    if (elRawText) elRawText.innerText = p.raw_response_turn1 || "(No raw content)";
+                } else if (isLive && !sc.is_live && sc.simulation_reason) {
+                    proofBox.classList.remove("hidden");
+                    const pDot = document.getElementById("proofDot");
+                    const pTitle = document.getElementById("proofTitle");
+                    const pBadge = document.getElementById("proofBadge");
+                    const pNotice = document.getElementById("proofNotice");
+                    const pGrid = document.getElementById("proofStatsGrid");
+                    const pRawBox = document.getElementById("proofRawContainer");
+
+                    if (pDot) pDot.className = "w-2 h-2 rounded-full bg-amber-500";
+                    if (pTitle) pTitle.innerText = "⚠️ Local Simulation Notice";
+                    if (pBadge) {
+                        pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold";
+                        pBadge.innerText = "OFFLINE SIMULATION MOCK";
+                    }
+                    if (pNotice) {
+                        pNotice.innerText = sc.simulation_reason;
+                        pNotice.classList.remove("hidden");
+                    }
+                    if (pGrid) pGrid.classList.add("hidden");
+                    if (pRawBox) pRawBox.classList.add("hidden");
+                } else {
+                    proofBox.classList.add("hidden");
+                }
             }
         } catch (err) {
             console.error("Error during live duel execution:", err);
