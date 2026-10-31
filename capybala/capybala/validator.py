@@ -232,12 +232,26 @@ class SchemaValidator:
                             call_id = tc.get("id")
                             if call_id and call_id not in tool_responses_seen:
                                 # Synthesize tool response
-                                synth_response = {
-                                    "role": "tool",
-                                    "tool_call_id": call_id,
-                                    "name": tc.get("function", {}).get("name", "tool"),
-                                    "content": "[Capybala Auto-Healed: Tool execution skipped or rolled back]"
-                                }
+                                # Provider-aware tool response synthesis (Anthropic Claude vs OpenAI)
+                                is_anthropic_format = (provider.lower() == "anthropic") or any(
+                                    ("tool_use" in str(m) or "toolu_" in str(m)) for m in msgs
+                                )
+                                if is_anthropic_format:
+                                    synth_response = {
+                                        "role": "user",
+                                        "content": [{
+                                            "type": "tool_result",
+                                            "tool_use_id": call_id,
+                                            "content": "[Capybala Auto-Healed: Tool execution skipped or rolled back]"
+                                        }]
+                                    }
+                                else:
+                                    synth_response = {
+                                        "role": "tool",
+                                        "tool_call_id": call_id,
+                                        "name": tc.get("function", {}).get("name", "tool"),
+                                        "content": "[Capybala Auto-Healed: Tool execution skipped or rolled back]"
+                                    }
                                 final_msgs.append(synth_response)
                                 tool_responses_seen[call_id] = idx
                                 fixes_applied.append(f"Synthesized missing tool response for unfulfilled call '{call_id}'")

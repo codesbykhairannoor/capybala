@@ -98,7 +98,7 @@ class DeadlockDetector:
         fuzzy_threshold: float = 0.65,
         enable_fuzzy: bool = True,
         enable_delegation: bool = True,
-        max_exploration_depth: int = 15,
+        max_exploration_depth: int = 22,
         enable_exploration_guard: bool = True,
         policy: Optional[Any] = None,
         enable_attractor: bool = True,
@@ -721,26 +721,37 @@ class DeadlockDetector:
                             loop_onset_turn=onset_turn,
                         )
 
-            # 4. OSCILLATION LOOP CHECK
+            # 4. OSCILLATION LOOP CHECK (Requires active failure or error persistence across the cycle)
             if not detected_event:
                 hist = list(self.action_history)
                 n = len(hist)
+                current_turn_failed = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
 
-                # 4a. Period-2 Oscillation (A -> B -> A -> B)
+                # 4a. Period-2 Oscillation (A -> B -> A -> B with failure on current turn)
                 required_turns_p2 = eff_osc_threshold * 2
-                if n >= required_turns_p2:
-                    if hist[-1] == hist[-3] and hist[-2] == hist[-4] and hist[-1] != hist[-2]:
-                        onset_turn = max(1, self.turn_counter - required_turns_p2 + 1)
-                        detected_event = DeadlockEvent(
-                            is_deadlock=True,
-                            pattern_type="oscillation",
-                            repetition_count=eff_osc_threshold,
-                            details=f"2-step oscillating action loop detected ({eff_osc_threshold} cycles).",
-                            signature=f"{hist[-2]}_{hist[-1]}",
-                            loop_onset_turn=onset_turn,
-                        )
+                is_silent = not safe_obs.strip()
+                if n >= required_turns_p2 and (current_turn_failed or is_silent):
+                    # Verify cycle repetition across required cycles
+                    is_p2_match = True
+                    for c in range(1, eff_osc_threshold):
+                        if hist[-1] != hist[-1 - 2 * c] or hist[-2] != hist[-2 - 2 * c]:
+                            is_p2_match = False
+                            break
+                    if is_p2_match and hist[-1] != hist[-2]:
+                        recent_errs_p2 = list(self.observation_signatures)[-required_turns_p2:]
+                        has_p2_error = any(e is not None for e in recent_errs_p2) or current_turn_failed or is_silent
+                        if has_p2_error:
+                            onset_turn = max(1, self.turn_counter - required_turns_p2 + 1)
+                            detected_event = DeadlockEvent(
+                                is_deadlock=True,
+                                pattern_type="oscillation",
+                                repetition_count=eff_osc_threshold,
+                                details=f"2-step oscillating action loop detected ({eff_osc_threshold} cycles with failure).",
+                                signature=f"{hist[-2]}_{hist[-1]}",
+                                loop_onset_turn=onset_turn,
+                            )
 
-                # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C)
+                # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C with failure)
                 if not detected_event:
                     required_turns_p3 = 6
                     if n >= required_turns_p3:
@@ -750,17 +761,20 @@ class DeadlockDetector:
                             and hist[-3] == hist[-6]
                             and len({hist[-1], hist[-2], hist[-3]}) == 3
                         ):
-                            onset_turn = max(1, self.turn_counter - required_turns_p3 + 1)
-                            detected_event = DeadlockEvent(
-                                is_deadlock=True,
-                                pattern_type="oscillation",
-                                repetition_count=2,
-                                details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C).",
-                                signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
-                                loop_onset_turn=onset_turn,
-                            )
+                            recent_errs_p3 = list(self.observation_signatures)[-required_turns_p3:]
+                            has_p3_error = any(e is not None for e in recent_errs_p3) or current_turn_failed or is_silent
+                            if has_p3_error:
+                                onset_turn = max(1, self.turn_counter - required_turns_p3 + 1)
+                                detected_event = DeadlockEvent(
+                                    is_deadlock=True,
+                                    pattern_type="oscillation",
+                                    repetition_count=2,
+                                    details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C with failure).",
+                                    signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
+                                    loop_onset_turn=onset_turn,
+                                )
 
-                # 4c. Period-4 Oscillation (A -> B -> C -> D -> A -> B -> C -> D)
+                # 4c. Period-4 Oscillation (A -> B -> C -> D -> A -> B -> C -> D with failure)
                 if not detected_event:
                     required_turns_p4 = 8
                     if n >= required_turns_p4:
@@ -768,15 +782,18 @@ class DeadlockDetector:
                             hist[-4:] == hist[-8:-4]
                             and len(set(hist[-4:])) == 4
                         ):
-                            onset_turn = max(1, self.turn_counter - required_turns_p4 + 1)
-                            detected_event = DeadlockEvent(
-                                is_deadlock=True,
-                                pattern_type="oscillation",
-                                repetition_count=2,
-                                details="4-step oscillating action loop detected (2 cycles: A -> B -> C -> D -> A -> B -> C -> D).",
-                                signature=f"{hist[-4]}_{hist[-3]}_{hist[-2]}_{hist[-1]}",
-                                loop_onset_turn=onset_turn,
-                            )
+                            recent_errs_p4 = list(self.observation_signatures)[-required_turns_p4:]
+                            has_p4_error = any(e is not None for e in recent_errs_p4) or current_turn_failed or is_silent
+                            if has_p4_error:
+                                onset_turn = max(1, self.turn_counter - required_turns_p4 + 1)
+                                detected_event = DeadlockEvent(
+                                    is_deadlock=True,
+                                    pattern_type="oscillation",
+                                    repetition_count=2,
+                                    details="4-step oscillating action loop detected (2 cycles with failure).",
+                                    signature=f"{hist[-4]}_{hist[-3]}_{hist[-2]}_{hist[-1]}",
+                                    loop_onset_turn=onset_turn,
+                                )
 
                 # 4d. Structural Trial-and-Error Oscillation (Period 2, 3, 4 with failure/stagnation)
                 if not detected_event:
@@ -829,6 +846,26 @@ class DeadlockDetector:
                                             is_repeating_error = True
 
                                 if is_repeating_error or is_stagnant:
+                                    # Active TDD Exemption: If cycle contains mutating code edits targeting new distinct line ranges,
+                                    # allow up to 4 cycles of exploratory debugging before declaring structural deadlock
+                                    recent_raw = list(self.raw_actions)[-req_turns:]
+                                    has_edit_in_cycle = any(
+                                        self._is_mutating_or_execution(a) and any(e in a.lower() for e in ("edit", "patch", "write", "replace", "create", "str_replace"))
+                                        for a in recent_raw
+                                    )
+                                    if has_edit_in_cycle and req_cycles < 4:
+                                        # Extract starting line numbers from recent edits across last 8 turns
+                                        recent_edits = [
+                                            re.search(r'\b(?:edit|patch)\s+(\d+)(?::\d+)?', a)
+                                            for a in list(self.raw_actions)[-8:]
+                                        ]
+                                        recent_targets = [m.group(1) for m in recent_edits if m]
+                                        # If the agent is re-targeting the exact same starting line, it is an oscillation deadlock
+                                        is_repeating_target = len(recent_targets) != len(set(recent_targets))
+                                        if not is_repeating_target:
+                                            # Forward code development on new line targets: exempt
+                                            continue
+
                                     onset_turn = max(1, self.turn_counter - req_turns + 1)
                                     detected_event = DeadlockEvent(
                                         is_deadlock=True,

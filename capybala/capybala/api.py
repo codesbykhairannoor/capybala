@@ -161,6 +161,23 @@ def heal(
             prev_act, _ = turns_sequence[-1]
             turns_sequence[-1] = (prev_act, str(content))
 
+    # Count prior doctor interventions in history to enforce Circuit Breaker across external calls
+    prior_interventions = 0
+    for m in messages:
+        if isinstance(m, dict):
+            c = str(m.get("content") or "")
+            if "CAPYBALA DOCTOR INTERVENTION" in c or "CAPYBALA PRUNING" in c:
+                prior_interventions += 1
+
+    if circuit_breaker and prior_interventions >= max_interventions:
+        details = f"Maximum intervention threshold reached ({max_interventions}). Halting execution to prevent infinite token burn."
+        if verbose:
+            sys.stderr.write(f"\n🚨 \033[1;31m[Capybala Circuit Breaker Tripped]\033[0m {details}\n\n")
+            sys.stderr.flush()
+        if raise_on_circuit_break:
+            raise DeadlockEmergencyStop(details, prior_interventions, "meta_deadlock_loop")
+        return messages
+
     # Evaluate sequence against DeadlockDetector with circuit breaker & fuzzy detection
     detector = DeadlockDetector(
         repetition_threshold=repetition_threshold,

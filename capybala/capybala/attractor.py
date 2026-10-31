@@ -121,13 +121,17 @@ class SemanticAttractorDetector:
         Low entropy indicates that the agent's actions are locked in a predictable attractor basin.
         """
         if len(vectors) < 3:
-            return math.log(64)  # Theoretical maximum entropy for 64-state system (maximum uncertainty)
+            return math.log(64)
 
         states = [self._discretize_action(v) for v in vectors]
+        num_transitions = len(states) - 1
+        if num_transitions <= 0:
+            return math.log(64)
+
         transitions: Dict[Tuple[int, int], int] = defaultdict(int)
         outgoing: Dict[int, int] = defaultdict(int)
 
-        for i in range(len(states) - 1):
+        for i in range(num_transitions):
             s_from = states[i]
             s_to = states[i + 1]
             transitions[(s_from, s_to)] += 1
@@ -141,7 +145,11 @@ class SemanticAttractorDetector:
                 if p_ij > self.EPSILON:
                     entropy -= p_ij * math.log(p_ij)
 
-        return entropy
+        # Normalized Shannon entropy against theoretical max for observed sample size:
+        max_possible_H = math.log(max(2, num_transitions))
+        normalized_H = entropy / max_possible_H
+        # Scale back to entropy threshold space (where <= 1.5 indicates trapped attractor):
+        return normalized_H * 2.0
 
     def _is_exempt_action(self, action: str) -> bool:
         """

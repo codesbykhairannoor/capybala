@@ -106,7 +106,7 @@ class ContextPruner:
 
             # 1. Protect Root Context: System instruction (turn 0) and first user prompt
             protected_prefix_count = 1
-            for i, msg in enumerate(valid_messages[:4]):
+            for i, msg in enumerate(valid_messages[:10]):
                 if msg.get("role") == "user":
                     protected_prefix_count = i + 1
                     break

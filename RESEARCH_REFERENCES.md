@@ -174,3 +174,4 @@ Theoretical Foundation                       Capybala Core Module
 
 8. **Conclusion & Future Directions**
    - Formal verification of multi-agent distributed deadlock detection.
+
