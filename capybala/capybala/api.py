@@ -238,12 +238,13 @@ def heal(
             details=event.details,
         )
 
-    # In-place slice mutation with mutex lock: Prevents Ghost Pruning Desync in concurrent threads
+    # In-place atomic list replacement with mutex lock: Prevents Ghost Pruning Desync in concurrent threads
     with _api_lock:
         if isinstance(messages, list):
             try:
-                messages[:] = rollback_res.pruned_messages
-            except TypeError:
+                messages.clear()
+                messages.extend(rollback_res.pruned_messages)
+            except (TypeError, AttributeError):
                 pass
 
     return messages

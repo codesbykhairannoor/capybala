@@ -216,8 +216,8 @@ class DeadlockDetector:
         # Strip true memory pointer addresses (0x followed by 8+ hex chars) -> PRESERVES Git SHAs
         s = re.sub(r"0x[0-9a-f]{8,}", "<PTR_ADDR>", s)
 
-        # Replace UUIDs / GUIDs without catastrophic backtracking
-        s = re.sub(r"(?:\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", "<UUID>", s)
+        # Replace UUIDs / GUIDs without catastrophic backtracking or redundant alternation
+        s = re.sub(r"\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}?", "<UUID>", s)
 
         # Replace ISO8601 timestamps (with optional ms via dot or comma and timezone offsets e.g. +07:00, Z)
         s = re.sub(r"\d{4}-\d{2}-\d{2}[tT ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:z|[+-]\d{2}:?\d{2})?", "<TIMESTAMP>", s)
