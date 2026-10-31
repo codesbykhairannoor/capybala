@@ -1,86 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
-  <defs>
-    <!-- Rich Warm Earth & Golden Amber Developer Palette (Zero Cheap Neon AI Gradient) -->
-    <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#b45309"/>
-      <stop offset="50%" stop-color="#d97706"/>
-      <stop offset="100%" stop-color="#78350f"/>
-    </linearGradient>
-    <linearGradient id="furHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#6c381c"/>
-      <stop offset="100%" stop-color="#451a03"/>
-    </linearGradient>
-    <linearGradient id="snoutGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#fef3c7"/>
-      <stop offset="100%" stop-color="#fde68a"/>
-    </linearGradient>
-    <linearGradient id="yuzuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fde047"/>
-      <stop offset="60%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#ea580c"/>
-    </linearGradient>
-    <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="125%">
-      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#1c1917" flood-opacity="0.25"/>
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <!-- Capybala Official Mascot: Ollama-Style Minimalist Black Sketch -->
+  <g stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 
-  <!-- Squircle Developer Badge (Warm Terracotta / Honey Amber with Crisp Gold Bevel) -->
-  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#badgeBg)"/>
-  <rect x="5.5" y="5.5" width="117" height="117" rx="28.5" stroke="#fde68a" stroke-width="1.8" stroke-opacity="0.5" fill="none"/>
+    <!-- 1. Iconic Yuzu Citrus Balanced on Flat Crown -->
+    <!-- Leaf -->
+    <path d="M 36.5 5.5 C 39.5 2.5, 44.5 3.5, 43.5 7.5 C 40.5 8.5, 37.5 7.5, 36.5 5.5 Z" fill="#000000" stroke-width="0.8"/>
+    <!-- Stem -->
+    <path d="M 35 10.5 L 36.5 6.5" stroke-width="1.8"/>
+    <!-- Fruit -->
+    <circle cx="34.5" cy="14" r="4.2" fill="none"/>
 
-  <!-- Capybara Ears (Earthy Mahogany with Soft Inner Cream Fluff) -->
-  <!-- Left Ear -->
-  <path d="M 32 46 C 26 42, 26 28, 36 30 C 43 32, 42 42, 36 48 Z" fill="#3b1604"/>
-  <path d="M 33 43 C 29 40, 29 33, 35 34 C 39 35, 39 41, 35 45 Z" fill="#fef3c7" fill-opacity="0.85"/>
-  <!-- Right Ear -->
-  <path d="M 96 46 C 102 42, 102 28, 92 30 C 85 32, 86 42, 92 48 Z" fill="#3b1604"/>
-  <path d="M 95 43 C 99 40, 99 33, 93 34 C 89 35, 89 41, 93 45 Z" fill="#fef3c7" fill-opacity="0.85"/>
+    <!-- 2. Small Rounded Ear perched at the back corner of flat crown -->
+    <path d="M 23 22.5 C 20.5 19, 21 15.5, 24.5 15.5 C 27.5 15.5, 27.5 19, 26 23" fill="none"/>
+    <path d="M 23.5 20.5 C 23.5 18, 25.5 18, 25.5 20.5" stroke-width="1.4"/>
 
-  <!-- Capybara Main Head (Noble, Organic, Smoothly Curved) -->
-  <path d="M 37 46 
-           C 37 36, 47 32, 64 32 
-           C 81 32, 91 36, 91 46 
-           C 94 56, 95 72, 93 86 
-           C 91 100, 81 106, 64 106 
-           C 47 106, 37 100, 35 86 
-           C 33 72, 34 56, 37 46 Z" 
-        fill="url(#furHighlight)" filter="url(#shadowFilter)"/>
+    <!-- 3. Unmistakable Capybara Loaf Profile Silhouette -->
+    <!-- Crown -> Flat Snout -> Blunt Drop -> Chin -> Throat -> Front Paw -> Ground -> Big Round Rump -> Back -->
+    <path d="
+      M 26 23
+      L 41 23
+      C 46 23, 51 25, 53.5 28
+      C 54.5 29.5, 54.5 33.5, 54 36.5
+      C 53.5 39.5, 50 41.5, 45 41.5
+      C 41 41.5, 38 43.5, 37 46.5
+      L 37 53.5
+      L 31 53.5
+      L 31 50.5
+      C 26 51.5, 21 52.5, 17 52.5
+      C 12 52.5, 7 48.5, 7 41.5
+      C 7 33.5, 12 27.5, 18 25.5
+      C 20.5 24.5, 23 23.5, 26 23
+      Z
+    " fill="none"/>
 
-  <!-- Snout Cheeks & Muzzle (Iconic Broad Golden Honey Curve) -->
-  <path d="M 42 66 
-           C 42 56, 51 54, 64 54 
-           C 77 54, 86 56, 86 66 
-           C 87 77, 88 92, 83 99 
-           C 78 105, 72 107, 64 107 
-           C 56 107, 50 105, 45 99 
-           C 40 92, 41 77, 42 66 Z" 
-        fill="url(#snoutGrad)"/>
+    <!-- 4. Minimalist Facial Features (Chill Stoic Zen) -->
+    <!-- Characteristic Blunt Nostril Slit -->
+    <path d="M 49.5 30 C 51 31, 52 31, 52.8 30.2" stroke-width="2"/>
 
-  <!-- Calm Zen Eyes (Half-Closed Horizontal Smile: The Zen Guardrail) -->
-  <!-- Left Eye -->
-  <path d="M 44 52 C 48 49, 54 49, 57 52" stroke="#fef3c7" stroke-width="3.2" stroke-linecap="round" fill="none"/>
-  <!-- Right Eye -->
-  <path d="M 71 52 C 74 49, 80 49, 84 52" stroke="#fef3c7" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <!-- Serene Horizontal Smile Eye (The Calm Guardrail) -->
+    <path d="M 37.5 29 C 39 27.7, 42 27.7, 43.5 29" stroke-width="2.2"/>
 
-  <!-- Distinctive Capybara Truffle Nose (Broad, Rounded Dark Espresso) -->
-  <path d="M 54 73 C 54 67, 74 67, 74 73 C 74 78, 70 80.5, 64 80.5 C 58 80.5, 54 78, 54 73 Z" fill="#1c1917"/>
-  <!-- Subtle Nostrils -->
-  <ellipse cx="58.5" cy="73.8" rx="2" ry="1.4" fill="#3b1604"/>
-  <ellipse cx="69.5" cy="73.8" rx="2" ry="1.4" fill="#3b1604"/>
+    <!-- Gentle Mouth Slit -->
+    <path d="M 48 37.5 C 50 38.3, 52 38, 53.5 37" stroke-width="1.8"/>
 
-  <!-- Serene Mouth Line -->
-  <path d="M 64 80.5 L 64 87 M 57 88 C 60.5 90.5, 67.5 90.5, 71 88" stroke="#1c1917" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    <!-- Front Leg separation line -->
+    <path d="M 33 46.5 L 33 53.5" stroke-width="1.8"/>
 
-  <!-- Iconic Japanese Yuzu / Citrus Crown (Calm Zen Anchor) -->
-  <!-- Subtle Shadow under Yuzu -->
-  <ellipse cx="64" cy="33.5" rx="14" ry="3.5" fill="#1c1917" fill-opacity="0.35"/>
-  <!-- Golden Yuzu Fruit -->
-  <circle cx="64" cy="22" r="13" fill="url(#yuzuGrad)" stroke="#b45309" stroke-width="1.2"/>
-  <!-- Top Dimple -->
-  <circle cx="64" cy="10.5" r="1.5" fill="#78350f"/>
-  <!-- Fresh Leaf -->
-  <path d="M 64 10.5 C 70 3, 79 5, 78 13 C 74 14.5, 67 13.5, 64 10.5 Z" fill="#16a34a" stroke="#14532d" stroke-width="0.9"/>
-  <path d="M 65 11 C 70 8, 74 9, 76 12" stroke="#4ade80" stroke-width="0.7" stroke-linecap="round" fill="none"/>
-  <!-- Tiny Stem -->
-  <path d="M 64 10.5 C 63 7, 61 6, 60 7" stroke="#78350f" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+    <!-- Rear Haunch Wrinkle (The Capybara Potato Loaf) -->
+    <path d="M 14 42.5 C 17 43.5, 19 46.5, 19 49.5" stroke-width="1.8"/>
+  </g>
 </svg>
