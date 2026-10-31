@@ -175,3 +175,4 @@ async def calculate_velocity(request: Request):
         "active_buckets_cmd1": sum(1 for val in v1 if val > 0),
         "active_buckets_cmd2": sum(1 for val in v2 if val > 0)
     }
+

@@ -1,4 +1,4 @@
-# 🦫 `capybala` (v0.4.0)
+# 🦫 `capybala` (v0.8.0)
 
 **C**ontext-**A**ware **P**runing for **Y**ielding & **B**acktrack-**A**ligned **L**oop **A**voidance  
 *The Requests-Grade, Self-Healing Runtime for Autonomous AI Agents.*
