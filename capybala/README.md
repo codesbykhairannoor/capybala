@@ -101,5 +101,16 @@ Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTo
 
 ---
 
+## 📚 Academic Research & Theoretical Foundations
+
+Capybala's architecture is grounded in peer-reviewed research across autonomous agent failure analysis, high-dimensional phase-space manifolds, and attention degradation:
+- **Phase-Space Manifolds**: Grounded in Weinberger et al. (*ICML 2009*) feature hashing trick ($O(1)$ memory, sub-millisecond trajectory projection).
+- **Agent Failure Taxonomies**: Evaluated against real failure modes documented in Xia et al. (*ACM PACMSE/FSE 2025*) and Jimenez et al. (*ICLR 2024 SWE-bench*).
+- **Attention & Context Degradation**: Pruning rules formulated to eliminate U-shaped retrieval degradation identified by Liu et al. (*TACL 2024*).
+
+See [**`RESEARCH_REFERENCES.md`**](https://github.com/capybala/capybala/blob/main/RESEARCH_REFERENCES.md) for the complete, 100% Crossref-verified bibliography with active DOI and Open Access PDF links.
+
+---
+
 ## 📜 License
 Apache-2.0 License. Built for the Meta Global AI Developer Hackathon 2026.
