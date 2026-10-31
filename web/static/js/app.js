@@ -119,6 +119,9 @@ const App = {
     }
 };
 
-window.addEventListener('DOMContentLoaded', () => {
+// Bulletproof execution regardless of when the script evaluates
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
     App.init();
-});
+}

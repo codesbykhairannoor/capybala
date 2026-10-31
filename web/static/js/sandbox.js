@@ -116,11 +116,10 @@ const SandboxEngine = {
         }
 
         const stepDiv = document.createElement("div");
-        stepDiv.className = `p-3 rounded-lg border font-mono text-xs transition space-y-1.5 shadow-sm ${
-            step.is_deadlock
+        stepDiv.className = `p-3 rounded-lg border font-mono text-xs transition space-y-1.5 shadow-sm ${step.is_deadlock
                 ? "bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-800"
                 : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-        }`;
+            }`;
 
         const isLowVel = step.semantic_velocity < 0.70;
         const velBadgeClass = isLowVel ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-semibold";
@@ -181,7 +180,7 @@ const SandboxEngine = {
         if (entBar) {
             const pct = Math.min(100, Math.max(0, (entropy / 4.16) * 100));
             entBar.style.width = `${pct}%`;
-            entBar.className = entropy < 1.50 
+            entBar.className = entropy < 1.50
                 ? "h-2 rounded-full bg-rose-500 transition-all duration-300"
                 : "h-2 rounded-full bg-sky-500 transition-all duration-300";
         }

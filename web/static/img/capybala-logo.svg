@@ -1,43 +1,86 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
-  <!-- Capybala Mascot Badge: Warm Terracotta & Golden Amber (Not Black & White, Zero AI Neon Cliché) -->
-  
-  <!-- Outer Warm Rounded Squircle -->
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="#f59e0b" stroke="#92400e" stroke-width="2.5"/>
-  <!-- Inner Warm Tone Shading -->
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="#fbbf24" stroke="#d97706" stroke-width="1.5" stroke-dasharray="2 2" stroke-opacity="0.6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <!-- Rich Warm Earth & Golden Amber Developer Palette (Zero Cheap Neon AI Gradient) -->
+    <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="50%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="furHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6c381c"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </linearGradient>
+    <linearGradient id="snoutGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="yuzuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="60%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#1c1917" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Capybara Body / Shoulders (Warm Deep Espresso Brown) -->
-  <path d="M12 54C12 43 19 37 30 37H34C45 37 52 43 52 54V57H12V54Z" fill="#451a03"/>
-  <path d="M22 40C22 40 27 45 32 45C37 45 42 40 42 40C46 43 47 48 47 54H17C17 48 18 43 22 40Z" fill="#78350f"/>
+  <!-- Squircle Developer Badge (Warm Terracotta / Honey Amber with Crisp Gold Bevel) -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#badgeBg)"/>
+  <rect x="5.5" y="5.5" width="117" height="117" rx="28.5" stroke="#fde68a" stroke-width="1.8" stroke-opacity="0.5" fill="none"/>
 
-  <!-- Ears with Warm Inner Details -->
+  <!-- Capybara Ears (Earthy Mahogany with Soft Inner Cream Fluff) -->
   <!-- Left Ear -->
-  <path d="M18 19C16 13 21 9 26 12C28 14 28 18 27 21C23 21 19 21 18 19Z" fill="#451a03"/>
-  <path d="M19.5 17.5C18.5 14 21.5 11.5 24.5 13C25.5 14.5 25.5 17 24.5 18.5C23 18.5 20.5 18.5 19.5 17.5Z" fill="#b45309"/>
+  <path d="M 32 46 C 26 42, 26 28, 36 30 C 43 32, 42 42, 36 48 Z" fill="#3b1604"/>
+  <path d="M 33 43 C 29 40, 29 33, 35 34 C 39 35, 39 41, 35 45 Z" fill="#fef3c7" fill-opacity="0.85"/>
   <!-- Right Ear -->
-  <path d="M46 19C48 13 43 9 38 12C36 14 36 18 37 21C41 21 45 21 46 19Z" fill="#451a03"/>
-  <path d="M44.5 17.5C45.5 14 42.5 11.5 39.5 13C38.5 14.5 38.5 17 39.5 18.5C41 18.5 43.5 18.5 44.5 17.5Z" fill="#b45309"/>
+  <path d="M 96 46 C 102 42, 102 28, 92 30 C 85 32, 86 42, 92 48 Z" fill="#3b1604"/>
+  <path d="M 95 43 C 99 40, 99 33, 93 34 C 89 35, 89 41, 93 45 Z" fill="#fef3c7" fill-opacity="0.85"/>
 
-  <!-- Capybara Head Base -->
-  <rect x="20" y="14" width="24" height="26" rx="10" fill="#78350f"/>
+  <!-- Capybara Main Head (Noble, Organic, Smoothly Curved) -->
+  <path d="M 37 46 
+           C 37 36, 47 32, 64 32 
+           C 81 32, 91 36, 91 46 
+           C 94 56, 95 72, 93 86 
+           C 91 100, 81 106, 64 106 
+           C 47 106, 37 100, 35 86 
+           C 33 72, 34 56, 37 46 Z" 
+        fill="url(#furHighlight)" filter="url(#shadowFilter)"/>
 
-  <!-- Iconic Broad Capybara Snout -->
-  <path d="M18 25C18 21 22 19 32 19C42 19 46 21 46 25V35C46 39 41 41 32 41C23 41 18 39 18 35V25Z" fill="#92400e"/>
-  <!-- Snout Cheeks Warm Cream Tone -->
-  <path d="M21 27C21 24 25 23 32 23C39 23 43 24 43 27V34C43 37.5 39 39 32 39C25 39 21 37.5 21 34V27Z" fill="#fde68a"/>
+  <!-- Snout Cheeks & Muzzle (Iconic Broad Golden Honey Curve) -->
+  <path d="M 42 66 
+           C 42 56, 51 54, 64 54 
+           C 77 54, 86 56, 86 66 
+           C 87 77, 88 92, 83 99 
+           C 78 105, 72 107, 64 107 
+           C 56 107, 50 105, 45 99 
+           C 40 92, 41 77, 42 66 Z" 
+        fill="url(#snoutGrad)"/>
 
-  <!-- Zen Stoic Eyes: Confident, unbothered, calm guardrail lines -->
-  <path d="M22.5 21.5C24 20.5 27 20.5 28.5 21.5" stroke="#1c1917" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M35.5 21.5C37 20.5 40 20.5 41.5 21.5" stroke="#1c1917" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Calm Zen Eyes (Half-Closed Horizontal Smile: The Zen Guardrail) -->
+  <!-- Left Eye -->
+  <path d="M 44 52 C 48 49, 54 49, 57 52" stroke="#fef3c7" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+  <!-- Right Eye -->
+  <path d="M 71 52 C 74 49, 80 49, 84 52" stroke="#fef3c7" stroke-width="3.2" stroke-linecap="round" fill="none"/>
 
-  <!-- Broad Blunt Nose -->
-  <path d="M28 28.5C28 27 30 26.5 32 26.5C34 26.5 36 27 36 28.5C36 30.5 34 31 32 31C30 31 28 30.5 28 28.5Z" fill="#1c1917"/>
-  <circle cx="30" cy="28.7" r="0.8" fill="#44403c"/>
-  <circle cx="34" cy="28.7" r="0.8" fill="#44403c"/>
+  <!-- Distinctive Capybara Truffle Nose (Broad, Rounded Dark Espresso) -->
+  <path d="M 54 73 C 54 67, 74 67, 74 73 C 74 78, 70 80.5, 64 80.5 C 58 80.5, 54 78, 54 73 Z" fill="#1c1917"/>
+  <!-- Subtle Nostrils -->
+  <ellipse cx="58.5" cy="73.8" rx="2" ry="1.4" fill="#3b1604"/>
+  <ellipse cx="69.5" cy="73.8" rx="2" ry="1.4" fill="#3b1604"/>
 
-  <!-- Peaceful Mouth Line -->
-  <path d="M32 31V34M29 34C30.5 35 33.5 35 35 34" stroke="#1c1917" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Serene Mouth Line -->
+  <path d="M 64 80.5 L 64 87 M 57 88 C 60.5 90.5, 67.5 90.5, 71 88" stroke="#1c1917" stroke-width="2.6" stroke-linecap="round" fill="none"/>
 
-  <!-- Golden Calming Third-Eye Spark (Guardrail Sensor) -->
-  <polygon points="32,15 33.2,17.5 35.7,17.8 33.8,19.5 34.3,22 32,20.7 29.7,22 30.2,19.5 28.3,17.8 30.8,17.5" fill="#fef3c7" stroke="#b45309" stroke-width="0.5"/>
+  <!-- Iconic Japanese Yuzu / Citrus Crown (Calm Zen Anchor) -->
+  <!-- Subtle Shadow under Yuzu -->
+  <ellipse cx="64" cy="33.5" rx="14" ry="3.5" fill="#1c1917" fill-opacity="0.35"/>
+  <!-- Golden Yuzu Fruit -->
+  <circle cx="64" cy="22" r="13" fill="url(#yuzuGrad)" stroke="#b45309" stroke-width="1.2"/>
+  <!-- Top Dimple -->
+  <circle cx="64" cy="10.5" r="1.5" fill="#78350f"/>
+  <!-- Fresh Leaf -->
+  <path d="M 64 10.5 C 70 3, 79 5, 78 13 C 74 14.5, 67 13.5, 64 10.5 Z" fill="#16a34a" stroke="#14532d" stroke-width="0.9"/>
+  <path d="M 65 11 C 70 8, 74 9, 76 12" stroke="#4ade80" stroke-width="0.7" stroke-linecap="round" fill="none"/>
+  <!-- Tiny Stem -->
+  <path d="M 64 10.5 C 63 7, 61 6, 60 7" stroke="#78350f" stroke-width="1.4" stroke-linecap="round" fill="none"/>
 </svg>
