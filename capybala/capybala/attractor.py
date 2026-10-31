@@ -3,7 +3,7 @@ capybala.attractor
 ~~~~~~~~~~~~~~~~~~
 Post-IF-ELSE Mathematical Deadlock Detection Engine.
 Detects semantic loops, paraphrased command oscillations, and ergodic traps using:
-1. Hybrid Word Token + Subword N-Gram Feature Hashing (256-D Unit Vector Space)
+1. Hybrid Word Token + Subword N-Gram Feature Hashing (1024-D Unit Vector Space)
 2. Semantic Velocity Tracking: v_t = 1 - cos_sim(v_t, v_t-1)
 3. Markov Transition Entropy Gating: H = -Σ p_ij * log(p_ij)
 
@@ -13,6 +13,7 @@ Latency: < 0.8 ms per action.
 
 import math
 import hashlib
+import heapq
 import re
 from collections import defaultdict, deque
 from typing import List, Tuple, Dict, Optional, Set
@@ -26,8 +27,9 @@ class SemanticAttractorDetector:
     """
 
     NGRAM_SIZE: int = 3
-    HASH_SPACE: int = 256
+    HASH_SPACE: int = 1024            # 1024-D unit sphere projection (virtually eliminates hash collisions under birthday paradox)
     VELOCITY_THRESHOLD: float = 0.70  # Below 0.70 indicates strong semantic gravity / attractor
+    VARIANCE_THRESHOLD: float = 0.08  # Stagnation variance bound (distinguishes true attractor from wide oscillation)
     ENTROPY_THRESHOLD: float = 1.50   # Low entropy = predictable/trapped state transitions
     WINDOW_SIZE: int = 12
     STAGNATION_STEPS: int = 3         # 3 transitions (4 turns) of persistent semantic stagnation
@@ -36,11 +38,13 @@ class SemanticAttractorDetector:
     def __init__(
         self,
         velocity_threshold: float = VELOCITY_THRESHOLD,
+        variance_threshold: float = VARIANCE_THRESHOLD,
         entropy_threshold: float = ENTROPY_THRESHOLD,
         stagnation_steps: int = STAGNATION_STEPS,
         window_size: int = WINDOW_SIZE,
     ):
         self.velocity_threshold = velocity_threshold
+        self.variance_threshold = variance_threshold
         self.entropy_threshold = entropy_threshold
         self.stagnation_steps = stagnation_steps
         self.window_size = window_size
@@ -90,7 +94,7 @@ class SemanticAttractorDetector:
 
     def _cosine_similarity(self, v1: List[float], v2: List[float]) -> float:
         """Computes cosine similarity between two unit vectors."""
-        if not v1 or not v2:
+        if not v1 or not v2 or len(v1) != len(v2):
             return 0.0
         dot = sum(a * b for a, b in zip(v1, v2))
         return max(-1.0, min(1.0, dot))
@@ -106,7 +110,7 @@ class SemanticAttractorDetector:
 
     def _discretize_action(self, vector: List[float]) -> int:
         """Projects continuous vector into a discrete 64-state space for Markov analysis."""
-        indexed = sorted(enumerate(vector), key=lambda x: -x[1])[:4]
+        indexed = heapq.nlargest(4, enumerate(vector), key=lambda x: x[1])
         state = sum((idx * (pos + 1)) for pos, (idx, val) in enumerate(indexed) if val > 0)
         return state % 64
 
@@ -117,7 +121,7 @@ class SemanticAttractorDetector:
         Low entropy indicates that the agent's actions are locked in a predictable attractor basin.
         """
         if len(vectors) < 3:
-            return 2.0  # Safe default (high entropy)
+            return math.log(64)  # Theoretical maximum entropy for 64-state system (maximum uncertainty)
 
         states = [self._discretize_action(v) for v in vectors]
         transitions: Dict[Tuple[int, int], int] = defaultdict(int)
@@ -148,14 +152,28 @@ class SemanticAttractorDetector:
         if not action:
             return True
         act_clean = action.strip().lower()
+
+        # Check tool call wrapper (e.g. modify_file(path=...), str_replace_editor(...))
+        tool_call_match = re.match(r"^([a-zA-Z0-9_]+)\s*\(", act_clean)
+        if tool_call_match:
+            tool_name = tool_call_match.group(1).lower()
+            if any(m in tool_name for m in ("edit", "write", "patch", "replace", "create", "modify", "insert", "diff", "apply")):
+                return True
+            if any(nav in tool_name for nav in ("scroll", "goto", "cursor")):
+                return True
+
         first_token = act_clean.split()[0] if act_clean else ""
         first_token = re.sub(r"[^a-zA-Z0-9_\-]", "", first_token)
         
         # 1. Viewport navigation commands
         if first_token in ("scroll_up", "scroll_down", "scroll", "page_up", "page_down", "goto", "cursor"):
             return True
-        # 2. File modification primitives
-        if first_token in ("edit", "write", "create", "replace", "patch"):
+        # 2. File modification primitives (including modern LLM tool call verbs)
+        if first_token in (
+            "edit", "write", "create", "replace", "patch",
+            "modify_file", "edit_file", "write_file", "create_file", "str_replace_editor",
+            "apply_diff", "apply_patch", "update_file", "insert_lines"
+        ):
             return True
         return False
 
@@ -205,12 +223,17 @@ class SemanticAttractorDetector:
         if len(set(list(self.action_history)[-self.stagnation_steps - 1:])) <= 1:
             return False, 0.0, ""
 
-        # 1. Metric 1: Mean Semantic Velocity over recent window
+        # 1. Metric 1: Mean & Variance of Semantic Velocity over recent window
         recent_velocities = list(self.velocity_history)[-self.stagnation_steps:]
         mean_vel = sum(recent_velocities) / len(recent_velocities)
+        vel_variance = sum((v - mean_vel) ** 2 for v in recent_velocities) / len(recent_velocities)
 
         if mean_vel > self.velocity_threshold:
             # Semantic velocity is high: agent is exploring diverse strategies
+            return False, 0.0, ""
+
+        if vel_variance > self.variance_threshold:
+            # High velocity variance indicates oscillating exploration, not a tight attractor basin
             return False, 0.0, ""
 
         # 2. Metric 2: Markov Transition Entropy
@@ -228,6 +251,7 @@ class SemanticAttractorDetector:
 
         details = (
             f"Semantic attractor loop detected (mean velocity={mean_vel:.3f} < {self.velocity_threshold}, "
+            f"variance={vel_variance:.4f} <= {self.variance_threshold}, "
             f"Markov entropy={entropy:.2f} < {self.entropy_threshold}, confidence={confidence:.1%})"
         )
 

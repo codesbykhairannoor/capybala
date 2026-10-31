@@ -905,7 +905,8 @@ class DeadlockDetector:
                 act_clean = raw_action.strip().lower()
                 first_tok = act_clean.split()[0] if act_clean else ""
                 first_tok = first_tok.split("(")[0]
-                if first_tok in ("edit", "write", "create", "patch", "replace") and not current_fail:
+                is_mutating_tool = any(m in act_clean for m in ("str_replace_editor", "modify_file", "edit_file", "write_file", "apply_diff", "apply_patch"))
+                if (first_tok in ("edit", "write", "create", "patch", "replace") or is_mutating_tool) and not current_fail:
                     self.attractor_detector.reset()
 
                 is_attractor, confidence, attractor_details = self.attractor_detector.inspect_step(
