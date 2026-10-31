@@ -156,7 +156,7 @@ const DuelEngine = {
                     msg.classList.remove("hidden");
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
     },
 
     saveBYOK() {
@@ -170,7 +170,7 @@ const DuelEngine = {
                 msg.innerText = "✓ Key saved in localStorage! Unmetered live runs active.";
                 msg.classList.remove("hidden");
             }
-        } catch (e) {}
+        } catch (e) { }
     },
 
     clearBYOK() {
@@ -183,7 +183,7 @@ const DuelEngine = {
                 msg.innerText = "Key cleared. Using free community quota.";
                 msg.classList.remove("hidden");
             }
-        } catch (e) {}
+        } catch (e) { }
     },
 
     async fetchQuota() {
@@ -196,7 +196,7 @@ const DuelEngine = {
                     qText.innerText = `${data.remaining}/${data.daily_cap}`;
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
     },
 
     selectScenario(key) {
