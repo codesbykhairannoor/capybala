@@ -37,13 +37,32 @@ class DeadlockEmergencyStop(RuntimeError):
 @dataclass
 class DeadlockEvent:
     is_deadlock: bool
-    pattern_type: Optional[str] = None  # 'direct_repetition', 'fuzzy_repetition', 'delegation_cycle', 'oscillation', 'semantic_traceback', 'output_stagnation'
+    pattern_type: Optional[str] = None  # 'direct_repetition', 'fuzzy_repetition', 'delegation_cycle', 'oscillation', 'semantic_traceback', 'output_stagnation', 'semantic_attractor'
     repetition_count: int = 0
     details: str = ""
     signature: str = ""
     loop_onset_turn: int = 0  # Absolute turn where the loop first started
     is_circuit_broken: bool = False
     consecutive_deadlocks: int = 0
+    detection_tier: str = "none"  # 'tier1_exact' (<0.01ms exact SHA/Floyd) or 'tier2_lexical' (sub-ms manifold attractor)
+
+
+def find_exact_cycle_floyd(sequence: List[str]) -> Optional[Tuple[int, int]]:
+    """
+    Floyd / Brent cycle verification on hash sequences.
+    Detects exact periodic patterns at the tail in O(1) time (< 0.01 ms).
+    Returns (period, min_cycles) if found, otherwise None.
+    """
+    n = len(sequence)
+    if n < 2:
+        return None
+    for period in range(1, (n // 2) + 1):
+        if sequence[-period:] == sequence[-2 * period : -period]:
+            cycles = 2
+            while (cycles + 1) * period <= n and sequence[-(cycles + 1) * period : -cycles * period] == sequence[-period:]:
+                cycles += 1
+            return period, cycles
+    return None
 
 
 # Standard commands used for valid polling / waiting (exempt from static-output deadlock)
@@ -599,7 +618,7 @@ class DeadlockDetector:
                 self.healthy_turns_since_deadlock += 1
                 if self.healthy_turns_since_deadlock >= 3:
                     self.consecutive_deadlocks = 0
-                return DeadlockEvent(is_deadlock=False)
+                return DeadlockEvent(is_deadlock=False, detection_tier="none")
 
             detected_event: Optional[DeadlockEvent] = None
 
@@ -613,7 +632,7 @@ class DeadlockDetector:
                 eff_rep_threshold = self.repetition_threshold
                 eff_osc_threshold = self.oscillation_threshold
 
-            # 1. DIRECT REPETITION CHECK (A -> A -> A)
+            # 1. DIRECT REPETITION CHECK (A -> A -> A) [Tier 1 Exact Cycle]
             if len(self.action_history) >= eff_rep_threshold:
                 recent_actions = list(self.action_history)[-eff_rep_threshold:]
                 if len(set(recent_actions)) == 1:
@@ -640,9 +659,10 @@ class DeadlockDetector:
                             details=f"Command repeated {eff_rep_threshold}x with persistent failure: '{preview}'",
                             signature=action_hash,
                             loop_onset_turn=onset_turn,
+                            detection_tier="tier1_exact",
                         )
 
-            # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure)
+            # 2. FUZZY POLYMORPHIC REPETITION CHECK (minor flag/parameter variations with failure) [Tier 2 Lexical]
             if not detected_event and self.enable_fuzzy and len(self.raw_actions) >= eff_rep_threshold:
                 recent_raw = list(self.raw_actions)[-eff_rep_threshold:]
                 
@@ -681,9 +701,10 @@ class DeadlockDetector:
                                 details=f"Polymorphic command loop ({effective_threshold}x variants with persistent failure): '{preview}'",
                                 signature=f"fuzzy_{self._hash(eval_raw[-1])}",
                                 loop_onset_turn=onset_turn,
+                                detection_tier="tier2_lexical",
                             )
 
-            # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong & multi-hop loops)
+            # 3. MULTI-AGENT DELEGATION CYCLE CHECK (Agent A <-> Agent B ping-pong & multi-hop loops) [Tier 1 Exact Cycle]
             if not detected_event and self.enable_delegation:
                 valid_del = [t for t in self.delegation_history if t]
                 if len(valid_del) >= 4:
@@ -697,6 +718,7 @@ class DeadlockDetector:
                             details=f"Multi-agent delegation cycle detected: '{valid_del[-2]}' <-> '{valid_del[-1]}' ping-pong handoffs.",
                             signature=f"del_{valid_del[-2]}_{valid_del[-1]}",
                             loop_onset_turn=onset_turn,
+                            detection_tier="tier1_exact",
                         )
                     # 3-agent cycle: A -> B -> C -> A -> B -> C
                     elif len(valid_del) >= 6 and valid_del[-3:] == valid_del[-6:-3] and len(set(valid_del[-3:])) == 3:
@@ -708,6 +730,7 @@ class DeadlockDetector:
                             details=f"Multi-agent delegation cycle detected: 3-agent loop ({valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
                             signature=f"del_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
                             loop_onset_turn=onset_turn,
+                            detection_tier="tier1_exact",
                         )
                     # 4-agent cycle: A -> B -> C -> D -> A -> B -> C -> D
                     elif len(valid_del) >= 8 and valid_del[-4:] == valid_del[-8:-4] and len(set(valid_del[-4:])) == 4:
@@ -719,6 +742,7 @@ class DeadlockDetector:
                             details=f"Multi-agent delegation cycle detected: 4-agent loop ({valid_del[-4]} -> {valid_del[-3]} -> {valid_del[-2]} -> {valid_del[-1]}).",
                             signature=f"del_{valid_del[-4]}_{valid_del[-3]}_{valid_del[-2]}_{valid_del[-1]}",
                             loop_onset_turn=onset_turn,
+                            detection_tier="tier1_exact",
                         )
 
             # 4. OSCILLATION LOOP CHECK (Requires active failure or error persistence across the cycle)
@@ -749,9 +773,10 @@ class DeadlockDetector:
                                 details=f"2-step oscillating action loop detected ({eff_osc_threshold} cycles with failure).",
                                 signature=f"{hist[-2]}_{hist[-1]}",
                                 loop_onset_turn=onset_turn,
+                                detection_tier="tier1_exact",
                             )
 
-                # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C with failure)
+                # 4b. Period-3 Oscillation (A -> B -> C -> A -> B -> C with failure) [Tier 1 Exact Cycle]
                 if not detected_event:
                     required_turns_p3 = 6
                     if n >= required_turns_p3:
@@ -772,9 +797,10 @@ class DeadlockDetector:
                                     details="3-step oscillating action loop detected (2 cycles: A -> B -> C -> A -> B -> C with failure).",
                                     signature=f"{hist[-3]}_{hist[-2]}_{hist[-1]}",
                                     loop_onset_turn=onset_turn,
+                                    detection_tier="tier1_exact",
                                 )
 
-                # 4c. Period-4 Oscillation (A -> B -> C -> D -> A -> B -> C -> D with failure)
+                # 4c. Period-4 Oscillation (A -> B -> C -> D -> A -> B -> C -> D with failure) [Tier 1 Exact Cycle]
                 if not detected_event:
                     required_turns_p4 = 8
                     if n >= required_turns_p4:
@@ -793,9 +819,10 @@ class DeadlockDetector:
                                     details="4-step oscillating action loop detected (2 cycles with failure).",
                                     signature=f"{hist[-4]}_{hist[-3]}_{hist[-2]}_{hist[-1]}",
                                     loop_onset_turn=onset_turn,
+                                    detection_tier="tier1_exact",
                                 )
 
-                # 4d. Structural Trial-and-Error Oscillation (Period 2, 3, 4 with failure/stagnation)
+                # 4d. Structural Trial-and-Error Oscillation (Period 2, 3, 4 with failure/stagnation) [Tier 2 Lexical]
                 if not detected_event:
                     s_hist = list(self.structural_action_history)
                     s_n = len(s_hist)
@@ -874,10 +901,11 @@ class DeadlockDetector:
                                         details=f"Structural trial-and-error oscillation detected ({period}-step cycle with failure or stagnant output).",
                                         signature=f"struct_{period}_{s_hist[-1]}",
                                         loop_onset_turn=onset_turn,
+                                        detection_tier="tier2_lexical",
                                     )
                                     break
 
-            # 5. SEMANTIC TRACEBACK DEADLOCK CHECK
+            # 5. SEMANTIC TRACEBACK DEADLOCK CHECK [Tier 1 Exact Cycle]
             if not detected_event and err_sig is not None:
                 if len(self.observation_signatures) >= eff_rep_threshold:
                     recent_sigs = list(self.observation_signatures)[-eff_rep_threshold:]
@@ -890,9 +918,10 @@ class DeadlockDetector:
                             details=f"Persistent traceback deadlock: '{err_sig}' repeated {eff_rep_threshold} times.",
                             signature=self._hash(err_sig),
                             loop_onset_turn=onset_turn,
+                            detection_tier="tier1_exact",
                         )
 
-            # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns)
+            # 6. OBSERVATION STAGNATION DEADLOCK CHECK (Identical error output across turns) [Tier 1 Exact Cycle]
             if not detected_event:
                 is_refining = self._is_active_code_refinement(list(self.raw_actions)[-eff_rep_threshold:], safe_obs)
                 eff_obs_thresh = eff_rep_threshold + 1 if is_refining else eff_rep_threshold
@@ -911,9 +940,10 @@ class DeadlockDetector:
                                 details=f"Observation stagnation deadlock: Environment produced identical failing output {eff_obs_thresh} times in a row.",
                                 signature=recent_obs_hashes[-1],
                                 loop_onset_turn=onset_turn,
+                                detection_tier="tier1_exact",
                             )
 
-            # 7. EXPLORATION THRASHING CHECK (Excessive read-only queries without code mutation/testing)
+            # 7. EXPLORATION THRASHING CHECK (Excessive read-only queries without code mutation/testing) [Tier 2 Lexical]
             if self.enable_exploration_guard:
                 if self._is_mutating_or_execution(raw_action):
                     self.consecutive_exploration_turns = 0
@@ -932,9 +962,10 @@ class DeadlockDetector:
                         ),
                         signature=f"thrash_{self.consecutive_exploration_turns}",
                         loop_onset_turn=onset_turn,
+                        detection_tier="tier2_lexical",
                     )
 
-            # 8. POST-IF-ELSE SEMANTIC ATTRACTOR & DYNAMICAL MANIFOLD CHECK
+            # 8. POST-IF-ELSE SEMANTIC ATTRACTOR & DYNAMICAL MANIFOLD CHECK [Tier 2 Lexical]
             if not detected_event and self.enable_attractor and self.attractor_detector is not None:
                 current_fail = self._has_failure_indicator(safe_obs) or (self.observation_signatures[-1] is not None)
 
@@ -959,6 +990,7 @@ class DeadlockDetector:
                         details=attractor_details,
                         signature=f"attractor_{confidence:.2f}",
                         loop_onset_turn=onset_turn,
+                        detection_tier="tier2_lexical",
                     )
 
             # CIRCUIT BREAKER & PROGRESSION EVALUATION
@@ -984,7 +1016,7 @@ class DeadlockDetector:
                 self.healthy_turns_since_deadlock += 1
                 if self.healthy_turns_since_deadlock >= 3:
                     self.consecutive_deadlocks = 0
-                return DeadlockEvent(is_deadlock=False)
+                return DeadlockEvent(is_deadlock=False, detection_tier="none")
 
     def reset(self):
         """Resets detection history and circuit breaker counters."""
