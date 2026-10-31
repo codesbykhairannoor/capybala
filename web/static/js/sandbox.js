@@ -231,9 +231,9 @@ const SandboxEngine = {
             }
         });
 
-        // Switch tab
+        // Scroll smoothly to debugger section
         if (window.App) {
-            App.switchTab('tab-debugger');
+            App.scrollToSection('debugger-section');
         }
 
         const input = document.getElementById("debuggerJsonInput");

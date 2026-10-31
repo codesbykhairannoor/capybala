@@ -41,6 +41,10 @@
     --status-sky-bg: rgba(56, 189, 248, 0.15);
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     background-color: var(--bg-ground);
     color: var(--text-secondary);

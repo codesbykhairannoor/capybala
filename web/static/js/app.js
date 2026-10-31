@@ -1,10 +1,8 @@
 /**
- * app.js - Main Application Orchestration, Tab Switching & UI Utilities
+ * app.js - Main Application Orchestration, Smooth Scroll Navigation & UI Utilities
  */
 
 const App = {
-    activeTab: 'tab-debugger',
-
     init() {
         this.initTheme();
         if (window.DebuggerEngine) DebuggerEngine.init();
@@ -13,50 +11,74 @@ const App = {
         if (window.ManifoldCanvas) ManifoldCanvas.init();
         if (window.ChaosEngine) ChaosEngine.computeDistance();
 
-        // Setup Keyboard Shortcut: Ctrl+Enter / Cmd+Enter
+        this.initScrollSpy();
+
+        // Keyboard Shortcut: Ctrl+Enter / Cmd+Enter runs heal
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                if (this.activeTab === 'tab-debugger' && window.DebuggerEngine) {
-                    DebuggerEngine.runHeal();
-                } else if (this.activeTab === 'tab-sandbox' && window.SandboxEngine) {
-                    SandboxEngine.submitStep();
+                const active = document.activeElement;
+                if (active && (active.id === 'sandboxActionInput' || active.id === 'sandboxObsInput')) {
+                    if (window.SandboxEngine) SandboxEngine.submitStep();
+                } else {
+                    if (window.DebuggerEngine) DebuggerEngine.runHeal();
                 }
             }
+        });
+
+        // Window resize re-renders canvas
+        window.addEventListener('resize', () => {
+            if (window.ManifoldCanvas) ManifoldCanvas.render();
         });
     },
 
-    switchTab(tabId) {
-        this.activeTab = tabId;
-        const tabs = ['tab-debugger', 'tab-sandbox', 'tab-duel', 'tab-canvas', 'tab-benchmarks'];
+    scrollToSection(sectionId) {
+        const el = document.getElementById(sectionId);
+        if (el) {
+            const offset = 70; // Header height
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = el.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
 
-        tabs.forEach(t => {
-            const el = document.getElementById(t);
-            const btn = document.getElementById(`nav-${t}`);
-            if (el) {
-                if (t === tabId) {
-                    el.classList.remove("hidden");
-                } else {
-                    el.classList.add("hidden");
-                }
-            }
-            if (btn) {
-                if (t === tabId) {
-                    btn.className = "nav-tab-active px-3 py-2 rounded-lg text-xs font-mono font-bold transition shadow-sm";
-                } else {
-                    btn.className = "nav-tab-inactive px-3 py-2 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition font-medium";
-                }
-            }
-        });
-
-        // Trigger canvas resize when switching to canvas or sandbox
-        if (tabId === 'tab-canvas' || tabId === 'tab-sandbox') {
-            setTimeout(() => {
-                if (window.ManifoldCanvas) {
-                    ManifoldCanvas.resize();
-                    ManifoldCanvas.render();
-                }
-            }, 50);
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
         }
+    },
+
+    initScrollSpy() {
+        const sections = ['duel-section', 'debugger-section', 'sandbox-section', 'canvas-section', 'benchmarks-section'];
+        const navMap = {
+            'duel-section': 'nav-duel',
+            'debugger-section': 'nav-debugger',
+            'sandbox-section': 'nav-sandbox',
+            'canvas-section': 'nav-canvas',
+            'benchmarks-section': 'nav-benchmarks'
+        };
+
+        window.addEventListener('scroll', () => {
+            const scrollPos = window.scrollY + 120;
+            let current = 'duel-section';
+
+            for (const id of sections) {
+                const el = document.getElementById(id);
+                if (el && el.offsetTop <= scrollPos) {
+                    current = id;
+                }
+            }
+
+            Object.entries(navMap).forEach(([secId, navId]) => {
+                const btn = document.getElementById(navId);
+                if (btn) {
+                    if (secId === current) {
+                        btn.className = "nav-tab-active px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm whitespace-nowrap";
+                    } else {
+                        btn.className = "nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+                    }
+                }
+            });
+        });
     },
 
     initTheme() {

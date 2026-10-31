@@ -52,27 +52,27 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-nowrap">
             
             <!-- Left: Logo & Branding -->
-            <div class="flex items-center space-x-2.5 shrink-0">
+            <a href="#" class="flex items-center space-x-2.5 shrink-0 hover:opacity-95 transition">
                 <img src="/static/img/capybala-logo.svg" alt="Capybala Logo" class="w-8 h-8 rounded-lg shadow-sm" />
                 <span class="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">Capybala</span>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold">v0.8.0</span>
-            </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-semibold">v0.8.0</span>
+            </a>
             
-            <!-- Center: Single-Row Tab Navigation (Never Wraps) -->
+            <!-- Center: Smooth Jump Navigation (Single-Row, Never Wraps) -->
             <nav class="flex items-center space-x-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 whitespace-nowrap overflow-x-auto text-xs shrink">
-                <button onclick="App.switchTab('tab-debugger')" id="nav-tab-debugger" class="nav-tab-active px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm whitespace-nowrap">
-                    🛠️ Debugger &amp; Healer
-                </button>
-                <button onclick="App.switchTab('tab-sandbox')" id="nav-tab-sandbox" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
-                    🕹️ Sandbox
-                </button>
-                <button onclick="App.switchTab('tab-duel')" id="nav-tab-duel" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
+                <button onclick="App.scrollToSection('duel-section')" id="nav-duel" class="nav-tab-active px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm whitespace-nowrap">
                     ⚔️ Live Duel
                 </button>
-                <button onclick="App.switchTab('tab-canvas')" id="nav-tab-canvas" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
-                    🌀 Manifold
+                <button onclick="App.scrollToSection('debugger-section')" id="nav-debugger" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    🛠️ JSON Debugger
                 </button>
-                <button onclick="App.switchTab('tab-benchmarks')" id="nav-tab-benchmarks" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
+                <button onclick="App.scrollToSection('sandbox-section')" id="nav-sandbox" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    🕹️ Turn Sandbox
+                </button>
+                <button onclick="App.scrollToSection('canvas-section')" id="nav-canvas" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    🌀 1024-D Manifold
+                </button>
+                <button onclick="App.scrollToSection('benchmarks-section')" id="nav-benchmarks" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                     📊 Benchmarks
                 </button>
             </nav>
@@ -91,25 +91,138 @@
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-6 w-full space-y-8">
+    <!-- Main Continuous-Flow Workspace -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-8 w-full space-y-16">
+
+        <!-- Top Hero Value Proposition Header -->
+        <div class="space-y-4 max-w-4xl pt-2">
+            <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-semibold shadow-sm">
+                <span>🔥 Stop Agent Death Spirals</span>
+                <span>•</span>
+                <span>Sub-Millisecond Execution</span>
+                <span>•</span>
+                <span>Zero Token Overhead</span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                Watch an AI Agent Loop. Then Watch Capybala Heal It.
+            </h1>
+            <p class="text-sm md:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                When autonomous agents get stuck in repetitive commands or paraphrased search basins, they burn tens of dollars and crash with context overflow. Capybala projects agent actions into a <span class="font-mono font-semibold text-slate-900 dark:text-white">1024-D</span> dynamical semantic manifold, catching ergodic attractors in <span class="font-mono font-semibold text-amber-600 dark:text-amber-400">&lt;1ms</span> with pure Python standard library.
+            </p>
+        </div>
+
 
         <!-- ============================================================== -->
-        <!-- TAB 1: REAL JSON CONVERSATION DEBUGGER & AST CONTEXT HEALER     -->
+        <!-- SECTION 1: LIVE SPLIT-SCREEN DUEL & REAL-TIME DOLLAR TICKER     -->
         <!-- ============================================================== -->
-        <section id="tab-debugger" class="space-y-6">
+        <section id="duel-section" class="bg-white dark:bg-[#11141c] border-2 border-slate-300 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+            
+            <!-- Duel Controls & Scoreboard -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-6">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-bold">Showdown 1: Head-to-Head Comparison</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        Unprotected Baseline vs Capybala Guarded Agent
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Select a task scenario and click "Run Live Duel" to witness real-time token burn and self-healing.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <select id="duelScenarioSelect" onchange="DuelEngine.selectScenario(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                        <option value="semantic_attractor">Vortex: Semantic Paraphrase Loop</option>
+                        <option value="direct_repetition">Loop: Direct Pytest Repetition</option>
+                        <option value="oscillation">Conflict: Git Edit-Revert Ping-Pong</option>
+                    </select>
+
+                    <button onclick="DuelEngine.runDuel()" id="duelBtn" class="px-5 py-2.5 rounded-lg font-bold text-xs font-mono tracking-wider bg-amber-500 hover:bg-amber-600 text-slate-950 transition flex items-center space-x-2 shadow-sm">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <span>Run Live Duel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Big Impact Metric Scoreboard -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Baseline Cost Burn</div>
+                    <div id="duelCostLeft" class="text-2xl font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5">$0.00</div>
+                    <div class="text-[11px] text-slate-500 font-mono">16k tokens burned</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Capybala Cost</div>
+                    <div id="duelCostRight" class="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">$0.00</div>
+                    <div class="text-[11px] text-slate-500 font-mono">2.4k tokens clean</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Cost Reduction</div>
+                    <div id="duelSavingsMultiplier" class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">10.1x</div>
+                    <div class="text-[11px] text-slate-500 font-mono">Cheaper per task</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Task Outcome</div>
+                    <div id="duelOutcomeBadge" class="text-base font-bold font-mono text-slate-800 dark:text-white mt-1">Ready to execute</div>
+                    <div class="text-[11px] text-slate-500 font-mono">Auto recovery</div>
+                </div>
+            </div>
+
+            <!-- Split-Screen Execution Stream -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Baseline Agent Loop -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-900">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
+                            <span class="font-bold text-xs font-mono text-rose-700 dark:text-rose-400 uppercase tracking-wide">Standard Agent (No Guardrail)</span>
+                        </div>
+                        <span id="leftStepIndicator" class="text-xs font-mono text-rose-600 font-semibold">Step 0</span>
+                    </div>
+
+                    <div id="leftStream" class="h-80 bg-rose-50/50 dark:bg-[#0e0709] border border-rose-200 dark:border-rose-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
+                        <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to observe baseline agent behavior...</div>
+                    </div>
+
+                    <div id="leftStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
+                        <span>Status: Idle</span>
+                        <span id="leftCostTicker" class="text-rose-600 font-bold">$0.00 Wasted</span>
+                    </div>
+                </div>
+
+                <!-- Right: Capybala Self-Healing -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-900">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="font-bold text-xs font-mono text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Agent with Capybala (Protected)</span>
+                        </div>
+                        <span id="rightStepIndicator" class="text-xs font-mono text-emerald-600 font-semibold">Step 0</span>
+                    </div>
+
+                    <div id="rightStream" class="h-80 bg-emerald-50/50 dark:bg-[#070e0a] border border-emerald-200 dark:border-emerald-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
+                        <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to see Capybala detect and self-heal...</div>
+                    </div>
+
+                    <div id="rightStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
+                        <span>Status: Idle</span>
+                        <span id="rightCostTicker" class="text-emerald-600 font-bold">$0.00 Total</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- SECTION 2: REAL JSON CONVERSATION DEBUGGER & AST CONTEXT HEALER -->
+        <!-- ============================================================== -->
+        <section id="debugger-section" class="space-y-6 pt-6">
             
             <div class="space-y-2 max-w-4xl">
-                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-semibold">
-                    <span>⚡ Real Engine Execution</span>
-                    <span>•</span>
-                    <span>OpenAI &amp; Anthropic AST Surgery</span>
-                    <span>•</span>
-                    <span>Sub-Millisecond Latency</span>
-                </div>
-                <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                <span class="text-xs font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-bold">Feature 2: Production Tooling</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     AI Agent Conversation Debugger &amp; Context Healer
-                </h1>
+                </h2>
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     Paste real multi-turn conversation JSON from your agent runs. Capybala parses tool-calls, detects structural oscillations and ergodic attractors in <span class="font-mono font-bold text-amber-600">&lt;1ms</span>, prunes redundant tokens, and injects doctor directives without triggering 400 Bad Request.
                 </p>
@@ -442,21 +555,15 @@
 
 
         <!-- ============================================================== -->
-        <!-- TAB 2: LIVE TURN-BY-TURN AGENT SANDBOX                         -->
+        <!-- SECTION 3: LIVE TURN-BY-TURN AGENT SANDBOX                     -->
         <!-- ============================================================== -->
-        <section id="tab-sandbox" class="hidden space-y-6">
+        <section id="sandbox-section" class="space-y-6 pt-6">
             
             <div class="space-y-2 max-w-4xl">
-                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-xs font-mono font-semibold">
-                    <span>🕹️ Interactive Turn Simulator</span>
-                    <span>•</span>
-                    <span>Live Semantic Velocity ($v_t$)</span>
-                    <span>•</span>
-                    <span>1024-D Manifold HUD</span>
-                </div>
-                <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                <span class="text-xs font-mono uppercase tracking-widest text-sky-700 dark:text-sky-400 font-bold">Feature 3: Dynamic Simulation</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     Live Turn-by-Turn Agent Sandbox
-                </h1>
+                </h2>
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     Act as an autonomous agent or inject failure scenarios step-by-step. Observe the Semantic Velocity Gauge ($v_t$), Markov Entropy ($H$), and the 1024-D Manifold canvas calculate in sub-milliseconds per turn.
                 </p>
@@ -596,134 +703,15 @@
 
 
         <!-- ============================================================== -->
-        <!-- TAB 3: LIVE SPLIT-SCREEN DUEL & REAL-TIME DOLLAR TICKER         -->
+        <!-- SECTION 4: TRUE 1024-D MANIFOLD PROJECTION & COSINE CALCULATOR -->
         <!-- ============================================================== -->
-        <section id="tab-duel" class="hidden space-y-6">
+        <section id="canvas-section" class="space-y-6 pt-6">
             
             <div class="space-y-2 max-w-4xl">
-                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-semibold">
-                    <span>⚔️ Head-to-Head Showdown</span>
-                    <span>•</span>
-                    <span>10.1x Cost Reduction</span>
-                    <span>•</span>
-                    <span>Context Overflow Prevention</span>
-                </div>
-                <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-                    Unprotected Baseline vs Capybala Guarded Agent
-                </h1>
-                <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Watch an unprotected agent loop until fatal context overflow, side-by-side with Capybala detecting the loop at Turn 4, executing an atomic rollback, and successfully solving the task.
-                </p>
-            </div>
-
-            <!-- Duel Controls & Live Scoreboard -->
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
-                
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-4">
-                    <div>
-                        <span class="text-xs font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-bold">Select Scenario</span>
-                        <div class="flex items-center space-x-3 mt-1">
-                            <select id="duelScenarioSelect" onchange="DuelEngine.selectScenario(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
-                                <option value="semantic_attractor">Vortex: Semantic Paraphrase Loop</option>
-                                <option value="direct_repetition">Loop: Direct Pytest Repetition</option>
-                                <option value="oscillation">Conflict: Git Edit-Revert Ping-Pong</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <button onclick="DuelEngine.runDuel()" id="duelBtn" class="px-5 py-2.5 rounded-lg font-bold text-xs font-mono tracking-wider bg-amber-500 hover:bg-amber-600 text-slate-950 transition flex items-center space-x-2 shadow-sm">
-                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <span>Run Live Duel</span>
-                    </button>
-                </div>
-
-                <!-- Big Impact Metric Scoreboard -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Baseline Cost Burn</div>
-                        <div id="duelCostLeft" class="text-2xl font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5">$0.00</div>
-                        <div class="text-[11px] text-slate-500 font-mono">16k tokens burned</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Capybala Cost</div>
-                        <div id="duelCostRight" class="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">$0.00</div>
-                        <div class="text-[11px] text-slate-500 font-mono">2.4k tokens clean</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Cost Reduction</div>
-                        <div id="duelSavingsMultiplier" class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">10.1x</div>
-                        <div class="text-[11px] text-slate-500 font-mono">Cheaper per task</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Task Outcome</div>
-                        <div id="duelOutcomeBadge" class="text-base font-bold font-mono text-slate-800 dark:text-white mt-1">Ready to execute</div>
-                        <div class="text-[11px] text-slate-500 font-mono">Auto recovery</div>
-                    </div>
-                </div>
-
-                <!-- Split-Screen Execution Stream -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Left: Baseline Agent Loop -->
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-950">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
-                                <span class="font-bold text-xs font-mono text-rose-700 dark:text-rose-400 uppercase tracking-wide">Standard Agent (No Guardrail)</span>
-                            </div>
-                            <span id="leftStepIndicator" class="text-xs font-mono text-rose-600 font-semibold">Step 0</span>
-                        </div>
-
-                        <div id="leftStream" class="h-80 bg-rose-50/50 dark:bg-[#0e0709] border border-rose-200 dark:border-rose-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
-                            <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to observe baseline agent behavior...</div>
-                        </div>
-
-                        <div id="leftStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
-                            <span>Status: Idle</span>
-                            <span id="leftCostTicker" class="text-rose-600 font-bold">$0.00 Wasted</span>
-                        </div>
-                    </div>
-
-                    <!-- Right: Capybala Self-Healing -->
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-950">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                                <span class="font-bold text-xs font-mono text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Agent with Capybala (Protected)</span>
-                            </div>
-                            <span id="rightStepIndicator" class="text-xs font-mono text-emerald-600 font-semibold">Step 0</span>
-                        </div>
-
-                        <div id="rightStream" class="h-80 bg-emerald-50/50 dark:bg-[#070e0a] border border-emerald-200 dark:border-emerald-950 rounded-xl p-4 overflow-y-auto space-y-2.5 font-mono text-xs shadow-inner">
-                            <div class="text-slate-400 text-xs italic">// Press 'Run Live Duel' to see Capybala detect and self-heal...</div>
-                        </div>
-
-                        <div id="rightStatusBar" class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
-                            <span>Status: Idle</span>
-                            <span id="rightCostTicker" class="text-emerald-600 font-bold">$0.00 Total</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-
-        <!-- ============================================================== -->
-        <!-- TAB 4: TRUE 1024-D MANIFOLD PROJECTION & COSINE CALCULATOR     -->
-        <!-- ============================================================== -->
-        <section id="tab-canvas" class="hidden space-y-6">
-            
-            <div class="space-y-2 max-w-4xl">
-                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-semibold">
-                    <span>🌀 Deterministic Random Projection</span>
-                    <span>•</span>
-                    <span>1024-D Feature Hashing</span>
-                    <span>•</span>
-                    <span>L2 Unit Sphere</span>
-                </div>
-                <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                <span class="text-xs font-mono uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-bold">Feature 4: Mathematical Physics</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     Phase-Space Trajectory Manifold Canvas
-                </h1>
+                </h2>
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     Mathematical visualization of semantic gravity wells. Actions are hashed into a 1024-dimensional feature vector on a unit sphere, then projected into 2D via deterministic Johnson-Lindenstrauss orthonormal basis vectors.
                 </p>
@@ -820,18 +808,28 @@
 
 
         <!-- ============================================================== -->
-        <!-- TAB 5: BENCHMARKS & ONE-LINE INTEGRATION                        -->
+        <!-- SECTION 5: BENCHMARKS & MULTI-AI AUDITS                        -->
         <!-- ============================================================== -->
-        <section id="tab-benchmarks" class="hidden space-y-6">
+        <section id="benchmarks-section" class="space-y-6 pt-6">
             
+            <div class="space-y-2 max-w-4xl">
+                <span class="text-xs font-mono uppercase tracking-widest text-purple-700 dark:text-purple-400 font-bold">Scientific Validation</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Reproducible SWE-bench Benchmarks &amp; Peer Audits
+                </h2>
+                <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Evaluated across 100 SWE-bench trajectories and cross-examined adversarially by frontier AI models.
+                </p>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- SWE-bench Table -->
                 <div class="lg:col-span-6 bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
                     <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-                        Reproducible SWE-bench Benchmark
+                        SWE-bench Empirical Metric Summary
                     </h3>
                     <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Benchmarked across 100 long-horizon agent trajectories (50 genuine multi-turn cognitive deadlocks from SWE-bench failed runs, and 50 clean tasks):
+                        Evaluated across 100 long-horizon agent trajectories (50 genuine multi-turn cognitive deadlocks from SWE-bench failed runs, and 50 clean tasks):
                     </p>
                     <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs font-mono shadow-sm">
                         <div class="bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 flex justify-between">
@@ -895,7 +893,7 @@
             </div>
 
             <!-- Quickstart Snippets -->
-            <div class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+            <div id="quickstart-section" class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                     One-Line Drop-In Integration
                 </h3>
@@ -934,7 +932,7 @@ from capybala.integrations import (
     </main>
 
     <!-- Clean Footer -->
-    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11141c] py-6 px-6 text-xs text-slate-500 dark:text-slate-400 mt-12">
+    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11141c] py-6 px-4 md:px-8 text-xs text-slate-500 dark:text-slate-400 mt-12">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center space-x-2">
                 <img src="/static/img/capybala-logo.svg" alt="Capybala Logo" class="w-5 h-5 rounded" />

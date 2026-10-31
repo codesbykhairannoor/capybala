@@ -93,7 +93,7 @@ const DebuggerEngine = {
                     .replace(/'/g, '"');
                 const parsed2 = JSON.parse(sanitized);
                 if (Array.isArray(parsed2)) return parsed2;
-            } catch (_) {}
+            } catch (_) { }
             throw new Error(err1.message);
         }
     },
@@ -232,11 +232,10 @@ const DebuggerEngine = {
         origMsgs.forEach((msg, idx) => {
             const isPruned = idx >= (healedCount - 1) && healedCount < origMsgs.length;
             const card = document.createElement("div");
-            card.className = `p-3 rounded-lg border text-xs font-mono transition ${
-                isPruned 
+            card.className = `p-3 rounded-lg border text-xs font-mono transition ${isPruned
                     ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 line-through opacity-75 text-rose-900 dark:text-rose-300"
                     : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
-            }`;
+                }`;
 
             const role = msg.role || "unknown";
             let contentStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
@@ -258,11 +257,10 @@ const DebuggerEngine = {
         healedMsgs.forEach((msg, idx) => {
             const isInjected = JSON.stringify(msg).includes("CAPYBALA DOCTOR INTERVENTION") || JSON.stringify(msg).includes("CAPYBALA STATE ROLLBACK");
             const card = document.createElement("div");
-            card.className = `p-3 rounded-lg border text-xs font-mono transition ${
-                isInjected
+            card.className = `p-3 rounded-lg border text-xs font-mono transition ${isInjected
                     ? "bg-amber-50 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-sm"
                     : "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-slate-800 dark:text-slate-200"
-            }`;
+                }`;
 
             const role = msg.role || "unknown";
             let contentStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
