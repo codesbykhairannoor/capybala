@@ -37,3 +37,4 @@
 - NO decorative capsule badges with pulsing green dots.
 - NO fake statistics, fake logos, or fake testimonials.
 - NO dummy buttons or non-functional mock UI — every interactive element runs actual Python Capybala algorithms.
+
