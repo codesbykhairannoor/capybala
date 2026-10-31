@@ -12,7 +12,7 @@
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #64748b;
-    --accent-amber: #d97706;
+    --accent-amber: #f59e0b;
     --accent-amber-light: #fef3c7;
     --status-emerald: #059669;
     --status-emerald-bg: #d1fae5;
@@ -52,6 +52,21 @@ code, pre, .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Tab Navigation Styles */
+.nav-tab-active {
+    background-color: #f59e0b !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+.nav-tab-inactive {
+    color: var(--text-muted);
+}
+.nav-tab-inactive:hover {
+    color: var(--text-primary);
+    background-color: rgba(148, 163, 184, 0.1);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
@@ -87,17 +102,9 @@ code, pre, .font-mono {
     animation: fadeInItem 0.25s ease-out forwards;
 }
 
-/* Ticker pulse */
-@keyframes tickerGlow {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.03);
-    }
+/* Diff viewer line clamp & styling */
+.diff-code-editor {
+    tab-size: 2;
+    white-space: pre;
+    font-family: 'JetBrains Mono', monospace;
 }
-
-.ticker-pulse {
-    animation: tickerGlow 1.2s infinite ease-in-out;
-}
-

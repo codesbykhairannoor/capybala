@@ -1,38 +1,112 @@
 /**
- * canvas.js - Phase-Space Trajectory Manifold Canvas Renderer
- * Visualizes 1024-D unit sphere projections, ergodic gravity wells, and Capybala deflection vectors.
+ * canvas.js - True 1024-D Unit Sphere Manifold Projection Canvas
+ * Renders real mathematical projections of agent trajectories using
+ * deterministic Johnson-Lindenstrauss orthonormal random projection vectors.
  */
 
 const ManifoldCanvas = {
     canvas: null,
     ctx: null,
-    mode: 'spiral', // 'spiral' or 'deflect'
-    particles: [],
+    points: [],
+    mode: 'live',
 
     init() {
         this.canvas = document.getElementById("manifoldCanvas");
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext("2d");
+        this.resize();
+        this.render();
+    },
 
-        // Initialize background ambient particles
-        this.particles = [];
-        for (let i = 0; i < 35; i++) {
-            this.particles.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                vx: (Math.random() - 0.5) * 0.4,
-                vy: (Math.random() - 0.5) * 0.4,
-                size: Math.random() * 2 + 1,
-                alpha: Math.random() * 0.4 + 0.1
-            });
-        }
+    resize() {
+        if (!this.canvas) return;
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = Math.min(680, rect.width - 32);
+        this.canvas.height = 360;
+    },
 
+    clearPoints() {
+        this.points = [];
+        this.render();
+    },
+
+    addPoint(step, x, y, isDeadlock, label) {
+        this.points.push({
+            step: step,
+            x: x,
+            y: y,
+            isDeadlock: isDeadlock,
+            label: label || `Turn ${step}`
+        });
         this.render();
     },
 
     setMode(newMode) {
         this.mode = newMode;
-        this.render();
+        if (newMode === 'spiral') {
+            this.simulateSpiralBasin();
+        } else if (newMode === 'deflect') {
+            this.simulateDeflection();
+        }
+    },
+
+    async simulateSpiralBasin() {
+        // Fetch projection of 6 paraphrased commands that collapse into attractor
+        const actions = [
+            "grep -rn 'def authenticate_user' tests/",
+            "find . -name '*test_auth*.py'",
+            "python -m pytest -k 'test_auth'",
+            "grep -i 'test_auth' src/",
+            "python -c 'import auth; print(dir(auth))'",
+            "grep -rn 'authenticate_user' ."
+        ];
+        try {
+            const res = await fetch('/api/vector_projection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actions })
+            });
+            const data = await res.json();
+            this.points = data.points.map((p, idx) => ({
+                step: idx + 1,
+                x: p.x,
+                y: p.y,
+                isDeadlock: idx >= 3,
+                label: p.action
+            }));
+            this.render();
+        } catch (err) {
+            console.error("Failed to project actions:", err);
+        }
+    },
+
+    async simulateDeflection() {
+        await this.simulateSpiralBasin();
+        // Add deflection point
+        if (this.points.length > 0) {
+            const last = this.points[this.points.length - 1];
+            this.points.push({
+                step: this.points.length + 1,
+                x: last.x + 0.65,
+                y: last.y - 0.45,
+                isDeadlock: false,
+                isDeflection: true,
+                label: "Capybala Atomic Deflection"
+            });
+            this.render();
+        }
+    },
+
+    toCanvasX(x) {
+        const cx = this.canvas.width / 2;
+        const scale = (this.canvas.width / 2) * 0.75;
+        return cx + x * scale;
+    },
+
+    toCanvasY(y) {
+        const cy = this.canvas.height / 2;
+        const scale = (this.canvas.height / 2) * 0.75;
+        return cy + y * scale;
     },
 
     render() {
@@ -40,121 +114,117 @@ const ManifoldCanvas = {
         const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
+
+        // Clear dark space background
+        ctx.fillStyle = "#090d16";
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw Coordinate Grid & Unit Sphere Bounds
+        ctx.strokeStyle = "#161f30";
+        ctx.lineWidth = 1;
+
         const cx = w / 2;
         const cy = h / 2;
 
-        // Clear canvas with dark slate background
-        ctx.fillStyle = "#0a0c10";
-        ctx.fillRect(0, 0, w, h);
-
-        // Render ambient manifold particles
-        this.particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            if (p.x < 0) p.x = w;
-            if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h;
-            if (p.y > h) p.y = 0;
-
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(148, 163, 184, ${p.alpha})`;
-            ctx.fill();
-        });
-
-        // Draw radial coordinate grid (Unit Sphere concentric shells)
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
-        ctx.lineWidth = 1;
-        for (let r = 40; r <= 160; r += 40) {
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Radius label
-            ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
-            ctx.font = "9px JetBrains Mono";
-            ctx.fillText(`r=${(r / 160).toFixed(2)}`, cx + r + 3, cy - 4);
-        }
-
-        // Draw center gravity well (Attractor Basin)
-        const grad = ctx.createRadialGradient(cx, cy, 6, cx, cy, 75);
-        grad.addColorStop(0, "rgba(225, 29, 72, 0.40)");
-        grad.addColorStop(0.6, "rgba(225, 29, 72, 0.15)");
-        grad.addColorStop(1, "rgba(225, 29, 72, 0.0)");
-        ctx.fillStyle = grad;
+        // Center Crosshair
         ctx.beginPath();
-        ctx.arc(cx, cy, 75, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(w, cy);
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, h);
+        ctx.stroke();
 
-        // Label center attractor basin
-        ctx.fillStyle = "rgba(244, 63, 94, 0.9)";
-        ctx.font = "10px JetBrains Mono";
-        ctx.textAlign = "center";
-        ctx.fillText("ATTRACTOR BASIN (v_t < 0.70)", cx, cy + 4);
+        // Unit Sphere Boundary Circle
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, (h / 2) * 0.75, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
 
-        // Compute trajectory points
-        const points = [];
-        if (this.mode === 'spiral') {
-            // Decaying spiral inwards (trapped agent loop)
-            for (let t = 0; t <= 12; t += 0.2) {
-                const radius = 150 * Math.exp(-0.16 * t);
-                const angle = t * 1.5;
-                const x = cx + Math.cos(angle) * radius;
-                const y = cy + Math.sin(angle) * radius;
-                points.push({x, y});
-            }
-        } else {
-            // Trajectory captured, then deflected by Capybala
-            for (let t = 0; t <= 6.2; t += 0.2) {
-                const radius = 150 * Math.exp(-0.16 * t);
-                const angle = t * 1.5;
-                const x = cx + Math.cos(angle) * radius;
-                const y = cy + Math.sin(angle) * radius;
-                points.push({x, y});
-            }
-            // Golden deflection vector pushing outwards
-            const last = points[points.length - 1];
-            points.push({x: last.x + 85, y: last.y - 75});
-            points.push({x: last.x + 180, y: last.y - 135});
+        // Axis labels
+        ctx.fillStyle = "#475569";
+        ctx.font = "9px 'JetBrains Mono', monospace";
+        ctx.fillText("Projection Dimension 1 (v · w_x)", w - 160, cy - 8);
+        ctx.fillText("Dimension 2 (v · w_y)", cx + 8, 16);
+
+        if (this.points.length === 0) {
+            ctx.fillStyle = "#64748b";
+            ctx.font = "11px 'JetBrains Mono', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("Run Sandbox Step or Click 'Simulate Spiral Basin' to plot manifold trajectory", cx, cy + 40);
+            ctx.textAlign = "start";
+            return;
         }
 
-        // Draw trajectory path line
-        if (points.length > 0) {
+        // Draw Trajectory Path Lines
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const p1 = this.points[i];
+            const p2 = this.points[i + 1];
+
+            const x1 = this.toCanvasX(p1.x);
+            const y1 = this.toCanvasY(p1.y);
+            const x2 = this.toCanvasX(p2.x);
+            const y2 = this.toCanvasY(p2.y);
+
             ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i].x, points[i].y);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+
+            if (p2.isDeflection) {
+                ctx.strokeStyle = "#f59e0b"; // Gold Deflection
+                ctx.lineWidth = 3;
+                ctx.setLineDash([6, 3]);
+            } else if (p2.isDeadlock) {
+                ctx.strokeStyle = "#f43f5e"; // Rose Deadlock
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+            } else {
+                ctx.strokeStyle = "#10b981"; // Emerald Forward
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
             }
-            ctx.strokeStyle = this.mode === 'spiral' ? "#e11d48" : "#10b981";
-            ctx.lineWidth = 2.5;
             ctx.stroke();
-
-            // Draw milestone nodes on the trajectory
-            points.forEach((p, idx) => {
-                if (idx % 3 === 0 || idx === points.length - 1) {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, idx === points.length - 1 ? 5 : 3, 0, Math.PI * 2);
-                    ctx.fillStyle = idx === points.length - 1 ? "#f59e0b" : (this.mode === 'spiral' ? "#f43f5e" : "#10b981");
-                    ctx.fill();
-                }
-            });
-
-            // If deflection mode, render explicit vector arrow and label
-            if (this.mode === 'deflect') {
-                const pDeflect = points[points.length - 3];
-                ctx.strokeStyle = "#f59e0b";
-                ctx.lineWidth = 3.5;
-                ctx.beginPath();
-                ctx.moveTo(pDeflect.x, pDeflect.y);
-                ctx.lineTo(pDeflect.x + 65, pDeflect.y - 55);
-                ctx.stroke();
-
-                ctx.fillStyle = "#f59e0b";
-                ctx.font = "bold 11px JetBrains Mono";
-                ctx.textAlign = "left";
-                ctx.fillText("CAPYBALA ATOMIC DEFLECTION", pDeflect.x + 75, pDeflect.y - 65);
-            }
+            ctx.setLineDash([]);
         }
+
+        // Draw Nodes
+        this.points.forEach((p, idx) => {
+            const px = this.toCanvasX(p.x);
+            const py = this.toCanvasY(p.y);
+
+            ctx.beginPath();
+            ctx.arc(px, py, p.isDeflection ? 6 : 4.5, 0, Math.PI * 2);
+
+            if (p.isDeflection) {
+                ctx.fillStyle = "#fbbf24";
+                ctx.shadowColor = "#f59e0b";
+                ctx.shadowBlur = 10;
+            } else if (p.isDeadlock) {
+                ctx.fillStyle = "#f43f5e";
+                ctx.shadowColor = "#e11d48";
+                ctx.shadowBlur = 8;
+            } else {
+                ctx.fillStyle = "#10b981";
+                ctx.shadowColor = "#059669";
+                ctx.shadowBlur = 6;
+            }
+
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw Step Number
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "10px 'JetBrains Mono', monospace";
+            ctx.fillText(`T${p.step}`, px + 7, py - 4);
+        });
     }
 };
 
+window.addEventListener("resize", () => {
+    if (window.ManifoldCanvas) {
+        ManifoldCanvas.resize();
+        ManifoldCanvas.render();
+    }
+});
