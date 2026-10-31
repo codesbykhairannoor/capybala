@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capybala: Autonomous Agent Deadlock Debugger & Context Profiler</title>
+    <title>Capybala: Autonomous Agent Deadlock Debugger &amp; Context Profiler</title>
     
+    <!-- Authentic Capybala SVG Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/img/capybala-logo.svg">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -44,48 +47,43 @@
 </head>
 <body class="bg-slate-50 dark:bg-[#0a0c10] text-slate-800 dark:text-slate-200 min-h-screen flex flex-col transition-colors duration-150">
 
-    <!-- Top Navigation Header -->
-    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#11141c]/95 backdrop-blur sticky top-0 z-50 px-6 py-3">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-lg bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 flex items-center justify-center text-xl shadow-sm">
-                    🦫
-                </div>
-                <div>
-                    <div class="flex items-center space-x-2">
-                        <span class="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">Capybala</span>
-                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium">v0.8.0</span>
-                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-medium">Zero Dependencies</span>
-                    </div>
-                </div>
+    <!-- Top Navigation Header: Single-Row, Pixel-Perfect, Non-Wrapping -->
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#11141c]/95 backdrop-blur sticky top-0 z-50 px-4 md:px-8 py-2.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-nowrap">
+            
+            <!-- Left: Logo & Branding -->
+            <div class="flex items-center space-x-2.5 shrink-0">
+                <img src="/static/img/capybala-logo.svg" alt="Capybala Logo" class="w-8 h-8 rounded-lg shadow-sm" />
+                <span class="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">Capybala</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold">v0.8.0</span>
             </div>
             
-            <!-- Tab Switcher Navigation -->
-            <nav class="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                <button onclick="App.switchTab('tab-debugger')" id="nav-tab-debugger" class="nav-tab-active px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm">
-                    🛠️ JSON Debugger &amp; Healer
+            <!-- Center: Single-Row Tab Navigation (Never Wraps) -->
+            <nav class="flex items-center space-x-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 whitespace-nowrap overflow-x-auto text-xs shrink">
+                <button onclick="App.switchTab('tab-debugger')" id="nav-tab-debugger" class="nav-tab-active px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm whitespace-nowrap">
+                    🛠️ Debugger &amp; Healer
                 </button>
-                <button onclick="App.switchTab('tab-sandbox')" id="nav-tab-sandbox" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition">
-                    🕹️ Agent Sandbox
+                <button onclick="App.switchTab('tab-sandbox')" id="nav-tab-sandbox" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
+                    🕹️ Sandbox
                 </button>
-                <button onclick="App.switchTab('tab-duel')" id="nav-tab-duel" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition">
+                <button onclick="App.switchTab('tab-duel')" id="nav-tab-duel" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
                     ⚔️ Live Duel
                 </button>
-                <button onclick="App.switchTab('tab-canvas')" id="nav-tab-canvas" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition">
-                    🌀 1024-D Manifold
+                <button onclick="App.switchTab('tab-canvas')" id="nav-tab-canvas" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
+                    🌀 Manifold
                 </button>
-                <button onclick="App.switchTab('tab-benchmarks')" id="nav-tab-benchmarks" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition">
+                <button onclick="App.switchTab('tab-benchmarks')" id="nav-tab-benchmarks" class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap">
                     📊 Benchmarks
                 </button>
             </nav>
 
-            <div class="flex items-center space-x-3 text-xs font-medium">
-                <!-- Theme Toggle Button -->
-                <button onclick="App.toggleTheme()" id="themeBtn" aria-label="Toggle Theme" class="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+            <!-- Right: Theme & GitHub -->
+            <div class="flex items-center space-x-2 shrink-0">
+                <button onclick="App.toggleTheme()" id="themeBtn" aria-label="Toggle Theme" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition text-xs">
                     <span id="themeIcon">🌙</span>
                 </button>
 
-                <a href="https://github.com/codesbykhairannoor/capybala" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-medium transition shadow-sm">
+                <a href="https://github.com/codesbykhairannoor/capybala" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-mono text-xs font-semibold transition shadow-sm">
                     <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>GitHub</span>
                 </a>
@@ -94,7 +92,7 @@
     </header>
 
     <!-- Main Workspace -->
-    <main class="flex-grow max-w-7xl mx-auto px-6 py-6 w-full space-y-8">
+    <main class="flex-grow max-w-7xl mx-auto px-4 md:px-8 py-6 w-full space-y-8">
 
         <!-- ============================================================== -->
         <!-- TAB 1: REAL JSON CONVERSATION DEBUGGER & AST CONTEXT HEALER     -->
@@ -105,9 +103,9 @@
                 <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-mono font-semibold">
                     <span>⚡ Real Engine Execution</span>
                     <span>•</span>
-                    <span>OpenAI &amp; Anthropic Messages AST Surgery</span>
+                    <span>OpenAI &amp; Anthropic AST Surgery</span>
                     <span>•</span>
-                    <span>0.4 ms Latency</span>
+                    <span>Sub-Millisecond Latency</span>
                 </div>
                 <h1 class="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
                     AI Agent Conversation Debugger &amp; Context Healer
@@ -115,6 +113,15 @@
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     Paste real multi-turn conversation JSON from your agent runs. Capybala parses tool-calls, detects structural oscillations and ergodic attractors in <span class="font-mono font-bold text-amber-600">&lt;1ms</span>, prunes redundant tokens, and injects doctor directives without triggering 400 Bad Request.
                 </p>
+            </div>
+
+            <!-- Inline Error Banner -->
+            <div id="debuggerErrorBanner" class="hidden p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-mono flex items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center space-x-2">
+                    <span class="text-base">⚠️</span>
+                    <span id="debuggerErrorMessage">Invalid JSON input.</span>
+                </div>
+                <button onclick="DebuggerEngine.clearError()" class="text-rose-600 dark:text-rose-400 font-bold hover:underline">Dismiss</button>
             </div>
 
             <!-- Debugger Input Card -->
@@ -125,7 +132,10 @@
                     <div class="flex flex-wrap items-center gap-3">
                         <label class="text-xs font-mono text-slate-500 font-semibold">Load Preset:</label>
                         <select id="debuggerPresetSelect" onchange="DebuggerEngine.selectPreset(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
-                            <!-- Populated dynamically by debugger.js -->
+                            <option value="swebench_oscillation">SWE-bench Structural Oscillation (Edit vs Test Ping-Pong) (20 turns)</option>
+                            <option value="semantic_paraphrase_vortex">Semantic Paraphrase Vortex (Ergodic Attractor Basin) (10 turns)</option>
+                            <option value="anthropic_missing_tool_result">Anthropic Claude Orphan Tool Call (400 Bad Request Trap) (3 turns)</option>
+                            <option value="clean_healthy_progress">Healthy Agent Forward Development (Zero False Alarm) (6 turns)</option>
                         </select>
 
                         <div class="flex items-center space-x-2">
@@ -149,16 +159,196 @@
                 </div>
 
                 <div id="presetDescription" class="text-xs text-slate-500 font-mono italic">
-                    // Select a preset above or paste your custom agent conversation messages...
+                    Agent alternates between modifying auth.py and running pytest, but reverts its own changes in a 2-period loop.
                 </div>
 
-                <!-- Monospace JSON Editor -->
+                <!-- Monospace JSON Editor Pre-Populated with Valid JSON -->
                 <div class="relative rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-900 shadow-inner">
                     <div class="bg-slate-800/80 px-4 py-1.5 text-[11px] font-mono text-slate-400 border-b border-slate-700 flex justify-between items-center">
                         <span>messages.json (OpenAI / Anthropic array)</span>
                         <span>Shortcut: Ctrl + Enter</span>
                     </div>
-                    <textarea id="debuggerJsonInput" rows="11" class="w-full bg-[#0d1117] text-slate-200 font-mono text-xs p-4 focus:outline-none leading-relaxed resize-y" placeholder="[ { &quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;...&quot; }, ... ]"></textarea>
+                    <textarea id="debuggerJsonInput" rows="11" class="w-full bg-[#0d1117] text-slate-200 font-mono text-xs p-4 focus:outline-none leading-relaxed resize-y" placeholder="[ { &quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;...&quot; }, ... ]">[
+  {
+    "role": "system",
+    "content": "You are an autonomous software engineering assistant. Fix failing tests in the repository."
+  },
+  {
+    "role": "user",
+    "content": "Run the tests and resolve any failures in tests/test_auth.py."
+  },
+  {
+    "role": "assistant",
+    "content": "Let me execute pytest to see the failure signature.",
+    "tool_calls": [
+      {
+        "id": "call_1",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"pytest tests/test_auth.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_1",
+    "content": "FAILED tests/test_auth.py::test_jwt - AssertionError: 401 != 200"
+  },
+  {
+    "role": "assistant",
+    "content": "I see the test expects 200. I will edit auth/token.py to bypass verification.",
+    "tool_calls": [
+      {
+        "id": "call_2",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"sed -i 's/verify=True/verify=False/g' auth/token.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_2",
+    "content": "File modified: 1 replacement made in auth/token.py"
+  },
+  {
+    "role": "assistant",
+    "content": "Now let me re-run pytest.",
+    "tool_calls": [
+      {
+        "id": "call_3",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"pytest tests/test_auth.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_3",
+    "content": "FAILED tests/test_auth.py::test_security - SecurityException: Insecure token bypass forbidden"
+  },
+  {
+    "role": "assistant",
+    "content": "Security check failed. Let me revert auth/token.py to previous state.",
+    "tool_calls": [
+      {
+        "id": "call_4",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"git checkout auth/token.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_4",
+    "content": "Updated 1 path from HEAD"
+  },
+  {
+    "role": "assistant",
+    "content": "Reverted. Now let me re-run pytest to observe initial state.",
+    "tool_calls": [
+      {
+        "id": "call_5",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"pytest tests/test_auth.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_5",
+    "content": "FAILED tests/test_auth.py::test_jwt - AssertionError: 401 != 200"
+  },
+  {
+    "role": "assistant",
+    "content": "Back to initial state. I will edit auth/token.py to bypass verification again.",
+    "tool_calls": [
+      {
+        "id": "call_6",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"sed -i 's/verify=True/verify=False/g' auth/token.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_6",
+    "content": "File modified: 1 replacement made in auth/token.py"
+  },
+  {
+    "role": "assistant",
+    "content": "Now re-running pytest.",
+    "tool_calls": [
+      {
+        "id": "call_7",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"pytest tests/test_auth.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_7",
+    "content": "FAILED tests/test_auth.py::test_security - SecurityException: Insecure token bypass forbidden"
+  },
+  {
+    "role": "assistant",
+    "content": "Security check failed. Reverting again.",
+    "tool_calls": [
+      {
+        "id": "call_8",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"git checkout auth/token.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_8",
+    "content": "Updated 1 path from HEAD"
+  },
+  {
+    "role": "assistant",
+    "content": "Reverted. Running pytest again.",
+    "tool_calls": [
+      {
+        "id": "call_9",
+        "type": "function",
+        "function": {
+          "name": "run_command",
+          "arguments": "{\"command\": \"pytest tests/test_auth.py\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "call_9",
+    "content": "FAILED tests/test_auth.py::test_jwt - AssertionError: 401 != 200"
+  }
+]</textarea>
                 </div>
             </div>
 
@@ -475,7 +665,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Left: Baseline Agent Loop -->
                     <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-900">
+                        <div class="flex items-center justify-between pb-2 border-b border-rose-200 dark:border-rose-950">
                             <div class="flex items-center space-x-2">
                                 <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
                                 <span class="font-bold text-xs font-mono text-rose-700 dark:text-rose-400 uppercase tracking-wide">Standard Agent (No Guardrail)</span>
@@ -495,7 +685,7 @@
 
                     <!-- Right: Capybala Self-Healing -->
                     <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-900">
+                        <div class="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-950">
                             <div class="flex items-center space-x-2">
                                 <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
                                 <span class="font-bold text-xs font-mono text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Agent with Capybala (Protected)</span>
@@ -747,7 +937,8 @@ from capybala.integrations import (
     <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11141c] py-6 px-6 text-xs text-slate-500 dark:text-slate-400 mt-12">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center space-x-2">
-                <span class="font-bold text-slate-800 dark:text-slate-200">🦫 Capybala</span>
+                <img src="/static/img/capybala-logo.svg" alt="Capybala Logo" class="w-5 h-5 rounded" />
+                <span class="font-bold text-slate-800 dark:text-slate-200">Capybala</span>
                 <span>•</span>
                 <span>Autonomous Agent Deadlock Interception &amp; Context Profiler</span>
             </div>

@@ -10,12 +10,12 @@ const DebuggerEngine = {
     async init() {
         try {
             const res = await fetch('/api/presets');
-            this.presets = await res.json();
-            this.populatePresetSelector();
-            // Default select first preset
-            this.selectPreset('swebench_oscillation');
+            if (res.ok) {
+                this.presets = await res.json();
+                this.populatePresetSelector();
+            }
         } catch (err) {
-            console.error("Failed to load debugger presets:", err);
+            console.warn("Presets endpoint loading:", err);
         }
     },
 
@@ -49,6 +49,7 @@ const DebuggerEngine = {
             input.value = JSON.stringify(p.messages, null, 2);
         }
 
+        this.clearError();
         this.resetResults();
     },
 
@@ -56,11 +57,62 @@ const DebuggerEngine = {
         const input = document.getElementById("debuggerJsonInput");
         if (!input) return;
         try {
-            const parsed = JSON.parse(input.value);
+            const parsed = this.parseConversationInput(input.value);
             input.value = JSON.stringify(parsed, null, 2);
+            this.clearError();
         } catch (err) {
-            alert("Invalid JSON format: " + err.message);
+            this.showError("JSON Format Error: " + err.message);
         }
+    },
+
+    parseConversationInput(rawText) {
+        if (!rawText || !rawText.trim()) {
+            throw new Error("Input is empty. Please select a preset above or paste conversation messages.");
+        }
+        let text = rawText.trim();
+
+        // Auto-strip markdown code fences (```json ... ``` or ``` ... ```)
+        text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+        try {
+            const parsed = JSON.parse(text);
+            if (!Array.isArray(parsed)) {
+                if (typeof parsed === "object" && parsed !== null) {
+                    return [parsed];
+                }
+                throw new Error("Root element must be a JSON array of messages (e.g. [ { role: 'user', content: '...' } ])");
+            }
+            return parsed;
+        } catch (err1) {
+            // Attempt auto-sanitizing Python-style literals (True, False, None, single-quotes)
+            try {
+                const sanitized = text
+                    .replace(/\bTrue\b/g, "true")
+                    .replace(/\bFalse\b/g, "false")
+                    .replace(/\bNone\b/g, "null")
+                    .replace(/'/g, '"');
+                const parsed2 = JSON.parse(sanitized);
+                if (Array.isArray(parsed2)) return parsed2;
+            } catch (_) {}
+            throw new Error(err1.message);
+        }
+    },
+
+    showError(msg) {
+        const errBanner = document.getElementById("debuggerErrorBanner");
+        const errMsg = document.getElementById("debuggerErrorMessage");
+        if (errBanner && errMsg) {
+            errMsg.textContent = msg;
+            errBanner.classList.remove("hidden");
+            errBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } else {
+            alert(msg);
+        }
+    },
+
+    clearError() {
+        const errBanner = document.getElementById("debuggerErrorBanner");
+        if (errBanner) errBanner.classList.add("hidden");
     },
 
     resetResults() {
@@ -75,13 +127,13 @@ const DebuggerEngine = {
         const btn = document.getElementById("runHealBtn");
 
         if (!input) return;
+        this.clearError();
 
         let messages;
         try {
-            messages = JSON.parse(input.value);
-            if (!Array.isArray(messages)) throw new Error("Root element must be a JSON array of messages");
+            messages = this.parseConversationInput(input.value);
         } catch (err) {
-            alert("JSON Syntax Error: " + err.message);
+            this.showError("JSON Parse Error: " + err.message);
             return;
         }
 
@@ -95,8 +147,6 @@ const DebuggerEngine = {
             </svg>
             <span>Analyzing Context...</span>
         `;
-
-        const t0 = performance.now();
 
         try {
             const res = await fetch('/api/heal', {
@@ -118,12 +168,12 @@ const DebuggerEngine = {
             this.currentResult = data;
             this.renderResults(data);
         } catch (err) {
-            alert("Capybala Engine Error: " + err.message);
+            this.showError("Capybala Engine Error: " + err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = `
                 <svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>Analyze & Surgically Heal (Live Engine)</span>
+                <span>Analyze &amp; Surgically Heal (Live Engine)</span>
             `;
         }
     },
@@ -242,7 +292,7 @@ const DebuggerEngine = {
 
     copyHealedJSON() {
         if (!this.currentResult || !this.currentResult.healed_messages) {
-            alert("No healed messages available to copy.");
+            this.showError("No healed messages available to copy.");
             return;
         }
         const text = JSON.stringify(this.currentResult.healed_messages, null, 2);
