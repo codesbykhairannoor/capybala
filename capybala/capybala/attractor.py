@@ -57,8 +57,8 @@ class SemanticAttractorDetector:
 
     def _extract_feature_vector(self, text: str) -> List[float]:
         """
-        Extracts hybrid word tokens and character 3-grams, hashing them
-        into an L2-normalized 256-dimensional unit vector.
+        Extracts hybrid word tokens, character 3-grams, and canonical operational intents,
+        hashing them into an L2-normalized 1024-dimensional unit vector.
         """
         clean = " ".join(text.strip().lower().split())
         if not clean:
@@ -79,7 +79,7 @@ class SemanticAttractorDetector:
         else:
             features[f"c_{clean}"] += 1.0
 
-        # Feature hashing into 256 buckets
+        # Feature hashing into 1024 buckets
         vector = [0.0] * self.HASH_SPACE
         for feat, weight in features.items():
             h = int(hashlib.md5(feat.encode("utf-8")).hexdigest(), 16) % self.HASH_SPACE

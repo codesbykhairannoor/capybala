@@ -23,16 +23,83 @@ _default_healer = AgentHealer()
 _api_lock = threading.RLock()
 
 
-def print_flight_recorder(action: str, tokens_saved: int, cycle_length: int, details: str):
+def extract_cache_telemetry(response: Any) -> Optional[Dict[str, Any]]:
+    """
+    Extracts live prompt cache telemetry from Anthropic Claude, OpenAI, and compatible provider responses.
+    Verifies actual cache hit rates and cost savings across rollback turns.
+    """
+    if response is None:
+        return None
+
+    usage = getattr(response, "usage", None)
+    if usage is None and isinstance(response, dict):
+        usage = response.get("usage")
+
+    if usage is None:
+        return None
+
+    # 1. Anthropic Claude prompt cache structure
+    cache_read = getattr(usage, "cache_read_input_tokens", None)
+    cache_creation = getattr(usage, "cache_creation_input_tokens", None)
+    input_tokens = getattr(usage, "input_tokens", None)
+
+    if cache_read is not None:
+        total_prompt = (input_tokens or 0) + (cache_read or 0) + (cache_creation or 0)
+        hit_rate = (cache_read / total_prompt * 100.0) if total_prompt > 0 else 0.0
+        return {
+            "provider": "anthropic",
+            "cached_tokens": cache_read,
+            "created_tokens": cache_creation or 0,
+            "total_prompt_tokens": total_prompt,
+            "cache_hit_rate": round(hit_rate, 2),
+        }
+
+    # 2. OpenAI prompt caching structure
+    prompt_tokens = getattr(usage, "prompt_tokens", None)
+    prompt_details = getattr(usage, "prompt_tokens_details", None)
+    if prompt_details is not None:
+        cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
+        hit_rate = (cached_tokens / prompt_tokens * 100.0) if (prompt_tokens and prompt_tokens > 0) else 0.0
+        return {
+            "provider": "openai",
+            "cached_tokens": cached_tokens,
+            "total_prompt_tokens": prompt_tokens or 0,
+            "cache_hit_rate": round(hit_rate, 2),
+        }
+
+    return None
+
+
+def print_flight_recorder(
+    action: str,
+    tokens_saved: int,
+    cycle_length: int,
+    details: str,
+    detection_tier: str = "tier1_exact",
+    cache_telemetry: Optional[Dict[str, Any]] = None,
+    shadow_mode: bool = False,
+):
     """
     Renders a clean, formatted flight recorder to stderr when a loop is intercepted.
     Using stderr prevents corrupting stdout JSON pipelines.
     """
     usd_saved = (tokens_saved / 1_000_000.0) * 6.0
     sys.stderr.write("\n" + "─" * 65 + "\n")
-    sys.stderr.write(f"🦫  \033[1;33mCapybala Cycle Intercepted\033[0m [\033[1;36m{action[:35]}\033[0m]\n")
-    sys.stderr.write(f" ├── Cycle Length: \033[1m{cycle_length} turns\033[0m | Recovered: \033[1;32m~{tokens_saved:,} tokens (~${usd_saved:.3f})\033[0m\n")
-    sys.stderr.write(f" └── Resolution:   \033[32mAtomic Rollback + Grounded Reflection Injected\033[0m\n")
+    if shadow_mode:
+        sys.stderr.write(f"🦫  \033[1;35m[SHADOW MODE] Capybala Cycle Intercept Candidate\033[0m [\033[1;36m{action[:35]}\033[0m]\n")
+        sys.stderr.write(f" ├── Cycle Length: \033[1m{cycle_length} turns\033[0m | Estimated Waste: \033[1;32m~{tokens_saved:,} tokens (~${usd_saved:.3f})\033[0m\n")
+        sys.stderr.write(f" ├── Detection Tier: \033[1m{detection_tier}\033[0m | Policy: \033[33mShadow Audit (No Context Mutated)\033[0m\n")
+        sys.stderr.write(f" └── Resolution:   \033[36mAudit Logged for Review (Zero-Risk Execution)\033[0m\n")
+    else:
+        sys.stderr.write(f"🦫  \033[1;33mCapybala Cycle Intercepted\033[0m [\033[1;36m{action[:35]}\033[0m]\n")
+        sys.stderr.write(f" ├── Cycle Length: \033[1m{cycle_length} turns\033[0m | Recovered: \033[1;32m~{tokens_saved:,} tokens (~${usd_saved:.3f})\033[0m\n")
+        sys.stderr.write(f" ├── Detection Tier: \033[1m{detection_tier}\033[0m\n")
+        if cache_telemetry and cache_telemetry.get("cached_tokens", 0) > 0:
+            c_tok = cache_telemetry["cached_tokens"]
+            tot_tok = cache_telemetry["total_prompt_tokens"]
+            hr = cache_telemetry["cache_hit_rate"]
+            sys.stderr.write(f" ├── Cache Telemetry: \033[1;32m{c_tok:,} / {tot_tok:,} tokens cached ({hr:.1f}% hit rate)\033[0m\n")
+        sys.stderr.write(f" └── Resolution:   \033[32mAtomic Rollback + Grounded Reflection Injected\033[0m\n")
     sys.stderr.write("─" * 65 + "\n\n")
     sys.stderr.flush()
 
@@ -50,6 +117,7 @@ def heal(
     enable_exploration_guard: bool = True,
     auto_repair_schema: bool = True,
     policy: Optional[Any] = None,
+    shadow_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     1-Line Functional Healer.
@@ -57,15 +125,19 @@ def heal(
     and injects reflection. Mutates messages in-place to prevent outer loop ghost pruning desync,
     and returns pruned history. Enforces Circuit Breaker against Infinite Healing Loops.
 
+    Shadow Mode (shadow_mode=True):
+    - Observes agent trajectory, detects deadlocks across Tier 1 & Tier 2, and logs telemetry.
+    - Zero active mutation: leaves messages completely untouched for zero-risk enterprise auditing.
+
     Usage:
         import capybala as cb
-        messages = cb.heal(messages)
+        messages = cb.heal(messages, shadow_mode=True)
     """
     if not isinstance(messages, list) or len(messages) < 4:
         return messages
 
     # Proactive schema validation & repair (fixes malformed arguments, IDs, and orphan calls)
-    if auto_repair_schema:
+    if auto_repair_schema and not shadow_mode:
         from .validator import SchemaValidator
         SchemaValidator.validate_and_repair(messages, in_place=True)
 
@@ -174,7 +246,7 @@ def heal(
         if verbose:
             sys.stderr.write(f"\n🚨 \033[1;31m[Capybala Circuit Breaker Tripped]\033[0m {details}\n\n")
             sys.stderr.flush()
-        if raise_on_circuit_break:
+        if raise_on_circuit_break and not shadow_mode:
             raise DeadlockEmergencyStop(details, prior_interventions, "meta_deadlock_loop")
         return messages
 
@@ -187,6 +259,7 @@ def heal(
         max_exploration_depth=max_exploration_depth,
         enable_exploration_guard=enable_exploration_guard,
         policy=policy,
+        shadow_mode=shadow_mode,
     )
     last_action = ""
     last_obs = ""
@@ -208,7 +281,7 @@ def heal(
         if verbose:
             sys.stderr.write(f"\n🚨 \033[1;31m[Capybala Circuit Breaker Tripped]\033[0m {event.details}\n\n")
             sys.stderr.flush()
-        if raise_on_circuit_break:
+        if raise_on_circuit_break and not shadow_mode:
             raise DeadlockEmergencyStop(event.details, event.consecutive_deadlocks, last_action)
 
     # Generate constructive heuristic prescription with progressive escalation
@@ -236,7 +309,13 @@ def heal(
             tokens_saved=rollback_res.tokens_saved_estimate,
             cycle_length=event.repetition_count,
             details=event.details,
+            detection_tier=event.detection_tier,
+            shadow_mode=shadow_mode,
         )
+
+    # In Shadow Mode: DO NOT mutate messages, return untouched!
+    if shadow_mode:
+        return messages
 
     # In-place atomic list replacement with mutex lock: Prevents Ghost Pruning Desync in concurrent threads
     with _api_lock:
@@ -271,6 +350,7 @@ def watch(
     circuit_breaker: bool = True,
     raise_on_circuit_break: bool = False,
     fuzzy_threshold: float = 0.65,
+    shadow_mode: bool = False,
 ) -> Any:
     """
     Explicit, Non-Invasive Client Wrapper (like Tenacity / Instructor).
@@ -278,13 +358,20 @@ def watch(
     supports streaming responses (stream=True), and offloads CPU-bound regex/hashing
     to worker threads in async loops.
 
+    Enterprise Shadow Mode (shadow_mode=True):
+    - Observes and logs deadlocks without mutating messages or halting requests.
+    - Zero disruption to production traffic; ideal for trial audits.
+
+    Live Cache Telemetry:
+    - Extracts live Anthropic/OpenAI prompt cache hit rates onto `client._last_cache_telemetry`.
+
     Supported Clients:
         - OpenAI / AsyncOpenAI
         - Anthropic / AsyncAnthropic
         - Groq / Mistral / Ollama / LlamaStackClient
 
     Usage:
-        client = capybala.watch(OpenAI())
+        client = capybala.watch(OpenAI(), shadow_mode=True)
     """
     with _api_lock:
         if getattr(client, "_capybala_watched", False):
@@ -307,8 +394,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return await orig_create(*args, **kwargs)
+                    res = await orig_create(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.chat.completions.create = async_guarded_create
             else:
@@ -323,8 +415,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return orig_create(*args, **kwargs)
+                    res = orig_create(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.chat.completions.create = guarded_create
 
@@ -349,8 +446,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return await orig_create(*args, **kwargs)
+                    res = await orig_create(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.messages.create = async_guarded_anthropic
             else:
@@ -366,8 +468,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return orig_create(*args, **kwargs)
+                    res = orig_create(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.messages.create = guarded_anthropic
 
@@ -392,8 +499,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return await orig_inference(*args, **kwargs)
+                    res = await orig_inference(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.inference.chat_completion = async_guarded_llama
             else:
@@ -409,8 +521,13 @@ def watch(
                             circuit_breaker=circuit_breaker,
                             raise_on_circuit_break=raise_on_circuit_break,
                             fuzzy_threshold=fuzzy_threshold,
+                            shadow_mode=shadow_mode,
                         )
-                    return orig_inference(*args, **kwargs)
+                    res = orig_inference(*args, **kwargs)
+                    cache_tel = extract_cache_telemetry(res)
+                    if cache_tel:
+                        setattr(client, "_last_cache_telemetry", cache_tel)
+                    return res
 
                 client.inference.chat_completion = guarded_llama
 

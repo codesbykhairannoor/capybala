@@ -45,11 +45,12 @@ class DeadlockEvent:
     is_circuit_broken: bool = False
     consecutive_deadlocks: int = 0
     detection_tier: str = "none"  # 'tier1_exact' (<0.01ms exact SHA/Floyd) or 'tier2_lexical' (sub-ms manifold attractor)
+    is_shadow: bool = False
 
 
 def find_exact_cycle_floyd(sequence: List[str]) -> Optional[Tuple[int, int]]:
     """
-    Floyd / Brent cycle verification on hash sequences.
+    Bounded Ring-Buffer Cycle Matcher.
     Detects exact periodic patterns at the tail in O(1) time (< 0.01 ms).
     Returns (period, min_cycles) if found, otherwise None.
     """
@@ -63,6 +64,93 @@ def find_exact_cycle_floyd(sequence: List[str]) -> Optional[Tuple[int, int]]:
                 cycles += 1
             return period, cycles
     return None
+
+find_exact_cycle_ring_buffer = find_exact_cycle_floyd
+
+
+def canonicalize_action_intent(action: Optional[str]) -> str:
+    """
+    Normalizes shell tools, editor commands, and agent function calls into a canonical semantic intent.
+    Eliminates cross-command syntactic variance (e.g. grep vs find|xargs grep vs rg).
+    """
+    if not action:
+        return ""
+
+    s = str(action).strip()
+
+    # 1. Unwrap shell wrappers: bash("grep ...") or run_shell({'command': '...'})
+    cmd_match = re.search(r"['\"](?:command|cmd|input|script)['\"]\s*:\s*['\"]([^'\"]+)['\"]", s)
+    if cmd_match:
+        s = cmd_match.group(1).strip()
+    else:
+        sub_match = re.search(r"^[a-zA-Z0-9_]+\s*\(\s*['\"]?(.*?)['\"]?\s*\)$", s)
+        if sub_match and not any(k in s.lower() for k in ("edit", "write", "patch", "replace")):
+            s = sub_match.group(1).strip()
+
+    s_clean = re.sub(r"^(?:sudo|nohup|timeout\s+\d+|watch\s+-n\s+\d+)\s+", "", s).strip()
+    s_lower = s_clean.lower()
+
+    # 2. Piped search commands: find ... | xargs grep ... or find ... | grep ...
+    if "|" in s_clean:
+        parts = s_clean.split("|")
+        left = parts[0].strip()
+        right = parts[1].strip()
+        if "grep" in right.lower() or "rg" in right.lower():
+            query_m = re.search(r"['\"]([^'\"]{2,})['\"]", right)
+            if not query_m:
+                toks = [t.lower() for t in right.split() if not t.startswith("-") and t.lower() not in ("grep", "rg", "xargs", "|")]
+                query = toks[0] if toks else ""
+            else:
+                query = query_m.group(1).strip().lower()
+
+            path_m = re.search(r"(?:find\s+)?(/[a-zA-Z0-9_\-\./]+|[a-zA-Z0-9_\-\.]+(?:/[a-zA-Z0-9_\-\.]+)+)", left)
+            path = path_m.group(1).strip().lower() if path_m else ""
+            path = path.strip("'\"")
+            return f"INTENT:SEARCH query='{query}' path='{path}'"
+
+    # 3. Direct Search Commands: grep, rg, ag, ack, find_file
+    is_search = bool(
+        re.search(r"\b(?:grep|rg|ag|ack|find_file|search_files|search_in_files)\b", s_lower)
+        or (s_lower.startswith("find ") and any(k in s_lower for k in ("grep", "-name", "-iname")))
+    )
+    if is_search:
+        query_m = re.search(r"['\"]([^'\"]{2,})['\"]", s_clean)
+        query = query_m.group(1).strip().lower() if query_m else ""
+        if not query:
+            tokens = [t.lower() for t in s_clean.split() if not t.startswith("-") and t not in ("grep", "rg", "ag", "find", "xargs", "|")]
+            query = tokens[0] if tokens else ""
+
+        path_m = re.search(r"(?:^|\s)(/[a-zA-Z0-9_\-\./]+|[a-zA-Z0-9_\-\.]+(?:/[a-zA-Z0-9_\-\.]+)+)", s_clean)
+        path = path_m.group(1).strip().lower() if path_m else ""
+        path = path.strip("'\"")
+
+        return f"INTENT:SEARCH query='{query}' path='{path}'"
+
+    # 3. Test & Verification Commands: pytest, unittest, python test_*.py
+    is_test = bool(re.search(r"\b(?:pytest|unittest|nosetests|cargo test|npm test)\b", s_lower) or ("python" in s_lower and "test" in s_lower))
+    if is_test:
+        test_file_m = re.search(r"([a-zA-Z0-9_\-\./]*test[a-zA-Z0-9_\-\./]*\.py)", s_clean, re.IGNORECASE)
+        test_target = test_file_m.group(1).lower() if test_file_m else ""
+        return f"INTENT:TEST target='{test_target}'"
+
+    # 4. Read / Inspection Commands: cat, head, tail, less, view_file
+    is_read = bool(
+        re.search(r"\b(?:cat|head|tail|less|more|view_file|read_file|open)\b", s_lower)
+        and not any(k in s_lower for k in ("edit", "write", "patch", "replace"))
+    )
+    if is_read:
+        path_m = re.search(r"['\"]?([a-zA-Z0-9_\-\./]+\.[a-zA-Z0-9_]+)['\"]?", s_clean)
+        read_path = path_m.group(1).lower() if path_m else ""
+        return f"INTENT:READ path='{read_path}'"
+
+    # 5. Mutating Edit Commands: edit, write, str_replace, patch
+    is_edit = bool(re.search(r"\b(?:edit|write|create|str_replace|patch|replace|modify)\b", s_lower))
+    if is_edit:
+        path_m = re.search(r"['\"]?([a-zA-Z0-9_\-\./]+\.[a-zA-Z0-9_]+)['\"]?", s_clean)
+        edit_path = path_m.group(1).lower() if path_m else ""
+        return f"INTENT:EDIT path='{edit_path}'"
+
+    return s[:128]
 
 
 # Standard commands used for valid polling / waiting (exempt from static-output deadlock)
@@ -121,6 +209,7 @@ class DeadlockDetector:
         enable_exploration_guard: bool = True,
         policy: Optional[Any] = None,
         enable_attractor: bool = True,
+        shadow_mode: bool = False,
     ):
         self.repetition_threshold = repetition_threshold
         self.oscillation_threshold = oscillation_threshold
@@ -133,6 +222,7 @@ class DeadlockDetector:
         self.max_exploration_depth = max_exploration_depth
         self.enable_exploration_guard = enable_exploration_guard
         self.enable_attractor = enable_attractor
+        self.shadow_mode = shadow_mode
 
         # Post-IF-ELSE Semantic Attractor & Manifold Engine
         if enable_attractor:
@@ -293,6 +383,12 @@ class DeadlockDetector:
             return 1.0 if s1_clean else 0.0
         if not s1_clean or not s2_clean:
             return 0.0
+
+        # Canonical Action Intent Equivalence: detects paraphrased searches (e.g. grep vs find|xargs grep vs rg)
+        intent1 = canonicalize_action_intent(s1_str)
+        intent2 = canonicalize_action_intent(s2_str)
+        if intent1.startswith("INTENT:") and intent1 == intent2:
+            return 0.90
 
         tok1 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s1_clean))
         tok2 = set(re.findall(r"[a-zA-Z0-9_\-\./]+", s2_clean))
@@ -999,24 +1095,34 @@ class DeadlockDetector:
                 self.total_deadlocks_detected += 1
                 self.healthy_turns_since_deadlock = 0
                 detected_event.consecutive_deadlocks = self.consecutive_deadlocks
+                detected_event.is_shadow = self.shadow_mode
 
                 # Reset attractor buffer on intervention to prevent cross-loop contamination
                 if self.attractor_detector is not None:
                     self.attractor_detector.reset()
 
+                if self.shadow_mode:
+                    detected_event.details = f"[SHADOW MODE] {detected_event.details}"
+
                 if self.circuit_breaker_enabled and self.consecutive_deadlocks >= self.max_interventions:
                     detected_event.is_circuit_broken = True
-                    detected_event.details = (
-                        f"CIRCUIT BREAKER TRIPPED: Exceeded max consecutive deadlock interventions "
-                        f"({self.max_interventions}). Halting execution to prevent infinite token burn."
-                    )
+                    if self.shadow_mode:
+                        detected_event.details = (
+                            f"[SHADOW MODE] CIRCUIT BREAKER CANDIDATE: Exceeded max consecutive deadlock interventions "
+                            f"({self.max_interventions}). (Shadow mode: would have halted execution)."
+                        )
+                    else:
+                        detected_event.details = (
+                            f"CIRCUIT BREAKER TRIPPED: Exceeded max consecutive deadlock interventions "
+                            f"({self.max_interventions}). Halting execution to prevent infinite token burn."
+                        )
                 return detected_event
             else:
                 # Healthy turn progression
                 self.healthy_turns_since_deadlock += 1
                 if self.healthy_turns_since_deadlock >= 3:
                     self.consecutive_deadlocks = 0
-                return DeadlockEvent(is_deadlock=False, detection_tier="none")
+                return DeadlockEvent(is_deadlock=False, detection_tier="none", is_shadow=self.shadow_mode)
 
     def reset(self):
         """Resets detection history and circuit breaker counters."""

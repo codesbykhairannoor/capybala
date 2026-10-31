@@ -1,11 +1,11 @@
-# 🦫 `capybala` (v0.9.0)
+# 🦫 `capybala` (v0.9.1)
 
 **C**ontext-**A**ware **P**runing for **Y**ielding & **B**acktrack-**A**ligned **L**oop **A**voidance  
 *High-Speed, Zero-Dependency Cognitive Deadlock & Oscillation Interceptor for Autonomous AI Coding Agents.*
 
-[![PyPI Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://pypi.org/project/capybala/)
+[![PyPI Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
-[![Tests](https://img.shields.io/badge/tests-88%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
@@ -30,22 +30,24 @@ Capybala uses a stratified, two-tier detection engine that applies the optimal a
 
 ```mermaid
 flowchart TD
-    A["Agent Tool Action & Environment Feedback"] --> T1{"Tier 1: Instant Exact Cycle"}
+    A["Agent Tool Action & Environment Feedback"] --> C["Canonical Action Normalizer\n(grep ↔ find|xargs ↔ rg)"]
+    C --> T1{"Tier 1: Bounded Ring-Buffer Matcher"}
     T1 -- "Exact Repetition / 2-Period Oscillation / SHA Match" --> D1["Intercept in O(1) Time (< 0.01 ms)\nPattern: EXACT_CYCLE"]
-    T1 -- "No Exact Match" --> T2{"Tier 2: Lexical Attractor"}
-    T2 -- "Velocity < 0.70 / Low Entropy / High N-Gram Shingle Sim" --> D2["Intercept in < 0.8 ms\nPattern: LEXICAL_ATTRACTOR"]
+    T1 -- "No Exact Match" --> T2{"Tier 2: Lexical Trajectory Engine"}
+    T2 -- "Directional Velocity < 0.70 / Low Entropy / Intent Match" --> D2["Intercept in < 0.8 ms\nPattern: LEXICAL_ATTRACTOR"]
     T2 -- "Forward Trajectory Progress" --> OK["Pass Through\nTurn Progression Healthy"]
     D1 --> R["Cache-Preserving Context Rollback & Doctor Guidance"]
     D2 --> R
 ```
 
-### 1. Tier 1: Instant Exact Cycle Detection ($O(1)$, $< 0.01$ ms)
-- **Floyd's & Brent's Cycle Verification**: Examines 16-byte SHA-256 action hash ring buffers to catch direct command repetitions ($A \to A \to A$), 2-period oscillations ($A \to B \to A \to B$), period-3/4 loops, and multi-agent delegation ping-pong in $< 10$ microseconds.
+### 1. Tier 1: Bounded Ring-Buffer Cycle Matcher ($O(1)$, $< 0.01$ ms)
+- **Ring-Buffer Cycle Verification**: Examines 16-byte SHA-256 action hash ring buffers to catch direct command repetitions ($A \to A \to A$), 2-period oscillations ($A \to B \to A \to B$), period-3/4 loops, and multi-agent delegation ping-pong in $< 10$ microseconds.
 - **Zero Heap Overhead**: Fixed-size circular deque storage prevents memory retention leaks during long-running sessions.
 
-### 2. Tier 2: Continuous Lexical Attractor Velocity ($< 0.8$ ms)
+### 2. Tier 2: Continuous Lexical Trajectory Velocity ($< 0.8$ ms)
 - **Subword N-Gram Unit Sphere Projection**: Uses 1024-dimensional feature hashing (Weinberger et al., *ICML 2009*) combining semantic tokens and character 3-gram shingles to map agent trajectories without PyTorch or NumPy.
-- **Velocity Metric**: Tracks angular acceleration $v_t = 1 - \cos(\mathbf{u}_t, \mathbf{u}_{t-1})$. Persistent stagnation below velocity threshold with low Markov transition entropy intercepts paraphrased exploration loops (`grep` ↔ `find` ↔ `locate`).
+- **Canonical Action Intent Normalization**: Normalizes disparate command syntaxes into unified semantic intents (e.g. `grep -rn 'UserModel' src/` and `find src/ -name '*.py' | xargs grep 'UserModel'` both resolve to `INTENT:SEARCH query='usermodel' path='src/'`), eliminating syntax evasion in fuzzy loops.
+- **Embedding Directional Velocity**: Tracks vector trajectory change $v_t = 1 - \cos(\mathbf{u}_t, \mathbf{u}_{t-1})$. Persistent stagnation below velocity threshold with low Markov transition entropy intercepts paraphrased exploration loops.
 
 ---
 
@@ -88,12 +90,33 @@ When an agent enters an infinite loop, Capybala intercepts it and prints the **F
 ─────────────────────────────────────────────────────────────────
 🦫  Capybala Cycle Intercepted [Tier 1 Exact Cycle: pytest tests/test_core.py]
  ├── Cycle Length: 2 turns | Recovered: ~3,200 tokens (~$0.019)
- ├── Cache Status: Prefix Preserved (Anthropic 90% Cache Discount Intact)
+ ├── Cache Telemetry: 8,450 / 9,100 tokens cached (92.8% hit rate)
  └── Resolution:   Atomic Rollback + Grounded Reflection Injected
 ─────────────────────────────────────────────────────────────────
 ```
 
-### 2. Cache-Preserving Rollback (`cache_preserving=True`)
+### 2. Enterprise Shadow Mode (`shadow_mode=True`)
+For enterprise engineering teams wanting zero-risk observability before enabling active rollbacks:
+
+```python
+import capybala as cb
+from openai import OpenAI
+
+# Shadow mode: monitors and logs deadlocks without mutating messages or interrupting traffic
+client = cb.watch(OpenAI(), shadow_mode=True)
+```
+
+In shadow mode, Capybala outputs:
+```text
+─────────────────────────────────────────────────────────────────
+🦫  [SHADOW MODE] Capybala Cycle Intercept Candidate [pytest tests/test_core.py]
+ ├── Cycle Length: 2 turns | Estimated Waste: ~3,200 tokens (~$0.019)
+ ├── Detection Tier: tier1_exact | Policy: Shadow Audit (No Context Mutated)
+ └── Resolution:   Audit Logged for Review (Zero-Risk Execution)
+─────────────────────────────────────────────────────────────────
+```
+
+### 3. Cache-Preserving Rollback (`cache_preserving=True`)
 Modern LLM APIs (Anthropic Claude, OpenAI) provide up to a 90% prompt cache discount on preserved prompt prefixes. Capybala's `rollback_and_reflect()` operates strictly on the suffix, leaving historic prefix messages byte-for-byte identical:
 
 ```python
@@ -112,7 +135,7 @@ messages = result.pruned_messages
 print(f"Tokens saved: {result.tokens_saved_estimate} | Cache preserved: {result.cache_preserved}")
 ```
 
-### 3. Pure Functional 1-Liner (For Custom Agent Frameworks)
+### 4. Pure Functional 1-Liner (For Custom Agent Frameworks)
 ```python
 import capybala as cb
 
@@ -122,12 +145,14 @@ messages = cb.heal(messages)
 
 ---
 
-## 🛡️ Production Invariant Guarantees (v0.9.0)
+## 🛡️ Production Invariant Guarantees (v0.9.1)
 
-| Production Hazard | Naive Loop Breakers | `capybala` v0.9.0 Guarantee |
+| Production Hazard | Naive Loop Breakers | `capybala` v0.9.1 Guarantee |
 | :--- | :---: | :---: |
+| **Enterprise Adoption Risk** | Active mutation frightens production teams | **Enterprise Shadow Mode**: Run `shadow_mode=True` for passive observability with zero context changes. |
 | **Prompt Cache Invalidation** | Rewrites ancient messages, busting Anthropic/OpenAI prompt cache | **Cache-Preserving Prefix Rollback**: Truncates suffix only; keeps historical prefixes 100% byte-for-byte identical. |
-| **Two-Tier Cycle Detection** | Slow regex scans or missed paraphrased loops | **Two-Tier Engine**: $O(1)$ Floyd exact cycle hashing ($<0.01$ ms) + Sub-millisecond continuous lexical attractor ($<0.8$ ms). |
+| **Cross-Syntax Evasion (`grep` vs `find`)** | Lexical shingles miss equivalent commands | **Canonical Action Normalizer**: Unifies diverse command syntaxes into standardized operational intents. |
+| **Two-Tier Cycle Detection** | Slow regex scans or missed paraphrased loops | **Two-Tier Engine**: $O(1)$ Bounded Ring-Buffer Matcher ($<0.01$ ms) + Sub-millisecond continuous lexical trajectory ($<0.8$ ms). |
 | **Infinite Healing Loops (Meta-Deadlocks)** | Blindly heals forever, burning thousands of dollars | **Autonomous Circuit Breaker**: Halts infinite healing loops after `max_interventions=5` (`DeadlockEmergencyStop`). |
 | **Volatile Dynamic Arguments** | Hashes raw args; blinded by changing timestamps/nonces | **JSON Key Sanitizer**: Strips volatile fields (`timestamp`, `nonce`, `request_id`) and canonicalizes JSON dicts. |
 | **Autoregressive Reflection Echo** | Static reflection becomes an attractor token loop | **Progressive Escalation Healer**: Levels 1, 2, 3+ escalate from local diagnostics to radical hypothesis resets. |

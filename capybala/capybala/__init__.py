@@ -4,10 +4,17 @@ Context-Aware Pruning for Yielding & Backtrack-Aligned Loop Avoidance
 """
 
 # The Requests-Grade Core API (Clean, Zero-Magic)
-from .api import watch, heal, validate, repair
+from .api import watch, heal, validate, repair, extract_cache_telemetry
 
 # Core Engine
-from .detector import DeadlockDetector, DeadlockEvent, DeadlockEmergencyStop, find_exact_cycle_floyd
+from .detector import (
+    DeadlockDetector,
+    DeadlockEvent,
+    DeadlockEmergencyStop,
+    find_exact_cycle_floyd,
+    find_exact_cycle_ring_buffer,
+    canonicalize_action_intent,
+)
 from .pruner import ContextPruner, PruneResult
 from .healer import AgentHealer, HealingPrescription
 
@@ -33,18 +40,21 @@ from .adapters import (
     CapybalaCallbackHandler
 )
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 __all__ = [
     # Top-Level DX
     "watch",
     "heal",
     "validate",
     "repair",
+    "extract_cache_telemetry",
     # Core Engine
     "DeadlockDetector",
     "DeadlockEvent",
     "DeadlockEmergencyStop",
     "find_exact_cycle_floyd",
+    "find_exact_cycle_ring_buffer",
+    "canonicalize_action_intent",
     "ContextPruner",
     "PruneResult",
     "AgentHealer",
