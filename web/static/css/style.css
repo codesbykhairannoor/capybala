@@ -1,0 +1,102 @@
+/*
+ * Capybala Web App Stylesheet (Clean Code & Antislop Compliance)
+ * Supports Light Theme by default with instant Dark Theme support.
+ */
+
+:root {
+    --bg-ground: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-field: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --accent-amber: #d97706;
+    --accent-amber-light: #fef3c7;
+    --status-emerald: #059669;
+    --status-emerald-bg: #d1fae5;
+    --status-rose: #e11d48;
+    --status-rose-bg: #ffe4e6;
+    --status-sky: #0284c7;
+    --status-sky-bg: #e0f2fe;
+}
+
+.dark {
+    --bg-ground: #0a0c10;
+    --bg-card: #11141c;
+    --bg-field: #161b24;
+    --border-subtle: #1e2430;
+    --border-strong: #2e384d;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --accent-amber: #f59e0b;
+    --accent-amber-light: rgba(245, 158, 11, 0.15);
+    --status-emerald: #10b981;
+    --status-emerald-bg: rgba(16, 185, 129, 0.15);
+    --status-rose: #f43f5e;
+    --status-rose-bg: rgba(244, 63, 94, 0.15);
+    --status-sky: #38bdf8;
+    --status-sky-bg: rgba(56, 189, 248, 0.15);
+}
+
+body {
+    background-color: var(--bg-ground);
+    color: var(--text-secondary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+/* Stream Terminal Animation */
+@keyframes fadeInItem {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stream-item {
+    animation: fadeInItem 0.25s ease-out forwards;
+}
+
+/* Ticker pulse */
+@keyframes tickerGlow {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.03);
+    }
+}
+
+.ticker-pulse {
+    animation: tickerGlow 1.2s infinite ease-in-out;
+}
