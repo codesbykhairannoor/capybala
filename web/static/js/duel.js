@@ -1,7 +1,7 @@
 /**
  * duel.js - Split-Screen Agent Duel & Real-Time Dollar Ticker Engine
  * Controls step-by-step playback, dollar cost accumulation, and self-healing state transitions.
- * Fully resilient with embedded fallback scenarios and zero reliance on async blocking.
+ * Fully supports Curated Presets and Custom Prompt Live Meta AI Execution with credit armor.
  */
 
 const DUEL_FALLBACK_SCENARIOS = {
@@ -71,6 +71,7 @@ const DUEL_FALLBACK_SCENARIOS = {
 const DuelEngine = {
     scenarios: DUEL_FALLBACK_SCENARIOS,
     currentKey: 'semantic_attractor',
+    mode: 'preset', // 'preset' or 'custom'
     isRunning: false,
 
     async init() {
@@ -81,6 +82,8 @@ const DuelEngine = {
         }
 
         this.resetDisplay();
+        this.fetchQuota();
+        this.loadBYOK();
 
         // Asynchronously supplement with backend scenarios if available
         try {
@@ -94,6 +97,106 @@ const DuelEngine = {
         } catch (err) {
             console.log("Using embedded duel scenarios (offline/resilient fallback).");
         }
+    },
+
+    setMode(m) {
+        if (this.isRunning) return;
+        this.mode = m;
+
+        const pBtn = document.getElementById("duelModePresetBtn");
+        const cBtn = document.getElementById("duelModeCustomBtn");
+        const pCont = document.getElementById("duelPresetContainer");
+        const cCont = document.getElementById("duelCustomContainer");
+
+        if (m === 'preset') {
+            if (pBtn) pBtn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm bg-amber-500 text-slate-950";
+            if (cBtn) cBtn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+            if (pCont) pCont.classList.remove("hidden");
+            if (cCont) cCont.classList.add("hidden");
+            this.resetDisplay();
+        } else {
+            if (cBtn) cBtn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm bg-amber-500 text-slate-950";
+            if (pBtn) pBtn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+            if (pCont) pCont.classList.add("hidden");
+            if (cCont) cCont.classList.remove("hidden");
+            this.fetchQuota();
+
+            const leftStream = document.getElementById("leftStream");
+            const rightStream = document.getElementById("rightStream");
+            if (leftStream) {
+                leftStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Custom Live Meta AI Mode Active.<br>Type your coding problem above and click <b>'⚔️ Run Meta AI Duel'</b>.</div>`;
+            }
+            if (rightStream) {
+                rightStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Capybala Runtime Armed &amp; Rate Limiter Active.<br>Your credit balance is strictly protected against token drainage.</div>`;
+            }
+        }
+    },
+
+    onPromptInput(val) {
+        const counter = document.getElementById("customCharCounter");
+        if (counter) {
+            counter.innerText = `${(val || '').length}/220`;
+        }
+    },
+
+    toggleBYOK() {
+        const c = document.getElementById("byokContainer");
+        if (c) c.classList.toggle("hidden");
+    },
+
+    loadBYOK() {
+        try {
+            const key = localStorage.getItem("capybala_byok_key");
+            const inp = document.getElementById("byokKeyInput");
+            if (key && inp) {
+                inp.value = key;
+                const msg = document.getElementById("byokStatusMsg");
+                if (msg) {
+                    msg.innerText = "✓ Active: Unmetered runs enabled via personal key.";
+                    msg.classList.remove("hidden");
+                }
+            }
+        } catch (e) {}
+    },
+
+    saveBYOK() {
+        const inp = document.getElementById("byokKeyInput");
+        const msg = document.getElementById("byokStatusMsg");
+        const val = inp ? inp.value.trim() : "";
+        if (!val) return;
+        try {
+            localStorage.setItem("capybala_byok_key", val);
+            if (msg) {
+                msg.innerText = "✓ Key saved in localStorage! Unmetered live runs active.";
+                msg.classList.remove("hidden");
+            }
+        } catch (e) {}
+    },
+
+    clearBYOK() {
+        try {
+            localStorage.removeItem("capybala_byok_key");
+            const inp = document.getElementById("byokKeyInput");
+            const msg = document.getElementById("byokStatusMsg");
+            if (inp) inp.value = "";
+            if (msg) {
+                msg.innerText = "Key cleared. Using free community quota.";
+                msg.classList.remove("hidden");
+            }
+        } catch (e) {}
+    },
+
+    async fetchQuota() {
+        try {
+            const res = await fetch('/api/duel/quota');
+            if (res.ok) {
+                const data = await res.json();
+                const qText = document.getElementById("quotaRemainingText");
+                if (qText) {
+                    qText.innerText = `${data.remaining}/${data.daily_cap}`;
+                }
+            }
+        } catch (e) {}
     },
 
     selectScenario(key) {
@@ -148,16 +251,86 @@ const DuelEngine = {
 
     async runDuel() {
         if (this.isRunning) return;
-
         const sc = this.getActiveScenario();
-        if (!sc) {
-            console.error("No valid duel scenario available");
+        if (!sc) return;
+        await this.executeTrajectoryAnimation(sc, false);
+    },
+
+    async runLiveMetaDuel() {
+        if (this.isRunning) return;
+
+        const inp = document.getElementById("customDuelPrompt");
+        const prompt = inp ? inp.value.trim() : "";
+        if (!prompt || prompt.length < 5) {
+            alert("Please enter a coding issue or prompt of at least 5 characters.");
+            if (inp) inp.focus();
             return;
         }
 
+        const btn = document.getElementById("liveDuelBtn");
+        const spinner = document.getElementById("liveDuelSpinner");
+        const userKey = localStorage.getItem("capybala_byok_key") || "";
+
+        this.isRunning = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("opacity-70");
+        }
+        if (spinner) spinner.classList.remove("hidden");
+
+        const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
+        if (leftStream) {
+            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Contacting Meta AI (muse-wonder-1.0)... Reasoning step executing...</div>`;
+        }
+        if (rightStream) {
+            rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Capybala Healer monitoring live token stream... Rate limiter active...</div>`;
+        }
+
+        try {
+            const res = await fetch('/api/duel/live', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-api-key': userKey
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                const errMsg = data.error || "Execution failed";
+                alert(errMsg);
+                if (leftStream) leftStream.innerHTML = `<div class='text-rose-500 text-xs p-2'>⚠️ ${this.escapeHtml(errMsg)}</div>`;
+                if (rightStream) rightStream.innerHTML = `<div class='text-slate-400 text-xs p-2'>Try offline presets or bring your own API key.</div>`;
+                return;
+            }
+
+            // Update remaining quota badge
+            if (typeof data.quota_remaining !== 'undefined') {
+                const qText = document.getElementById("quotaRemainingText");
+                if (qText) qText.innerText = `${data.quota_remaining}/35`;
+            }
+
+            await this.executeTrajectoryAnimation(data, true);
+        } catch (err) {
+            console.error("Live duel request failed:", err);
+            alert("Network connection error. Please try again.");
+        } finally {
+            this.isRunning = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove("opacity-70");
+            }
+            if (spinner) spinner.classList.add("hidden");
+        }
+    },
+
+    async executeTrajectoryAnimation(sc, isLive = false) {
         this.isRunning = true;
         const btn = document.getElementById("duelBtn");
-        if (btn) {
+        if (btn && !isLive) {
             btn.disabled = true;
             btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Simulating Duel...</span>`;
         }
@@ -178,7 +351,7 @@ const DuelEngine = {
                 if (elLeftStep) elLeftStep.innerText = `Step ${Math.min(i + 1, bTurns.length)} / ${bTurns.length}`;
                 if (elRightStep) elRightStep.innerText = `Step ${Math.min(i + 1, cTurns.length)} / ${cTurns.length}`;
 
-                // Left: Unprotected Baseline Execution
+                // Left: Baseline Execution
                 if (i < bTurns.length && leftStream) {
                     const t = bTurns[i];
                     const d = document.createElement("div");
@@ -225,13 +398,13 @@ const DuelEngine = {
                     if (elRightTicker) elRightTicker.innerText = `$${t.cost.toFixed(2)} Total`;
                 }
 
-                // Smooth realistic step delay
+                // Step animation delay
                 await new Promise(r => setTimeout(r, 650));
             }
 
             // Final Calculations & Scoreboard
-            const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 1.62;
-            const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.16;
+            const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 1.48;
+            const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.12;
             const multiplier = (finalLeft / Math.max(0.01, finalRight)).toFixed(1);
 
             const elMultiplier = document.getElementById("duelSavingsMultiplier");
@@ -239,14 +412,15 @@ const DuelEngine = {
 
             if (elMultiplier) elMultiplier.innerText = `${multiplier}x`;
             if (elBadge) {
-                elBadge.innerText = `Capybala Solved (${multiplier}x cheaper)`;
+                const engineTag = isLive ? "Live Meta AI" : "Capybala Solved";
+                elBadge.innerText = `${engineTag} (${multiplier}x cheaper)`;
                 elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
             }
         } catch (err) {
             console.error("Error during live duel execution:", err);
         } finally {
             this.isRunning = false;
-            if (btn) {
+            if (btn && !isLive) {
                 btn.disabled = false;
                 btn.innerHTML = `<svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Run Live Duel</span>`;
             }
