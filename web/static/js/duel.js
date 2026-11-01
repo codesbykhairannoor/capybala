@@ -71,11 +71,12 @@ const DUEL_FALLBACK_SCENARIOS = {
 const DuelEngine = {
     scenarios: DUEL_FALLBACK_SCENARIOS,
     currentKey: 'semantic_attractor',
-    mode: 'preset', // 'preset' or 'custom'
+    mode: 'agent_loop', // default mode: Live Multi-Turn Code Playground
     isRunning: false,
     selectedRepoId: 'auth-service',
     reposList: [],
     _repoFilesCache: null,
+    activeFilePath: null,
 
     async init() {
         // Sync with dropdown if user already selected something
@@ -87,7 +88,7 @@ const DuelEngine = {
         this.resetDisplay();
         this.fetchQuota();
         this.loadBYOK();
-        this.initRepos();
+        await this.initRepos();
 
         // Asynchronously supplement with backend scenarios if available
         try {
@@ -122,12 +123,30 @@ const DuelEngine = {
             name: repoId === 'order-engine' ? 'E-Commerce Inventory & Order State Machine' : (repoId === 'gateway-proxy' ? 'Distributed API Gateway & Rate Limiter' : 'FinTech Payment & Auth Service'),
             badge: repoId === 'order-engine' ? 'Uncommitted DB Transaction' : (repoId === 'gateway-proxy' ? 'Token Bucket Cold-Start 429' : 'JWT Algorithm Mismatch'),
             description: repoId === 'order-engine' ? 'High-throughput inventory checkout fails under concurrent requests due to missing session.commit() before response.' : (repoId === 'gateway-proxy' ? 'Distributed rate limiter prematurely drops burst HTTP traffic with 429 due to token bucket initialized at 0.' : 'Production JWT Token handler configured with asymmetric RS256 instead of symmetric HS256 HMAC.'),
-            default_issue: repoId === 'order-engine' ? 'tests/test_orders.py fails with RollbackException: Database session uncommitted before return. Inspect orders/inventory.py and fix.' : (repoId === 'gateway-proxy' ? 'tests/test_gateway.py fails with AssertionError: 429 != 200 on cold start burst. Inspect gateway/rate_limiter.py and fix.' : 'tests/test_auth.py fails with InvalidKeyError: The specified key is an HMAC key but algorithm is RS256. Inspect files and fix the issue.'),
+            default_issue: repoId === 'order-engine' ? 'tests/test_orders.py fails with RollbackException: Database session uncommitted before return. Inspect orders/inventory.py and fix.' : (repoId === 'gateway-proxy' ? 'tests/test_gateway.py fails with AssertionError: 429 != 200 on cold start burst. Inspect gateway/rate_limiter.py and fix.' : 'tests/test_auth.py fails with InvalidKeyError: HMAC key requires HS256, but algorithm is RS256. Inspect files and fix the issue.'),
             bug_file: repoId === 'order-engine' ? 'orders/inventory.py' : (repoId === 'gateway-proxy' ? 'gateway/rate_limiter.py' : 'auth/jwt_handler.py'),
+            bug_line: repoId === 'order-engine' ? 23 : (repoId === 'gateway-proxy' ? 13 : 11),
+            bug_snippet: repoId === 'order-engine' ? '# db.commit()  # <-- Missing commit creates dirty uncommitted session' : (repoId === 'gateway-proxy' ? 'self.tokens = 0  # BUG: Initialized with 0 tokens instead of capacity' : 'DEFAULT_ALGORITHM = "RS256"  # BUG: Configured as RS256 instead of HS256'),
+            bug_explanation: repoId === 'order-engine' ? 'Line 23 in orders/inventory.py: db.commit() is commented out before returning the reservation response. Transaction remains uncommitted, causing tests/test_orders.py to raise RollbackException.' : (repoId === 'gateway-proxy' ? 'Line 13 in gateway/rate_limiter.py: self.tokens is initialized to 0 instead of capacity. Burst packets arriving on cold start immediately receive HTTP 429 Too Many Requests in tests/test_gateway.py.' : 'Line 11 in auth/jwt_handler.py: DEFAULT_ALGORITHM is set to "RS256" (RSA asymmetric) while SECRET_KEY is a symmetric HMAC string. When tests/test_auth.py runs, jwt.decode() throws InvalidKeyError.'),
+            suggested_prompts: repoId === 'order-engine' ? [
+                'Enable db.commit() in orders/inventory.py to persist stock reservations',
+                'tests/test_orders.py fails with RollbackException: Uncommitted session. Fix inventory deduction.',
+                'Fix concurrent order state machine and verify transaction commits'
+            ] : (repoId === 'gateway-proxy' ? [
+                'Initialize self.tokens = capacity in gateway/rate_limiter.py to fix burst 429',
+                'tests/test_gateway.py fails with 429 on cold start. Inspect token bucket and fix.',
+                'Fix rate limiter cold-start initialization to allow burst traffic'
+            ] : [
+                'Fix DEFAULT_ALGORITHM to HS256 in auth/jwt_handler.py and verify with pytest',
+                'tests/test_auth.py fails with InvalidKeyError: HMAC key requires HS256. Inspect and fix.',
+                'Diagnose why test_token_encode_and_decode fails and resolve the algorithm mismatch'
+            ]),
             test_file: repoId === 'order-engine' ? 'tests/test_orders.py' : (repoId === 'gateway-proxy' ? 'tests/test_gateway.py' : 'tests/test_auth.py'),
             tags: repoId === 'order-engine' ? ['SQLAlchemy', 'PostgreSQL', 'Concurrency'] : (repoId === 'gateway-proxy' ? ['Redis', 'Rate Limiter', 'Microservices'] : ['FastAPI', 'PyJWT', 'Security']),
             file_count: 6
         };
+
+        this.currentRepo = repo;
 
         // Update Pill Buttons
         ['auth-service', 'order-engine', 'gateway-proxy'].forEach(id => {
@@ -147,18 +166,26 @@ const DuelEngine = {
         const descEl = document.getElementById("agentLoopRepoDesc");
         const tagsEl = document.getElementById("agentLoopRepoTags");
         const promptInp = document.getElementById("agentLoopPromptInput");
-        const expTitle = document.getElementById("repoExplorerTitle");
-        const expBadge = document.getElementById("repoExplorerBadge");
 
         if (badgeEl) badgeEl.innerText = repo.badge;
         if (titleEl) titleEl.innerText = repo.name;
         if (descEl) descEl.innerText = repo.description;
-        if (expTitle) expTitle.innerText = repo.name;
-        if (expBadge) expBadge.innerText = `${repo.file_count || 6} Files Active`;
         if (promptInp) promptInp.value = repo.default_issue;
 
         if (tagsEl && repo.tags) {
             tagsEl.innerHTML = repo.tags.map(t => `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">${this.escapeHtml(t)}</span>`).join('');
+        }
+
+        // Render Suggested Action Prompts
+        const sugContainer = document.getElementById("repoSuggestedPrompts");
+        if (sugContainer && repo.suggested_prompts) {
+            sugContainer.innerHTML = repo.suggested_prompts.map(p => `
+                <button type="button" onclick="DuelEngine.usePrompt('${this.escapeHtml(p).replace(/'/g, "\\'")}')"
+                    class="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-mono transition text-left flex items-center space-x-1 shadow-sm">
+                    <span>💡</span>
+                    <span class="truncate max-w-[340px] sm:max-w-none">${this.escapeHtml(p)}</span>
+                </button>
+            `).join('');
         }
 
         // Fetch files for this repo
@@ -167,9 +194,24 @@ const DuelEngine = {
             if (res.ok) {
                 this._repoFilesCache = await res.json();
                 this.renderRepoFiles(repo);
+                // Auto-view the buggy file by default
+                const defaultFile = repo.bug_file || Object.keys(this._repoFilesCache)[0];
+                if (defaultFile) {
+                    this.viewFile(defaultFile);
+                }
             }
         } catch (e) {
             console.error("Failed to load repo files for", repoId, e);
+        }
+    },
+
+    usePrompt(text) {
+        const inp = document.getElementById("agentLoopPromptInput");
+        if (inp) {
+            inp.value = text;
+            inp.focus();
+            inp.classList.add("ring-2", "ring-amber-500");
+            setTimeout(() => inp.classList.remove("ring-2", "ring-amber-500"), 800);
         }
     },
 
@@ -181,28 +223,29 @@ const DuelEngine = {
         Object.keys(this._repoFilesCache).forEach(path => {
             const btn = document.createElement("button");
             btn.onclick = () => this.viewFile(path);
-            
+            btn.id = `repoFileTab-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
             const isBuggy = (path === repo.bug_file);
             const isTest = (path === repo.test_file);
 
             if (isBuggy) {
-                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm";
-                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded font-bold">BUGGY</span>`;
+                btn.className = "px-2 py-1 rounded bg-slate-900 border border-rose-500/60 text-rose-300 text-[11px] font-mono font-semibold flex items-center space-x-1 hover:border-amber-500 transition shadow-sm";
+                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-rose-500 text-white px-1 py-0.2 rounded font-bold">BUGGY</span>`;
             } else if (isTest) {
-                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm";
-                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-bold">FAILS TEST</span>`;
+                btn.className = "px-2 py-1 rounded bg-slate-900 border border-amber-500/60 text-amber-300 text-[11px] font-mono font-semibold flex items-center space-x-1 hover:border-amber-500 transition shadow-sm";
+                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded font-bold">FAILS</span>`;
             } else {
-                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm";
+                btn.className = "px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-400 text-[11px] font-mono hover:text-white hover:border-slate-700 transition shadow-sm";
                 btn.innerHTML = `<span>${this.escapeHtml(path)}</span>`;
             }
             container.appendChild(btn);
         });
-
-        const viewer = document.getElementById("repoFileViewer");
-        if (viewer) viewer.classList.add("hidden");
     },
 
     async viewFile(path) {
+        this.activeFilePath = path;
+        const repo = this.currentRepo || {};
+
         if (!this._repoFilesCache || !this._repoFilesCache[path]) {
             try {
                 const res = await fetch(`/api/repo/tree?repo_id=${this.selectedRepoId || 'auth-service'}`);
@@ -213,13 +256,74 @@ const DuelEngine = {
                 console.error("Failed to load repo files:", e);
             }
         }
-        const viewer = document.getElementById("repoFileViewer");
+
+        if (!this._repoFilesCache || !this._repoFilesCache[path]) return;
+
+        const fileData = this._repoFilesCache[path];
+        const content = fileData.content || "";
+
+        // Update active tab highlights
+        Object.keys(this._repoFilesCache).forEach(p => {
+            const tabBtn = document.getElementById(`repoFileTab-${p.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            if (tabBtn) {
+                if (p === path) {
+                    tabBtn.classList.add("ring-2", "ring-amber-500", "bg-slate-800");
+                } else {
+                    tabBtn.classList.remove("ring-2", "ring-amber-500", "bg-slate-800");
+                }
+            }
+        });
+
+        // Update File Header
         const nameEl = document.getElementById("repoFileName");
-        const codeEl = document.getElementById("repoFileCode");
-        if (viewer && nameEl && codeEl && this._repoFilesCache && this._repoFilesCache[path]) {
-            nameEl.innerText = path;
-            codeEl.innerText = this._repoFilesCache[path].content;
-            viewer.classList.remove("hidden");
+        const linesEl = document.getElementById("repoFileLineCount");
+        if (nameEl) nameEl.innerText = path;
+        if (linesEl) linesEl.innerText = `${fileData.lines || content.split('\n').length} lines (${fileData.size || content.length} bytes)`;
+
+        // Update Diagnostic Banner
+        const bugAlert = document.getElementById("repoBugAlert");
+        const bugLineBadge = document.getElementById("repoBugLineBadge");
+        const bugExplanation = document.getElementById("repoBugExplanation");
+        const bugSnippet = document.getElementById("repoBugSnippet");
+
+        const isBuggy = (path === repo.bug_file);
+        if (bugAlert) {
+            if (isBuggy) {
+                bugAlert.className = "px-4 py-2.5 bg-rose-950/40 border-b border-rose-900/50 flex items-start space-x-2.5 text-xs font-mono";
+                if (bugLineBadge) bugLineBadge.innerText = `Line ${repo.bug_line || '11'}`;
+                if (bugExplanation) bugExplanation.innerText = repo.bug_explanation || "Root cause identified in this file.";
+                if (bugSnippet) {
+                    bugSnippet.innerText = repo.bug_snippet || "";
+                    bugSnippet.classList.remove("hidden");
+                }
+            } else {
+                bugAlert.className = "px-4 py-2 bg-slate-900/60 border-b border-slate-800 flex items-start space-x-2 text-xs font-mono text-slate-400";
+                if (bugLineBadge) bugLineBadge.innerText = "Supporting File";
+                if (bugExplanation) bugExplanation.innerText = `Viewing '${path}'. Click '${repo.bug_file}' tab to inspect the bug and root-cause failure.`;
+                if (bugSnippet) bugSnippet.classList.add("hidden");
+            }
+        }
+
+        // Render Formatted Code with Line Numbers & Bug Highlight
+        const codeContainer = document.getElementById("repoFileCodeContainer");
+        if (codeContainer) {
+            const lines = content.split('\n');
+            const bugLine = repo.bug_line;
+
+            let html = '<div class="space-y-0.5 font-mono text-[11px]">';
+            lines.forEach((line, idx) => {
+                const lineNum = idx + 1;
+                const isBugLine = (isBuggy && lineNum === bugLine);
+                const lineBg = isBugLine ? 'bg-rose-950/80 border-l-2 border-rose-500 text-rose-200 font-bold' : 'text-slate-300 hover:bg-slate-900/50';
+
+                html += `<div class="flex items-center px-2 py-0.5 ${lineBg}">
+                    <span class="w-7 text-right pr-2 text-slate-600 select-none text-[10px] shrink-0">${lineNum}</span>
+                    <span class="flex-1 whitespace-pre overflow-x-auto">${this.escapeHtml(line)}</span>
+                    ${isBugLine ? '<span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded ml-2 font-bold select-none shrink-0">BUG LINE</span>' : ''}
+                </div>`;
+            });
+            html += '</div>';
+            codeContainer.innerHTML = html;
         }
     },
 
@@ -248,6 +352,26 @@ const DuelEngine = {
         this.resetDisplay();
 
         const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
+
+        if (m === 'agent_loop') {
+            this.fetchQuota();
+            if (leftStream) {
+                leftStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>🤖 <b>Live Multi-Turn Agent Mode Active.</b><br>Inspect the code above, pick a suggested prompt, and click <b>'🚀 Run Live Meta AI Duel on Repo'</b> to watch Meta AI explore, loop, and get intercepted by Capybala live!</div>`;
+            }
+            if (rightStream) {
+                rightStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>🦫 <b>Capybala Runtime Armed.</b><br>Semantic Velocity Manifold &amp; Atomic Rollback ready to intercept live Meta AI attractor basins.</div>`;
+            }
+        } else if (m === 'custom') {
+            this.fetchQuota();
+            if (leftStream) {
+                leftStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Custom Live Meta AI Mode Active.<br>Type your prompt above and click <b>'⚔️ Run Meta AI Duel'</b>.</div>`;
+            }
+            if (rightStream) {
+                rightStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Capybala Runtime Armed &amp; Rate Limiter Active.<br>Single-turn queries run in zero-overhead passive standby (0.0ms delay).</div>`;
+            }
+        }
+    },
         const rightStream = document.getElementById("rightStream");
 
         if (m === 'agent_loop') {

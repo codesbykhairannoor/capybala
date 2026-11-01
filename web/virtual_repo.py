@@ -366,6 +366,14 @@ REPOSITORIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Production JWT Token handler configured with asymmetric RS256 instead of symmetric HS256 HMAC.",
         "default_issue": "tests/test_auth.py fails with InvalidKeyError: HMAC key requires HS256, but algorithm is RS256. Inspect files and fix the issue.",
         "bug_file": "auth/jwt_handler.py",
+        "bug_line": 11,
+        "bug_snippet": "DEFAULT_ALGORITHM = \"RS256\"  # BUG: Configured as RS256 instead of HS256",
+        "bug_explanation": "Line 11 in auth/jwt_handler.py: DEFAULT_ALGORITHM is set to 'RS256' (RSA asymmetric) while SECRET_KEY is a symmetric HMAC string. When tests/test_auth.py runs, jwt.decode() throws InvalidKeyError.",
+        "suggested_prompts": [
+            "Fix DEFAULT_ALGORITHM to HS256 in auth/jwt_handler.py and verify with pytest",
+            "tests/test_auth.py fails with InvalidKeyError: HMAC key requires HS256. Inspect and fix.",
+            "Diagnose why test_token_encode_and_decode fails and resolve the algorithm mismatch"
+        ],
         "test_file": "tests/test_auth.py",
         "tags": ["FastAPI", "PyJWT", "Security", "SWE-bench"],
         "files": AUTH_SERVICE_FILES
@@ -377,6 +385,14 @@ REPOSITORIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "High-throughput inventory checkout fails under concurrent requests due to missing session.commit() before response.",
         "default_issue": "tests/test_orders.py fails with RollbackException: Database session uncommitted before return. Inspect orders/inventory.py and fix.",
         "bug_file": "orders/inventory.py",
+        "bug_line": 23,
+        "bug_snippet": "# db.commit()  # <-- Missing commit creates dirty uncommitted session",
+        "bug_explanation": "Line 23 in orders/inventory.py: db.commit() is commented out before returning the reservation response. Transaction remains uncommitted, causing tests/test_orders.py to raise RollbackException.",
+        "suggested_prompts": [
+            "Enable db.commit() in orders/inventory.py to persist stock reservations",
+            "tests/test_orders.py fails with RollbackException: Uncommitted session. Fix inventory deduction.",
+            "Fix concurrent order state machine and verify transaction commits"
+        ],
         "test_file": "tests/test_orders.py",
         "tags": ["SQLAlchemy", "PostgreSQL", "Concurrency", "Transactions"],
         "files": ORDER_ENGINE_FILES
@@ -388,6 +404,14 @@ REPOSITORIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Distributed rate limiter prematurely drops burst HTTP traffic with 429 due to token bucket initialized at 0.",
         "default_issue": "tests/test_gateway.py fails with AssertionError: 429 != 200 on cold start burst. Inspect gateway/rate_limiter.py and fix.",
         "bug_file": "gateway/rate_limiter.py",
+        "bug_line": 13,
+        "bug_snippet": "self.tokens = 0  # BUG: Initialized with 0 tokens instead of capacity",
+        "bug_explanation": "Line 13 in gateway/rate_limiter.py: self.tokens is initialized to 0 instead of capacity. Burst packets arriving on cold start immediately receive HTTP 429 Too Many Requests in tests/test_gateway.py.",
+        "suggested_prompts": [
+            "Initialize self.tokens = capacity in gateway/rate_limiter.py to fix burst 429",
+            "tests/test_gateway.py fails with 429 on cold start. Inspect token bucket and fix.",
+            "Fix rate limiter cold-start initialization to allow burst traffic"
+        ],
         "test_file": "tests/test_gateway.py",
         "tags": ["Redis", "Rate Limiter", "Networking", "Microservices"],
         "files": GATEWAY_PROXY_FILES
@@ -406,6 +430,10 @@ def get_available_repositories() -> List[Dict[str, Any]]:
             "description": data["description"],
             "default_issue": data["default_issue"],
             "bug_file": data["bug_file"],
+            "bug_line": data.get("bug_line"),
+            "bug_snippet": data.get("bug_snippet"),
+            "bug_explanation": data.get("bug_explanation"),
+            "suggested_prompts": data.get("suggested_prompts", []),
             "test_file": data["test_file"],
             "tags": data["tags"],
             "file_count": len(data["files"])

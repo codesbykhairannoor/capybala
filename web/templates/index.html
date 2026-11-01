@@ -163,13 +163,13 @@
                     <!-- Mode Toggle Tabs (3 Distinct Experiences) -->
                     <div
                         class="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0 self-start lg:self-auto">
-                        <button onclick="DuelEngine.setMode('preset')" id="duelModePresetBtn"
-                            class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm bg-amber-500 text-slate-950">
-                            ⚡ SWE-bench Replay (Instant)
-                        </button>
                         <button onclick="DuelEngine.setMode('agent_loop')" id="duelModeAgentLoopBtn"
-                            class="px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                            class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm bg-amber-500 text-slate-950">
                             🤖 Live Multi-Turn Agent Loop (Meta AI)
+                        </button>
+                        <button onclick="DuelEngine.setMode('preset')" id="duelModePresetBtn"
+                            class="px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                            ⚡ SWE-bench Replay (Instant)
                         </button>
                         <button onclick="DuelEngine.setMode('custom')" id="duelModeCustomBtn"
                             class="px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
@@ -179,7 +179,7 @@
                 </div>
 
                 <!-- Mode 1: Preset Scenarios Container (Verified SWE-bench Dataset Replays) -->
-                <div id="duelPresetContainer" class="flex flex-wrap items-center gap-3">
+                <div id="duelPresetContainer" class="hidden flex flex-wrap items-center gap-3">
                     <select id="duelScenarioSelect" onchange="DuelEngine.selectScenario(this.value)"
                         class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 shadow-sm flex-1 md:flex-initial min-w-[280px]">
                         <option value="semantic_attractor">Vortex: Semantic Paraphrase Loop</option>
@@ -197,14 +197,20 @@
                     </button>
                 </div>
 
-                <!-- Mode 2: Live Multi-Turn Agent Loop (100% Real Meta AI + Multi-Repository Playground) -->
+                <!-- Mode 2: Live Multi-Turn Agent Loop (IDE Code Playground + Meta AI Duel) -->
                 <div id="duelAgentLoopContainer"
-                    class="hidden space-y-3.5 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border-2 border-amber-500/30">
-                    <!-- Repository Picker Pills -->
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">1. Select Target Production Repository:</span>
-                            <span id="agentLoopRepoBadge" class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold font-mono">JWT Algorithm Mismatch</span>
+                    class="space-y-4 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border-2 border-amber-500/30">
+                    
+                    <!-- 1. Target Repository Selector Header -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                                <span>1. Select Production Repository:</span>
+                            </span>
+                            <span id="agentLoopRepoBadge"
+                                class="px-2.5 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold font-mono">
+                                JWT Algorithm Mismatch
+                            </span>
                         </div>
                         <div class="flex flex-wrap items-center gap-2" id="repoSelectorPills">
                             <button onclick="DuelEngine.selectRepo('auth-service')" id="repoPill-auth-service"
@@ -222,40 +228,136 @@
                         </div>
                     </div>
 
-                    <!-- Selected Repo Summary -->
-                    <div class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                        <div class="flex items-center justify-between">
+                    <!-- Selected Repo Summary & Tech Tags -->
+                    <div class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex-1 min-w-[240px]">
                             <span id="agentLoopRepoTitle" class="text-xs font-mono font-bold text-slate-900 dark:text-white">FinTech Payment &amp; Auth Service</span>
-                            <div id="agentLoopRepoTags" class="flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">FastAPI</span>
-                                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">PyJWT</span>
-                            </div>
+                            <p id="agentLoopRepoDesc" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                                Production JWT Token handler configured with asymmetric RS256 instead of symmetric HS256 HMAC.
+                            </p>
                         </div>
-                        <p id="agentLoopRepoDesc" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                            Production JWT Token handler configured with asymmetric RS256 instead of symmetric HS256 HMAC.
-                        </p>
+                        <div id="agentLoopRepoTags" class="flex items-center gap-1.5">
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">FastAPI</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">PyJWT</span>
+                        </div>
                     </div>
 
-                    <!-- Custom Prompt / Instruction on Selected Repo -->
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300">2. Enter Agent Prompt for Selected Repository:</label>
-                            <span class="text-[10px] text-slate-400 font-mono">Edit instruction or run default SWE-bench issue</span>
+                    <!-- 2. Integrated Code Workspace (OPEN BY DEFAULT) -->
+                    <div class="rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-950 overflow-hidden shadow-md">
+                        <!-- Code Tab Bar -->
+                        <div class="flex items-center justify-between px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex-wrap gap-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="flex space-x-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                                </span>
+                                <span class="text-[11px] font-mono font-bold text-slate-300 ml-1">📂 Codebase Inspector:</span>
+                            </div>
+                            <!-- Dynamic File Tabs Container -->
+                            <div id="repoFilesContainer" class="flex flex-wrap items-center gap-1.5">
+                                <!-- Populated dynamically by DuelEngine -->
+                            </div>
                         </div>
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            <input type="text" id="agentLoopPromptInput"
-                                value="tests/test_auth.py fails with InvalidKeyError: The specified key is an HMAC key but algorithm is RS256. Inspect files and fix the issue."
-                                class="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3.5 py-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm" />
-                            <button onclick="DuelEngine.runLiveAgentLoop()" id="launchAgentLoopBtn"
-                                class="px-5 py-2.5 rounded-lg font-bold text-xs font-mono tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 transition flex items-center justify-center space-x-2 shadow-sm shrink-0 whitespace-nowrap">
-                                <span id="agentLoopSpinner" class="hidden animate-spin">⟳</span>
-                                <span>🚀 Run Live Meta AI on Repo</span>
+
+                        <!-- Diagnostic Bug Alert Box (Line & Root cause explanation) -->
+                        <div id="repoBugAlert" class="px-4 py-2.5 bg-rose-950/40 border-b border-rose-900/50 flex items-start space-x-2.5 text-xs font-mono">
+                            <span class="text-rose-400 text-sm">🚨</span>
+                            <div class="flex-1 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-rose-300 text-[11px] uppercase tracking-wide">Root Cause Diagnostic</span>
+                                    <span id="repoBugLineBadge" class="text-[10px] px-2 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">Line 11</span>
+                                </div>
+                                <div id="repoBugExplanation" class="text-rose-200/90 text-[11px] leading-relaxed">
+                                    Line 11 in auth/jwt_handler.py: DEFAULT_ALGORITHM is set to 'RS256' (RSA asymmetric) while SECRET_KEY is a symmetric HMAC string. When tests/test_auth.py runs, jwt.decode() throws InvalidKeyError.
+                                </div>
+                                <div id="repoBugSnippet" class="text-[10px] font-mono text-amber-300 bg-black/60 px-2 py-1 rounded border border-rose-900/40 truncate">
+                                    DEFAULT_ALGORITHM = "RS256"  # BUG: Configured as RS256 instead of HS256
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Code Viewer Window with Line Numbers -->
+                        <div class="relative bg-slate-950 p-3 max-h-80 overflow-y-auto">
+                            <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/80 text-[10px] font-mono text-slate-400">
+                                <span>File: <strong id="repoFileName" class="text-amber-400">auth/jwt_handler.py</strong></span>
+                                <span id="repoFileLineCount" class="text-slate-500">43 lines</span>
+                            </div>
+                            <div id="repoFileCodeContainer" class="font-mono text-xs leading-relaxed text-slate-300">
+                                <!-- Formatted code with line numbers rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Action & Prompt Station -->
+                    <div class="space-y-3 pt-1">
+                        <!-- Suggested 1-Click Action Prompts -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                                    <span>💡 Suggested Action Prompts:</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">(Click any chip to autofill prompt)</span>
+                                </span>
+                            </div>
+                            <div id="repoSuggestedPrompts" class="flex flex-wrap items-center gap-2">
+                                <!-- Dynamic prompt chips populated by DuelEngine -->
+                            </div>
+                        </div>
+
+                        <!-- Prompt Input Field & Execution CTA -->
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300">
+                                2. Agent Instruction (Run default SWE-bench issue or type custom prompt):
+                            </label>
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" id="agentLoopPromptInput"
+                                    value="tests/test_auth.py fails with InvalidKeyError: HMAC key requires HS256, but algorithm is RS256. Inspect files and fix the issue."
+                                    class="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3.5 py-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm" />
+                                <button onclick="DuelEngine.runLiveAgentLoop()" id="launchAgentLoopBtn"
+                                    class="px-5 py-2.5 rounded-lg font-bold text-xs font-mono tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 transition flex items-center justify-center space-x-2 shadow-sm shrink-0 whitespace-nowrap">
+                                    <span id="agentLoopSpinner" class="hidden animate-spin">⟳</span>
+                                    <span>🚀 Run Live Meta AI Duel on Repo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quota & BYOK Bar -->
+                        <div class="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>Meta AI Live Quota: <strong id="quotaRemainingText">35/35</strong> runs remaining today</span>
+                                </span>
+                                <span class="text-[10px] text-slate-400">(Offline simulation fallback enabled if no key)</span>
+                            </div>
+                            <button onclick="DuelEngine.toggleBYOK()"
+                                class="text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1 text-[11px]">
+                                <span>🔑 Bring Your Own Key (BYOK)</span>
                             </button>
+                        </div>
+
+                        <!-- Collapsible BYOK Input -->
+                        <div id="byokContainer"
+                            class="hidden p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 mt-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Bring Your Own Key (Unmetered Live Runs)</span>
+                                <span class="text-[10px] text-slate-400">Stored safely in your browser localStorage</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="password" id="byokKeyInput"
+                                    placeholder="Enter Meta AI key (LLM_...) or OpenRouter key (sk-or-v1-...)"
+                                    class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500" />
+                                <button onclick="DuelEngine.saveBYOK()"
+                                    class="px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-mono font-bold">Save Key</button>
+                                <button onclick="DuelEngine.clearBYOK()"
+                                    class="px-2.5 py-1.5 rounded text-xs font-mono text-rose-500 hover:underline">Clear</button>
+                            </div>
+                            <div id="byokStatusMsg" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono hidden"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Mode 2: Custom Prompt (Live Meta AI) Container -->
+                <!-- Mode 3: Custom Prompt (Live Meta AI Single-Turn) Container -->
                 <div id="duelCustomContainer"
                     class="hidden space-y-3 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -279,45 +381,6 @@
                         with 0ms passive standby overhead and identical 1:1 cost. Multi-turn coding bugs test Capybala's
                         active deadlock interception.
                     </p>
-
-                    <div
-                        class="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 gap-2 pt-1">
-                        <div class="flex items-center space-x-2">
-                            <span id="communityQuotaBadge"
-                                class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span>Meta AI Live Quota: <strong id="quotaRemainingText">35/35</strong> runs remaining
-                                    today</span>
-                            </span>
-                            <span class="text-[10px] text-slate-400">(Safety limit: 3 runs/hr per IP)</span>
-                        </div>
-                        <button onclick="DuelEngine.toggleBYOK()"
-                            class="text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1 text-[11px]">
-                            <span>🔑 Bring Your Own Key (BYOK)</span>
-                        </button>
-                    </div>
-
-                    <!-- Collapsible BYOK Input -->
-                    <div id="byokContainer"
-                        class="hidden p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 mt-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Bring Your Own Key
-                                (Unmetered Live Runs)</span>
-                            <span class="text-[10px] text-slate-400">Stored safely in your browser localStorage</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input type="password" id="byokKeyInput"
-                                placeholder="Enter Meta AI key (LLM_...) or OpenRouter key (sk-or-v1-...)"
-                                class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500" />
-                            <button onclick="DuelEngine.saveBYOK()"
-                                class="px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-mono font-bold">Save
-                                Key</button>
-                            <button onclick="DuelEngine.clearBYOK()"
-                                class="px-2.5 py-1.5 rounded text-xs font-mono text-rose-500 hover:underline">Clear</button>
-                        </div>
-                        <div id="byokStatusMsg"
-                            class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono hidden"></div>
-                    </div>
                 </div>
             </div>
 
@@ -347,61 +410,6 @@
                     <div id="duelOutcomeBadge"
                         class="text-base font-bold font-mono text-slate-800 dark:text-white mt-1">Ready to execute</div>
                     <div class="text-[11px] text-slate-500 font-mono">Auto recovery</div>
-                </div>
-            </div>
-
-            <!-- Dynamic Multi-Repository Codebase File Explorer -->
-            <div
-                class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <span
-                        class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
-                        <span>📂 Active Repository Explorer: <strong id="repoExplorerTitle" class="text-amber-500">FinTech Payment &amp; Auth Service</strong></span>
-                        <span id="repoExplorerBadge"
-                            class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">6
-                            Files Active</span>
-                    </span>
-                    <span class="text-[10px] font-mono text-slate-400">Click any file to inspect authentic source
-                        code</span>
-                </div>
-                <div id="repoFilesContainer" class="flex flex-wrap items-center gap-2">
-                    <button onclick="DuelEngine.viewFile('auth/jwt_handler.py')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm">
-                        <span>auth/jwt_handler.py</span>
-                        <span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded font-bold">BUGGY</span>
-                    </button>
-                    <button onclick="DuelEngine.viewFile('tests/test_auth.py')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm">
-                        <span>tests/test_auth.py</span>
-                        <span class="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-bold">FAILS TEST</span>
-                    </button>
-                    <button onclick="DuelEngine.viewFile('auth/tokens.py')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
-                        auth/tokens.py
-                    </button>
-                    <button onclick="DuelEngine.viewFile('api/routes.py')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
-                        api/routes.py
-                    </button>
-                    <button onclick="DuelEngine.viewFile('config/settings.py')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
-                        config/settings.py
-                    </button>
-                    <button onclick="DuelEngine.viewFile('requirements.txt')"
-                        class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
-                        requirements.txt
-                    </button>
-                </div>
-                <!-- File Viewer Drawer -->
-                <div id="repoFileViewer"
-                    class="hidden p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-[11px] space-y-2 mt-2">
-                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
-                        <span id="repoFileName" class="font-bold text-amber-400">auth/jwt_handler.py</span>
-                        <button onclick="document.getElementById('repoFileViewer').classList.add('hidden')"
-                            class="text-slate-400 hover:text-white text-xs font-mono">✕ Close</button>
-                    </div>
-                    <pre id="repoFileCode"
-                        class="max-h-56 overflow-y-auto text-emerald-400 whitespace-pre p-2 rounded bg-black/40 border border-slate-800"></pre>
                 </div>
             </div>
 
