@@ -370,9 +370,11 @@ const DuelEngine = {
                     const elLeftCost = document.getElementById("duelCostLeft");
                     const elLeftTicker = document.getElementById("leftCostTicker");
                     const elLeftTokens = document.getElementById("duelTokensLeft");
+                    const isFailure = t.status === 'fatal_crash' || t.status === 'failing';
+                    const tickerLabel = isFailure ? 'Wasted' : 'Spent';
                     if (elLeftCost) elLeftCost.innerText = this.formatCost(t.cost);
-                    if (elLeftTicker) elLeftTicker.innerText = `${this.formatCost(t.cost)} Wasted`;
-                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} burned`;
+                    if (elLeftTicker) elLeftTicker.innerText = `${this.formatCost(t.cost)} ${tickerLabel}`;
+                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} ${isFailure ? 'burned' : 'used'}`;
                 }
 
                 // Right: Capybala Protected Execution
@@ -413,14 +415,18 @@ const DuelEngine = {
 
             const elMultiplier = document.getElementById("duelSavingsMultiplier");
             const elBadge = document.getElementById("duelOutcomeBadge");
+            const elSubMultiplier = document.getElementById("duelSavingsSubText");
 
-            if (elMultiplier) elMultiplier.innerText = multiplier.endsWith("x") ? multiplier : `${multiplier}x`;
+            const isIdentical = multiplier === '1.0x' || multiplier === '1.0';
+            if (elMultiplier) elMultiplier.innerText = isIdentical ? "1.0x" : (multiplier.endsWith("x") ? multiplier : `${multiplier}x`);
+            if (elSubMultiplier) elSubMultiplier.innerText = isIdentical ? "Optimal (No waste)" : "Cheaper per task";
+
             if (elBadge) {
                 if (sc.task_outcome) {
                     elBadge.innerText = sc.task_outcome;
                     elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
                 } else if (isLive && sc.is_live) {
-                    elBadge.innerText = `Verified Meta AI (${multiplier} cheaper)`;
+                    elBadge.innerText = isIdentical ? "Verified Meta AI (Single-Turn)" : `Verified Meta AI (${multiplier} cheaper)`;
                     elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
                 } else if (isLive && !sc.is_live) {
                     elBadge.innerText = `Offline Simulation (${multiplier} cheaper)`;
