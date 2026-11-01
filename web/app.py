@@ -356,8 +356,8 @@ async def run_live_duel(request: Request):
         obs_1 = "Command executed successfully (exit code 0)."
 
     # Real Meta AI token cost calculation ($0.20 per 1M tokens)
-    tokens_base = tokens_burned_total if tokens_burned_total > 0 else 1200
-    real_cost_turn1 = round((tokens_base / 1_000_000.0) * 0.20, 5)
+    tokens_base = tokens_burned_total if tokens_burned_total > 0 else (int(len(prompt) * 4.2) + 680)
+    real_cost_turn1 = round((tokens_base / 1_000_000.0) * 0.20, 6)
 
     is_coding_problem = any(kw in prompt.lower() for kw in [
         "error", "bug", "fail", "broken", "traceback", "import", "loop",
@@ -391,17 +391,24 @@ async def run_live_duel(request: Request):
         task_outcome = "Verified Meta AI (Healthy Single-Turn)"
         multiplier = "1.0x"
     else:
-        # Actual coding problem: models agent retry trajectory with honest token costs
+        # Actual coding problem: models agent retry trajectory with dynamic token costs
         obs_fail = f"Exit code 1: Problem unresolved ('{prompt[:25]}...')" if "grep" in cmd_lower or "find" in cmd_lower else obs_1
+        t2_search_cmd = f"find . -name '*.py' | xargs grep '{prompt[:18]}'"
 
-        tokens_t2 = tokens_base + 1500
-        cost_t2 = round((tokens_t2 / 1_000_000.0) * 0.20, 5)
+        # Live mathematical attractor detection for dynamic semantic velocity
+        attr = SemanticAttractorDetector()
+        attr.inspect_step(t1_action)
+        is_loop, real_vt, _ = attr.inspect_step(t2_search_cmd)
+        dynamic_vt = round(float(real_vt or 0.16), 2)
 
-        tokens_t3_base = tokens_t2 + 2500
-        cost_t3_base = round((tokens_t3_base / 1_000_000.0) * 0.20, 5)
+        tokens_t2 = tokens_base + int(tokens_base * 0.75) + len(prompt) * 2
+        cost_t2 = round((tokens_t2 / 1_000_000.0) * 0.20, 6)
 
-        tokens_t3_capy = tokens_base + 600
-        cost_t3_capy = round((tokens_t3_capy / 1_000_000.0) * 0.20, 5)
+        tokens_t3_base = tokens_t2 + int(tokens_t2 * 0.8) + len(t3_resolution) * 3
+        cost_t3_base = round((tokens_t3_base / 1_000_000.0) * 0.20, 6)
+
+        tokens_t3_capy = tokens_base + int(len(t3_resolution) * 3.5) + 120
+        cost_t3_capy = round((tokens_t3_capy / 1_000_000.0) * 0.20, 6)
 
         baseline_turns = [
             {
@@ -414,7 +421,7 @@ async def run_live_duel(request: Request):
             },
             {
                 "turn": 2,
-                "action": f"find . -name '*.py' | xargs grep '{prompt[:18]}'",
+                "action": t2_search_cmd,
                 "obs": "find: 0 matching references found. Token consumption expanding.",
                 "tokens": tokens_t2,
                 "cost": cost_t2,
@@ -441,7 +448,7 @@ async def run_live_duel(request: Request):
             },
             {
                 "turn": 2,
-                "action": f"find . -name '*.py' | xargs grep '{prompt[:18]}'",
+                "action": t2_search_cmd,
                 "obs": "find: 0 matches found",
                 "tokens": tokens_t2,
                 "cost": cost_t2,
@@ -449,8 +456,8 @@ async def run_live_duel(request: Request):
                 "intervention": True,
                 "intervention_details": {
                     "trigger": "Ergodic Attractor Collapse",
-                    "semantic_velocity": 0.14,
-                    "doctor_pivot": f"Deadlock caught. Stop repeated search. Apply direct root-cause fix."
+                    "semantic_velocity": dynamic_vt,
+                    "doctor_pivot": f"Deadlock caught (v_t = {dynamic_vt}). Stop repeated search. Apply direct root-cause fix."
                 }
             },
             {
@@ -930,7 +937,14 @@ async def heal_conversation(request: Request):
     tokens_after = estimate_tokens(healed_messages)
     tokens_saved = max(0, tokens_before - tokens_after)
     percent_saved = round((tokens_saved / max(1, tokens_before)) * 100.0, 1)
-    cost_saved = round((tokens_saved / 1000.0) * 0.03, 4)
+
+    provider_rates = {
+        "meta": 0.0002,     # $0.20 per 1M tokens
+        "openai": 0.0025,   # $2.50 per 1M tokens
+        "anthropic": 0.003  # $3.00 per 1M tokens
+    }
+    rate_per_k = provider_rates.get(provider.lower(), 0.0025)
+    cost_saved = round((tokens_saved / 1000.0) * rate_per_k, 5)
 
     return {
         "is_deadlock": deadlock_detected,

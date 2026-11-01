@@ -567,7 +567,14 @@ const DuelEngine = {
         if (elRightTicker) elRightTicker.innerText = "$0.00 Total";
         if (elLeftStep) elLeftStep.innerText = "Step 0";
         if (elRightStep) elRightStep.innerText = "Step 0";
-        if (elMultiplier) elMultiplier.innerText = "10.1x";
+        if (elMultiplier) elMultiplier.innerText = "--";
+
+        const elSubMultiplier = document.getElementById("duelSavingsSubText");
+        if (elSubMultiplier) elSubMultiplier.innerText = "Awaiting execution";
+        const elLeftTokens = document.getElementById("duelTokensLeft");
+        if (elLeftTokens) elLeftTokens.innerText = "-- tokens";
+        const elRightTokens = document.getElementById("duelTokensRight");
+        if (elRightTokens) elRightTokens.innerText = "-- tokens";
     },
 
     async runDuel() {
