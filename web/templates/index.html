@@ -337,27 +337,34 @@
             </div>
 
             <!-- Telemetry & Verifiable Proof Inspector (100% Anti-Manipulation) -->
-            <div id="duelProofContainer" class="hidden p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 font-mono text-xs">
+            <div id="duelProofContainer"
+                class="hidden p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 font-mono text-xs">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span id="proofDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span id="proofTitle" class="font-bold text-slate-800 dark:text-white uppercase tracking-wider text-[11px]">
+                        <span id="proofTitle"
+                            class="font-bold text-slate-800 dark:text-white uppercase tracking-wider text-[11px]">
                             🔍 Real-Time Model Telemetry &amp; Cryptographic Proof
                         </span>
                     </div>
-                    <span id="proofBadge" class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold">
+                    <span id="proofBadge"
+                        class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold">
                         VERIFIED API CALL
                     </span>
                 </div>
-                <div id="proofNotice" class="hidden p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs"></div>
+                <div id="proofNotice"
+                    class="hidden p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
+                </div>
                 <div id="proofStatsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
                     <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                         <div class="text-[9px] uppercase text-slate-400">Request ID</div>
-                        <div id="proofReqId" class="text-slate-700 dark:text-slate-300 font-bold truncate">chatcmpl-...</div>
+                        <div id="proofReqId" class="text-slate-700 dark:text-slate-300 font-bold truncate">chatcmpl-...
+                        </div>
                     </div>
                     <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                         <div class="text-[9px] uppercase text-slate-400">Official Model</div>
-                        <div id="proofModel" class="text-slate-700 dark:text-slate-300 font-bold truncate">muse-wonder-1.0</div>
+                        <div id="proofModel" class="text-slate-700 dark:text-slate-300 font-bold truncate">
+                            muse-wonder-1.0</div>
                     </div>
                     <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                         <div class="text-[9px] uppercase text-slate-400">Total Reasoning Tokens</div>
@@ -369,8 +376,10 @@
                     </div>
                 </div>
                 <div id="proofRawContainer" class="space-y-1">
-                    <div class="text-[10px] uppercase text-slate-400 font-bold">Raw Model Thought Stream (Unfiltered from api.meta.ai):</div>
-                    <pre id="proofRawText" class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed"></pre>
+                    <div class="text-[10px] uppercase text-slate-400 font-bold">Raw Model Thought Stream (Unfiltered
+                        from api.meta.ai):</div>
+                    <pre id="proofRawText"
+                        class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed"></pre>
                 </div>
             </div>
 
