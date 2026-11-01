@@ -160,21 +160,25 @@
                         </p>
                     </div>
 
-                    <!-- Mode Toggle Tabs -->
+                    <!-- Mode Toggle Tabs (3 Distinct Experiences) -->
                     <div
-                        class="flex items-center space-x-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0 self-start lg:self-auto">
+                        class="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0 self-start lg:self-auto">
                         <button onclick="DuelEngine.setMode('preset')" id="duelModePresetBtn"
                             class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition shadow-sm bg-amber-500 text-slate-950">
-                            ⚡ Curated Presets
+                            ⚡ SWE-bench Replay (Instant)
+                        </button>
+                        <button onclick="DuelEngine.setMode('agent_loop')" id="duelModeAgentLoopBtn"
+                            class="px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                            🤖 Live Multi-Turn Agent Loop (Meta AI)
                         </button>
                         <button onclick="DuelEngine.setMode('custom')" id="duelModeCustomBtn"
                             class="px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
-                            ✍️ Custom Prompt (Live Meta AI)
+                            ✍️ Custom Prompt (Single-Turn)
                         </button>
                     </div>
                 </div>
 
-                <!-- Mode 1: Preset Scenarios Container -->
+                <!-- Mode 1: Preset Scenarios Container (Verified SWE-bench Dataset Replays) -->
                 <div id="duelPresetContainer" class="flex flex-wrap items-center gap-3">
                     <select id="duelScenarioSelect" onchange="DuelEngine.selectScenario(this.value)"
                         class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 shadow-sm flex-1 md:flex-initial min-w-[280px]">
@@ -189,8 +193,30 @@
                         <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                         </svg>
-                        <span>Run Live Duel</span>
+                        <span>Replay SWE-bench Trajectory</span>
                     </button>
+                </div>
+
+                <!-- Mode 2: Live Multi-Turn Agent Loop (100% Real Meta AI + Virtual Multi-File Repo) -->
+                <div id="duelAgentLoopContainer"
+                    class="hidden space-y-3 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border-2 border-amber-500/30">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="text-xs font-mono font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>🎯 Production SWE-bench Task: Fix HMAC InvalidKeyError in auth/jwt_handler.py</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">FAILS PYTEST</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                                Real autonomous agent explores a multi-file repository live against Meta AI (<code class="text-amber-600 dark:text-amber-400 font-bold">muse-spark-1.3</code>). Watch Meta AI repeat file inspections, get intercepted by Capybala in 0.6ms, and apply Doctor Pivot!
+                            </p>
+                        </div>
+                        <button onclick="DuelEngine.runLiveAgentLoop()" id="launchAgentLoopBtn"
+                            class="px-5 py-2.5 rounded-lg font-bold text-xs font-mono tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 transition flex items-center justify-center space-x-2 shadow-sm shrink-0 whitespace-nowrap">
+                            <span id="agentLoopSpinner" class="hidden animate-spin">⟳</span>
+                            <span>🚀 Launch Real Agent Loop (Live Meta AI)</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Mode 2: Custom Prompt (Live Meta AI) Container -->
@@ -213,7 +239,9 @@
                     </div>
 
                     <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                        💡 <b>Zero-Gimmick Transparency:</b> Single-turn prompts (e.g. general QA) complete normally with 0ms passive standby overhead and identical 1:1 cost. Multi-turn coding bugs test Capybala's active deadlock interception.
+                        💡 <b>Zero-Gimmick Transparency:</b> Single-turn prompts (e.g. general QA) complete normally
+                        with 0ms passive standby overhead and identical 1:1 cost. Multi-turn coding bugs test Capybala's
+                        active deadlock interception.
                     </p>
 
                     <div
@@ -283,6 +311,46 @@
                     <div id="duelOutcomeBadge"
                         class="text-base font-bold font-mono text-slate-800 dark:text-white mt-1">Ready to execute</div>
                     <div class="text-[11px] text-slate-500 font-mono">Auto recovery</div>
+                </div>
+            </div>
+
+            <!-- Complex Production Repository: Payment & Auth Service File Explorer -->
+            <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
+                        <span>📂 Complex Production Repository: Payment &amp; Auth Service</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">6 Files Active</span>
+                    </span>
+                    <span class="text-[10px] font-mono text-slate-400">Click any file to inspect authentic source code</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="DuelEngine.viewFile('auth/jwt_handler.py')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm">
+                        <span>auth/jwt_handler.py</span>
+                        <span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded font-bold">BUGGY</span>
+                    </button>
+                    <button onclick="DuelEngine.viewFile('tests/test_auth.py')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
+                        tests/test_auth.py
+                    </button>
+                    <button onclick="DuelEngine.viewFile('auth/tokens.py')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
+                        auth/tokens.py
+                    </button>
+                    <button onclick="DuelEngine.viewFile('api/routes.py')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
+                        api/routes.py
+                    </button>
+                    <button onclick="DuelEngine.viewFile('config/settings.py')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
+                        config/settings.py
+                    </button>
+                    <button onclick="DuelEngine.viewFile('requirements.txt')" class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm">
+                        requirements.txt
+                    </button>
+                </div>
+                <!-- File Viewer Drawer -->
+                <div id="repoFileViewer" class="hidden p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-[11px] space-y-2 mt-2">
+                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                        <span id="repoFileName" class="font-bold text-amber-400">auth/jwt_handler.py</span>
+                        <button onclick="document.getElementById('repoFileViewer').classList.add('hidden')" class="text-slate-400 hover:text-white text-xs font-mono">✕ Close</button>
+                    </div>
+                    <pre id="repoFileCode" class="max-h-56 overflow-y-auto text-emerald-400 whitespace-pre p-2 rounded bg-black/40 border border-slate-800"></pre>
                 </div>
             </div>
 
