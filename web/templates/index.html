@@ -259,13 +259,13 @@
                     <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Baseline Cost Burn</div>
                     <div id="duelCostLeft"
                         class="text-2xl font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5">$0.00</div>
-                    <div class="text-[11px] text-slate-500 font-mono">16k tokens burned</div>
+                    <div id="duelTokensLeft" class="text-[11px] text-slate-500 font-mono">16k tokens burned</div>
                 </div>
                 <div>
                     <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Capybala Cost</div>
                     <div id="duelCostRight"
                         class="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">$0.00</div>
-                    <div class="text-[11px] text-slate-500 font-mono">2.4k tokens clean</div>
+                    <div id="duelTokensRight" class="text-[11px] text-slate-500 font-mono">2.4k tokens clean</div>
                 </div>
                 <div>
                     <div class="text-[10px] font-mono uppercase text-slate-500 font-semibold">Cost Reduction</div>
@@ -1263,12 +1263,12 @@ from capybala.integrations import (
     </footer>
 
     <!-- Modular Scripts with Cache-Busting -->
-    <script src="/static/js/debugger.js?v=0.9.1"></script>
-    <script src="/static/js/sandbox.js?v=0.9.1"></script>
-    <script src="/static/js/duel.js?v=0.9.1"></script>
-    <script src="/static/js/canvas.js?v=0.9.1"></script>
-    <script src="/static/js/chaos.js?v=0.9.1"></script>
-    <script src="/static/js/app.js?v=0.9.1"></script>
+    <script src="/static/js/debugger.js?v=0.9.2"></script>
+    <script src="/static/js/sandbox.js?v=0.9.2"></script>
+    <script src="/static/js/duel.js?v=0.9.2"></script>
+    <script src="/static/js/canvas.js?v=0.9.2"></script>
+    <script src="/static/js/chaos.js?v=0.9.2"></script>
+    <script src="/static/js/app.js?v=0.9.2"></script>
     <script>
         // Secondary guarantee to trigger App.init if DOM is already active
         if (window.App && typeof App.init === 'function') {

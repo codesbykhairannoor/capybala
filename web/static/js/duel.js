@@ -369,8 +369,10 @@ const DuelEngine = {
 
                     const elLeftCost = document.getElementById("duelCostLeft");
                     const elLeftTicker = document.getElementById("leftCostTicker");
-                    if (elLeftCost) elLeftCost.innerText = `$${t.cost.toFixed(2)}`;
-                    if (elLeftTicker) elLeftTicker.innerText = `$${t.cost.toFixed(2)} Wasted`;
+                    const elLeftTokens = document.getElementById("duelTokensLeft");
+                    if (elLeftCost) elLeftCost.innerText = this.formatCost(t.cost);
+                    if (elLeftTicker) elLeftTicker.innerText = `${this.formatCost(t.cost)} Wasted`;
+                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} burned`;
                 }
 
                 // Right: Capybala Protected Execution
@@ -384,7 +386,7 @@ const DuelEngine = {
                         d.innerHTML = `🦫 <b>[CAPYBALA INTERCEPTED DEADLOCK]</b><br><span class='text-[11px] font-normal'>Phase transition caught in 0.6ms. Semantic velocity collapsed. Atomic Rollback performed &amp; Doctor Pivot injected!</span>`;
                     } else if (t.status === 'success') {
                         d.className += " p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-200 font-bold shadow-md";
-                        d.innerHTML = `🎉 <b>[TASK SOLVED!]</b><br><span class='text-[11px] font-normal'>${this.escapeHtml(t.obs)}</span>`;
+                        d.innerHTML = `🎉 <b>[TASK COMPLETED]</b><br><span class='text-[11px] font-normal'>${this.escapeHtml(t.obs)}</span>`;
                     } else {
                         d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
                         d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
@@ -394,8 +396,10 @@ const DuelEngine = {
 
                     const elRightCost = document.getElementById("duelCostRight");
                     const elRightTicker = document.getElementById("rightCostTicker");
-                    if (elRightCost) elRightCost.innerText = `$${t.cost.toFixed(2)}`;
-                    if (elRightTicker) elRightTicker.innerText = `$${t.cost.toFixed(2)} Total`;
+                    const elRightTokens = document.getElementById("duelTokensRight");
+                    if (elRightCost) elRightCost.innerText = this.formatCost(t.cost);
+                    if (elRightTicker) elRightTicker.innerText = `${this.formatCost(t.cost)} Total`;
+                    if (elRightTokens) elRightTokens.innerText = `${this.formatTokens(t.tokens)} clean`;
                 }
 
                 // Step animation delay
@@ -403,23 +407,26 @@ const DuelEngine = {
             }
 
             // Final Calculations & Scoreboard
-            const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 1.48;
-            const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.12;
-            const multiplier = (finalLeft / Math.max(0.01, finalRight)).toFixed(1);
+            const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 0.001;
+            const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.001;
+            const multiplier = sc.multiplier || (finalLeft / Math.max(0.00001, finalRight)).toFixed(1) + "x";
 
             const elMultiplier = document.getElementById("duelSavingsMultiplier");
             const elBadge = document.getElementById("duelOutcomeBadge");
 
-            if (elMultiplier) elMultiplier.innerText = `${multiplier}x`;
+            if (elMultiplier) elMultiplier.innerText = multiplier.endsWith("x") ? multiplier : `${multiplier}x`;
             if (elBadge) {
-                if (isLive && sc.is_live) {
-                    elBadge.innerText = `Verified Meta AI (${multiplier}x cheaper)`;
+                if (sc.task_outcome) {
+                    elBadge.innerText = sc.task_outcome;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                } else if (isLive && sc.is_live) {
+                    elBadge.innerText = `Verified Meta AI (${multiplier} cheaper)`;
                     elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
                 } else if (isLive && !sc.is_live) {
-                    elBadge.innerText = `Offline Simulation (${multiplier}x cheaper)`;
+                    elBadge.innerText = `Offline Simulation (${multiplier} cheaper)`;
                     elBadge.className = "text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-1";
                 } else {
-                    elBadge.innerText = `Capybala Solved (${multiplier}x cheaper)`;
+                    elBadge.innerText = `Capybala Solved (${multiplier} cheaper)`;
                     elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
                 }
             }
@@ -492,6 +499,26 @@ const DuelEngine = {
                 btn.innerHTML = `<svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Run Live Duel</span>`;
             }
         }
+    },
+
+    formatCost(val) {
+        if (typeof val !== 'number') return "$0.00";
+        if (val === 0) return "$0.00";
+        if (val < 0.001) {
+            return "$" + val.toFixed(5);
+        }
+        if (val < 0.01) {
+            return "$" + val.toFixed(4);
+        }
+        return "$" + val.toFixed(2);
+    },
+
+    formatTokens(val) {
+        if (!val) return "0 tokens";
+        if (val >= 1000) {
+            return `${(val / 1000).toFixed(1)}k tokens`;
+        }
+        return `${val} tokens`;
     },
 
     escapeHtml(str) {
