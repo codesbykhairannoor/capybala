@@ -73,6 +73,9 @@ const DuelEngine = {
     currentKey: 'semantic_attractor',
     mode: 'preset', // 'preset' or 'custom'
     isRunning: false,
+    selectedRepoId: 'auth-service',
+    reposList: [],
+    _repoFilesCache: null,
 
     async init() {
         // Sync with dropdown if user already selected something
@@ -84,6 +87,7 @@ const DuelEngine = {
         this.resetDisplay();
         this.fetchQuota();
         this.loadBYOK();
+        this.initRepos();
 
         // Asynchronously supplement with backend scenarios if available
         try {
@@ -99,12 +103,109 @@ const DuelEngine = {
         }
     },
 
-    _repoFilesCache: null,
+    async initRepos() {
+        try {
+            const res = await fetch('/api/repos');
+            if (res.ok) {
+                this.reposList = await res.json();
+            }
+        } catch (e) {
+            console.error("Failed to load repositories metadata:", e);
+        }
+        await this.selectRepo(this.selectedRepoId || 'auth-service');
+    },
+
+    async selectRepo(repoId) {
+        this.selectedRepoId = repoId;
+        const repo = (this.reposList && this.reposList.find(r => r.id === repoId)) || {
+            id: repoId,
+            name: repoId === 'order-engine' ? 'E-Commerce Inventory & Order State Machine' : (repoId === 'gateway-proxy' ? 'Distributed API Gateway & Rate Limiter' : 'FinTech Payment & Auth Service'),
+            badge: repoId === 'order-engine' ? 'Uncommitted DB Transaction' : (repoId === 'gateway-proxy' ? 'Token Bucket Cold-Start 429' : 'JWT Algorithm Mismatch'),
+            description: repoId === 'order-engine' ? 'High-throughput inventory checkout fails under concurrent requests due to missing session.commit() before response.' : (repoId === 'gateway-proxy' ? 'Distributed rate limiter prematurely drops burst HTTP traffic with 429 due to token bucket initialized at 0.' : 'Production JWT Token handler configured with asymmetric RS256 instead of symmetric HS256 HMAC.'),
+            default_issue: repoId === 'order-engine' ? 'tests/test_orders.py fails with RollbackException: Database session uncommitted before return. Inspect orders/inventory.py and fix.' : (repoId === 'gateway-proxy' ? 'tests/test_gateway.py fails with AssertionError: 429 != 200 on cold start burst. Inspect gateway/rate_limiter.py and fix.' : 'tests/test_auth.py fails with InvalidKeyError: The specified key is an HMAC key but algorithm is RS256. Inspect files and fix the issue.'),
+            bug_file: repoId === 'order-engine' ? 'orders/inventory.py' : (repoId === 'gateway-proxy' ? 'gateway/rate_limiter.py' : 'auth/jwt_handler.py'),
+            test_file: repoId === 'order-engine' ? 'tests/test_orders.py' : (repoId === 'gateway-proxy' ? 'tests/test_gateway.py' : 'tests/test_auth.py'),
+            tags: repoId === 'order-engine' ? ['SQLAlchemy', 'PostgreSQL', 'Concurrency'] : (repoId === 'gateway-proxy' ? ['Redis', 'Rate Limiter', 'Microservices'] : ['FastAPI', 'PyJWT', 'Security']),
+            file_count: 6
+        };
+
+        // Update Pill Buttons
+        ['auth-service', 'order-engine', 'gateway-proxy'].forEach(id => {
+            const btn = document.getElementById(`repoPill-${id}`);
+            if (btn) {
+                if (id === repoId) {
+                    btn.className = "repo-pill px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500 text-slate-950 border border-amber-600 shadow-sm flex items-center space-x-1.5 transition";
+                } else {
+                    btn.className = "repo-pill px-3 py-1.5 rounded-lg text-xs font-mono font-medium bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 hover:border-amber-500 flex items-center space-x-1.5 transition";
+                }
+            }
+        });
+
+        // Update DOM metadata
+        const badgeEl = document.getElementById("agentLoopRepoBadge");
+        const titleEl = document.getElementById("agentLoopRepoTitle");
+        const descEl = document.getElementById("agentLoopRepoDesc");
+        const tagsEl = document.getElementById("agentLoopRepoTags");
+        const promptInp = document.getElementById("agentLoopPromptInput");
+        const expTitle = document.getElementById("repoExplorerTitle");
+        const expBadge = document.getElementById("repoExplorerBadge");
+
+        if (badgeEl) badgeEl.innerText = repo.badge;
+        if (titleEl) titleEl.innerText = repo.name;
+        if (descEl) descEl.innerText = repo.description;
+        if (expTitle) expTitle.innerText = repo.name;
+        if (expBadge) expBadge.innerText = `${repo.file_count || 6} Files Active`;
+        if (promptInp) promptInp.value = repo.default_issue;
+
+        if (tagsEl && repo.tags) {
+            tagsEl.innerHTML = repo.tags.map(t => `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">${this.escapeHtml(t)}</span>`).join('');
+        }
+
+        // Fetch files for this repo
+        try {
+            const res = await fetch(`/api/repo/tree?repo_id=${repoId}`);
+            if (res.ok) {
+                this._repoFilesCache = await res.json();
+                this.renderRepoFiles(repo);
+            }
+        } catch (e) {
+            console.error("Failed to load repo files for", repoId, e);
+        }
+    },
+
+    renderRepoFiles(repo) {
+        const container = document.getElementById("repoFilesContainer");
+        if (!container || !this._repoFilesCache) return;
+
+        container.innerHTML = "";
+        Object.keys(this._repoFilesCache).forEach(path => {
+            const btn = document.createElement("button");
+            btn.onclick = () => this.viewFile(path);
+            
+            const isBuggy = (path === repo.bug_file);
+            const isTest = (path === repo.test_file);
+
+            if (isBuggy) {
+                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm";
+                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded font-bold">BUGGY</span>`;
+            } else if (isTest) {
+                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] font-mono font-semibold flex items-center space-x-1.5 hover:border-amber-500 transition shadow-sm";
+                btn.innerHTML = `<span>${this.escapeHtml(path)}</span><span class="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-bold">FAILS TEST</span>`;
+            } else {
+                btn.className = "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-semibold hover:border-amber-500 transition shadow-sm";
+                btn.innerHTML = `<span>${this.escapeHtml(path)}</span>`;
+            }
+            container.appendChild(btn);
+        });
+
+        const viewer = document.getElementById("repoFileViewer");
+        if (viewer) viewer.classList.add("hidden");
+    },
 
     async viewFile(path) {
-        if (!this._repoFilesCache) {
+        if (!this._repoFilesCache || !this._repoFilesCache[path]) {
             try {
-                const res = await fetch('/api/repo/tree');
+                const res = await fetch(`/api/repo/tree?repo_id=${this.selectedRepoId || 'auth-service'}`);
                 if (res.ok) {
                     this._repoFilesCache = await res.json();
                 }
@@ -173,6 +274,8 @@ const DuelEngine = {
         const btn = document.getElementById("launchAgentLoopBtn");
         const spinner = document.getElementById("agentLoopSpinner");
         const userKey = localStorage.getItem("capybala_byok_key") || "";
+        const promptInp = document.getElementById("agentLoopPromptInput");
+        const customPrompt = promptInp ? promptInp.value.trim() : "";
 
         this.isRunning = true;
         if (btn) {
@@ -184,7 +287,7 @@ const DuelEngine = {
         const leftStream = document.getElementById("leftStream");
         const rightStream = document.getElementById("rightStream");
         if (leftStream) {
-            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Turn 1: Calling Meta AI (muse-spark-1.3) with production repository...</div>`;
+            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Turn 1: Calling Meta AI (muse-spark-1.3) on repository '${this.selectedRepoId}'...</div>`;
         }
         if (rightStream) {
             rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Turn 1: Capybala monitoring semantic velocity in sub-millisecond runtime...</div>`;
@@ -197,7 +300,10 @@ const DuelEngine = {
                     'Content-Type': 'application/json',
                     'x-user-api-key': userKey
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    repo_id: this.selectedRepoId || 'auth-service',
+                    issue: customPrompt
+                })
             });
 
             const data = await res.json();

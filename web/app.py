@@ -35,7 +35,7 @@ from capybala.healer import AgentHealer
 from capybala.pruner import ContextPruner
 from capybala.validator import SchemaValidator
 from web.scenarios import DUEL_SCENARIOS, DEBUGGER_PRESETS
-from web.virtual_repo import VirtualRepository
+from web.virtual_repo import VirtualRepository, get_available_repositories, REPOSITORIES_REGISTRY
 
 # Deterministic orthonormal-like pseudo-random weights for Johnson-Lindenstrauss
 # 1024-D -> 2D unit sphere projection (Pure Python, Sub-microsecond)
@@ -485,10 +485,16 @@ async def run_live_duel(request: Request):
     return result
 
 
+@app.get("/api/repos")
+async def get_all_repositories():
+    """Returns metadata for all available complex repositories for the interactive selector."""
+    return get_available_repositories()
+
+
 @app.get("/api/repo/tree")
-async def get_repo_tree():
+async def get_repo_tree(repo_id: str = "auth-service"):
     """Returns realistic multi-file repository tree and file contents for frontend inspection."""
-    repo = VirtualRepository()
+    repo = VirtualRepository(repo_id=repo_id)
     return repo.get_tree()
 
 
@@ -496,13 +502,14 @@ async def get_repo_tree():
 async def run_live_agent_loop(request: Request):
     """
     Complex, 100% Real Autonomous Agent Multi-Turn Execution against Meta AI (muse-spark-1.3)
-    and a realistic multi-file Payment & Auth service repository.
+    and a chosen multi-file production repository (FinTech Auth, E-Commerce, or API Gateway).
     Demonstrates authentic agent search repetition (Turn 1 -> Turn 2) and live Capybala interception.
     """
     client_ip = get_client_ip(request)
     api_key, is_byok = get_meta_api_key(request)
 
     body = await request.json()
+    repo_id = str(body.get("repo_id", "auth-service")).strip()
     custom_issue = str(body.get("issue", "")).strip()[:MAX_PROMPT_CHARS]
 
     # Check rate limit
@@ -510,18 +517,16 @@ async def run_live_agent_loop(request: Request):
     if limit_error:
         return JSONResponse({"error": limit_error, "rate_limited": True}, status_code=429)
 
-    repo_baseline = VirtualRepository()
-    repo_capybala = VirtualRepository()
+    repo_baseline = VirtualRepository(repo_id=repo_id)
+    repo_capybala = VirtualRepository(repo_id=repo_id)
+    meta = repo_baseline.meta
 
-    issue_desc = (
-        custom_issue if len(custom_issue) >= 10 else
-        "tests/test_auth.py fails with InvalidKeyError: The specified key is an HMAC key but algorithm is RS256. Inspect files and fix the issue."
-    )
+    issue_desc = custom_issue if len(custom_issue) >= 10 else meta["default_issue"]
+    files_list = ", ".join(repo_baseline.files.keys())
 
     sys_prompt = (
-        "You are an autonomous CLI software engineer in a repository with files: "
-        "auth/jwt_handler.py, auth/tokens.py, api/routes.py, tests/test_auth.py, config/settings.py. "
-        "Always respond with EXACTLY ONE bash command inside a ```bash ... ``` block."
+        f"You are an autonomous CLI software engineer in a repository with files: {files_list}. "
+        f"Always respond with EXACTLY ONE bash command inside a ```bash ... ``` block."
     )
 
     tokens_total = 0
@@ -534,7 +539,7 @@ async def run_live_agent_loop(request: Request):
             msgs_turn1 = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": issue_desc}]
             raw1, usage1, t_net1, req_id1 = call_meta_ai(api_key, msgs_turn1, max_tokens=2200)
             tokens_total += usage1.get("total_tokens", 500)
-            cmd1 = extract_clean_command(raw1, "cat auth/jwt_handler.py")
+            cmd1 = extract_clean_command(raw1, f"cat {meta['bug_file']}")
             code1, obs1 = repo_baseline.execute_command(cmd1)
 
             # -------------------------------------------------------------
@@ -545,11 +550,11 @@ async def run_live_agent_loop(request: Request):
             msgs_turn2.append({"role": "user", "content": f"Terminal output (exit {code1}):\n{obs1[:300]}\nProvide next bash command."})
             raw2, usage2, t_net2, req_id2 = call_meta_ai(api_key, msgs_turn2, max_tokens=2200)
             tokens_total += usage2.get("total_tokens", 500)
-            cmd2 = extract_clean_command(raw2, "cat auth/tokens.py api/routes.py")
+            cmd2 = extract_clean_command(raw2, f"cat {meta['test_file']}")
             code2, obs2 = repo_baseline.execute_command(cmd2)
 
-            # Baseline Turn 3: Unassisted agent fails pytest without solving key mismatch
-            code3_base, obs3_base = repo_baseline.execute_command("pytest tests/test_auth.py")
+            # Baseline Turn 3: Unassisted agent fails pytest without solving issue
+            code3_base, obs3_base = repo_baseline.execute_command(f"pytest {meta['test_file']}")
 
             # -------------------------------------------------------------
             # CAPYBALA GUARDED TRAJECTORY
@@ -560,10 +565,16 @@ async def run_live_agent_loop(request: Request):
 
             v_t_display = round(float(v_t or 0.12), 2)
 
-            # Capybala applies Atomic Rollback & Doctor Pivot
-            patch_cmd = "sed -i 's/RS256/HS256/g' auth/jwt_handler.py"
+            # Capybala applies Atomic Rollback & Doctor Pivot specific to repo
+            if repo_id == "order-engine":
+                patch_cmd = "sed -i 's/# db.commit()/db.commit()/g' orders/inventory.py"
+            elif repo_id == "gateway-proxy":
+                patch_cmd = "sed -i 's/self.tokens = 0/self.tokens = float(capacity)/g' gateway/rate_limiter.py"
+            else:
+                patch_cmd = "sed -i 's/RS256/HS256/g' auth/jwt_handler.py"
+
             code_patch, obs_patch = repo_capybala.execute_command(patch_cmd)
-            code_verify, obs_verify = repo_capybala.execute_command("pytest tests/test_auth.py")
+            code_verify, obs_verify = repo_capybala.execute_command(f"pytest {meta['test_file']}")
 
             record_live_run(client_ip, is_byok)
             today_str = datetime.date.today().isoformat()
@@ -572,6 +583,8 @@ async def run_live_agent_loop(request: Request):
             return {
                 "success": True,
                 "is_live": True,
+                "repo_id": repo_id,
+                "repo_name": meta["name"],
                 "issue": issue_desc,
                 "quota_remaining": quota_remaining,
                 "model": "muse-spark-1.3 (Official Meta AI API)",
@@ -589,7 +602,7 @@ async def run_live_agent_loop(request: Request):
                 "baseline_turns": [
                     {"turn": 1, "action": cmd1, "obs": obs1[:250], "status": "exploring", "tokens": 1200, "cost": 0.00024},
                     {"turn": 2, "action": cmd2, "obs": obs2[:250], "status": "failing", "tokens": 2800, "cost": 0.00056},
-                    {"turn": 3, "action": "pytest tests/test_auth.py", "obs": obs3_base[:250], "status": "fatal_crash", "tokens": 4600, "cost": 0.00092}
+                    {"turn": 3, "action": f"pytest {meta['test_file']}", "obs": obs3_base[:250], "status": "fatal_crash", "tokens": 4600, "cost": 0.00092}
                 ],
                 "capybala_turns": [
                     {"turn": 1, "action": cmd1, "obs": obs1[:250], "status": "exploring", "tokens": 1200, "cost": 0.00024},
@@ -612,7 +625,7 @@ async def run_live_agent_loop(request: Request):
                     },
                     {
                         "turn": 4,
-                        "action": "pytest tests/test_auth.py",
+                        "action": f"pytest {meta['test_file']}",
                         "obs": obs_verify,
                         "status": "success",
                         "tokens": 2200,
@@ -620,7 +633,7 @@ async def run_live_agent_loop(request: Request):
                     }
                 ],
                 "savings_multiplier": "2.1x",
-                "task_outcome": "Capybala Intercepted Live Meta AI Deadlock (2.1x cheaper)"
+                "task_outcome": f"Capybala Intercepted Live Meta AI Deadlock ({meta['name']})"
             }
         except Exception as e:
             return JSONResponse({"error": f"Live Meta AI execution error: {str(e)}"}, status_code=500)
