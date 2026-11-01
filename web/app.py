@@ -183,11 +183,11 @@ def record_live_run(client_ip: str, is_byok: bool):
     _daily_run_tracker[today_str] = _daily_run_tracker.get(today_str, 0) + 1
 
 
-def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int = 1200) -> Tuple[Optional[str], Dict[str, Any], float, str]:
-    """Invokes Meta AI (muse-wonder-1.0 / muse-spark-1.3) via official endpoint."""
+def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int = 1500) -> Tuple[Optional[str], Dict[str, Any], float, str]:
+    """Invokes Meta AI (muse-spark-1.3) via official endpoint."""
     url = "https://api.meta.ai/v1/chat/completions"
     payload = {
-        "model": "muse-wonder-1.0",
+        "model": "muse-spark-1.3",
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": 0.2
@@ -281,8 +281,8 @@ async def run_live_duel(request: Request):
     simulation_reason = None
 
     sys_prompt = (
-        "You are an autonomous CLI software engineer agent running in a Linux terminal. "
-        "When the user describes an issue, respond with ONE concise terminal command to inspect or fix it inside a ```bash ... ``` block."
+        "You are an autonomous CLI software engineer assistant. "
+        "When the user describes an issue, respond with ONE concise terminal command to inspect or resolve it in a ```bash ... ``` block."
     )
 
     t1_action = f"grep -rn '{prompt[:20]}' src/"
@@ -290,13 +290,14 @@ async def run_live_duel(request: Request):
 
     if api_key:
         try:
-            # Turn 1: Initial exploration action from Meta AI
+            # Turn 1: Initial action from Meta AI
             content_t1, usage_t1, t_net1, req_id1 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                max_tokens=1200
+                max_tokens=1500
             )
-            t1_action = extract_clean_command(content_t1, t1_action)
+            if content_t1:
+                t1_action = extract_clean_command(content_t1, t1_action)
             tokens_burned_total += usage_t1.get("total_tokens", 500)
 
             # Turn 3: Capybala Healed Resolution Action from Meta AI
@@ -304,21 +305,22 @@ async def run_live_duel(request: Request):
             content_t3, usage_t3, t_net3, req_id3 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": healed_prompt}],
-                max_tokens=1200
+                max_tokens=1500
             )
-            t3_resolution = extract_clean_command(content_t3, t3_resolution)
+            if content_t3:
+                t3_resolution = extract_clean_command(content_t3, t3_resolution)
             tokens_burned_total += usage_t3.get("total_tokens", 500)
             is_live = True
 
             telemetry_proof = {
                 "request_id": req_id1,
-                "model": "muse-wonder-1.0 (Official Meta AI API)",
+                "model": "muse-spark-1.3 (Official Meta AI API)",
                 "verified": True,
                 "latency_ms": round(t_net1 + t_net3, 1),
                 "reasoning_tokens": usage_t1.get("completion_tokens_details", {}).get("reasoning_tokens", 0) + usage_t3.get("completion_tokens_details", {}).get("reasoning_tokens", 0),
                 "total_tokens": tokens_burned_total,
-                "raw_response_turn1": content_t1,
-                "raw_response_turn3": content_t3
+                "raw_response_turn1": content_t1 or "(Model reasoning overflow: output text empty)",
+                "raw_response_turn3": content_t3 or "(Model reasoning overflow: output text empty)"
             }
         except Exception as e:
             is_live = False
