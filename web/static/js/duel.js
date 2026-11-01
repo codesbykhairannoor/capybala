@@ -374,489 +374,489 @@ const DuelEngine = {
     },
 
     async runLiveAgentLoop() {
-    if (this.isRunning) return;
-    const btn = document.getElementById("launchAgentLoopBtn");
-    const spinner = document.getElementById("agentLoopSpinner");
-    const userKey = localStorage.getItem("capybala_byok_key") || "";
-    const promptInp = document.getElementById("agentLoopPromptInput");
-    const customPrompt = promptInp ? promptInp.value.trim() : "";
+        if (this.isRunning) return;
+        const btn = document.getElementById("launchAgentLoopBtn");
+        const spinner = document.getElementById("agentLoopSpinner");
+        const userKey = localStorage.getItem("capybala_byok_key") || "";
+        const promptInp = document.getElementById("agentLoopPromptInput");
+        const customPrompt = promptInp ? promptInp.value.trim() : "";
 
-    this.isRunning = true;
-    if (btn) {
-        btn.disabled = true;
-        btn.classList.add("opacity-70");
-    }
-    if (spinner) spinner.classList.remove("hidden");
-
-    const leftStream = document.getElementById("leftStream");
-    const rightStream = document.getElementById("rightStream");
-    if (leftStream) {
-        leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Turn 1: Calling Meta AI (muse-spark-1.3) on repository '${this.selectedRepoId}'...</div>`;
-    }
-    if (rightStream) {
-        rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Turn 1: Capybala monitoring semantic velocity in sub-millisecond runtime...</div>`;
-    }
-
-    try {
-        const res = await fetch('/api/agent/live-loop', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-user-api-key': userKey
-            },
-            body: JSON.stringify({
-                repo_id: this.selectedRepoId || 'auth-service',
-                issue: customPrompt
-            })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            const errMsg = data.error || "Agent execution failed";
-            alert(errMsg);
-            if (leftStream) leftStream.innerHTML = `<div class='text-rose-500 text-xs p-2'>⚠️ ${this.escapeHtml(errMsg)}</div>`;
-            return;
-        }
-
-        if (typeof data.quota_remaining !== 'undefined') {
-            const qText = document.getElementById("quotaRemainingText");
-            if (qText) qText.innerText = `${data.quota_remaining}/35`;
-        }
-
-        // Map telemetry to proof box format
-        if (data.telemetry) {
-            data.telemetry_proof = {
-                request_id: data.telemetry.turn1_req_id,
-                model: data.model,
-                total_tokens: data.telemetry.total_tokens,
-                reasoning_tokens: Math.round(data.telemetry.total_tokens * 0.7),
-                latency_ms: data.telemetry.total_latency_ms,
-                raw_response_turn1: `[Turn 1 Thought Stream]\n${data.telemetry.raw_thought_turn1}\n\n[Turn 2 Repeat Thought Stream]\n${data.telemetry.raw_thought_turn2}`
-            };
-        }
-
-        await this.executeTrajectoryAnimation(data, true);
-    } catch (err) {
-        console.error("Live agent loop failed:", err);
-        alert("Network connection error. Please try again.");
-    } finally {
-        this.isRunning = false;
+        this.isRunning = true;
         if (btn) {
-            btn.disabled = false;
-            btn.classList.remove("opacity-70");
+            btn.disabled = true;
+            btn.classList.add("opacity-70");
         }
-        if (spinner) spinner.classList.add("hidden");
-    }
-},
+        if (spinner) spinner.classList.remove("hidden");
 
-onPromptInput(val) {
-    const counter = document.getElementById("customCharCounter");
-    if (counter) {
-        counter.innerText = `${(val || '').length}/220`;
-    }
-},
+        const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
+        if (leftStream) {
+            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Turn 1: Calling Meta AI (muse-spark-1.3) on repository '${this.selectedRepoId}'...</div>`;
+        }
+        if (rightStream) {
+            rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Turn 1: Capybala monitoring semantic velocity in sub-millisecond runtime...</div>`;
+        }
 
-toggleBYOK() {
-    const c = document.getElementById("byokContainer");
-    if (c) c.classList.toggle("hidden");
-},
+        try {
+            const res = await fetch('/api/agent/live-loop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-api-key': userKey
+                },
+                body: JSON.stringify({
+                    repo_id: this.selectedRepoId || 'auth-service',
+                    issue: customPrompt
+                })
+            });
 
-loadBYOK() {
-    try {
-        const key = localStorage.getItem("capybala_byok_key");
-        const inp = document.getElementById("byokKeyInput");
-        if (key && inp) {
-            inp.value = key;
-            const msg = document.getElementById("byokStatusMsg");
-            if (msg) {
-                msg.innerText = "✓ Active: Unmetered runs enabled via personal key.";
-                msg.classList.remove("hidden");
+            const data = await res.json();
+
+            if (!res.ok) {
+                const errMsg = data.error || "Agent execution failed";
+                alert(errMsg);
+                if (leftStream) leftStream.innerHTML = `<div class='text-rose-500 text-xs p-2'>⚠️ ${this.escapeHtml(errMsg)}</div>`;
+                return;
             }
-        }
-    } catch (e) { }
-},
 
-saveBYOK() {
-    const inp = document.getElementById("byokKeyInput");
-    const msg = document.getElementById("byokStatusMsg");
-    const val = inp ? inp.value.trim() : "";
-    if (!val) return;
-    try {
-        localStorage.setItem("capybala_byok_key", val);
-        if (msg) {
-            msg.innerText = "✓ Key saved in localStorage! Unmetered live runs active.";
-            msg.classList.remove("hidden");
-        }
-    } catch (e) { }
-},
+            if (typeof data.quota_remaining !== 'undefined') {
+                const qText = document.getElementById("quotaRemainingText");
+                if (qText) qText.innerText = `${data.quota_remaining}/35`;
+            }
 
-clearBYOK() {
-    try {
-        localStorage.removeItem("capybala_byok_key");
+            // Map telemetry to proof box format
+            if (data.telemetry) {
+                data.telemetry_proof = {
+                    request_id: data.telemetry.turn1_req_id,
+                    model: data.model,
+                    total_tokens: data.telemetry.total_tokens,
+                    reasoning_tokens: Math.round(data.telemetry.total_tokens * 0.7),
+                    latency_ms: data.telemetry.total_latency_ms,
+                    raw_response_turn1: `[Turn 1 Thought Stream]\n${data.telemetry.raw_thought_turn1}\n\n[Turn 2 Repeat Thought Stream]\n${data.telemetry.raw_thought_turn2}`
+                };
+            }
+
+            await this.executeTrajectoryAnimation(data, true);
+        } catch (err) {
+            console.error("Live agent loop failed:", err);
+            alert("Network connection error. Please try again.");
+        } finally {
+            this.isRunning = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove("opacity-70");
+            }
+            if (spinner) spinner.classList.add("hidden");
+        }
+    },
+
+    onPromptInput(val) {
+        const counter = document.getElementById("customCharCounter");
+        if (counter) {
+            counter.innerText = `${(val || '').length}/220`;
+        }
+    },
+
+    toggleBYOK() {
+        const c = document.getElementById("byokContainer");
+        if (c) c.classList.toggle("hidden");
+    },
+
+    loadBYOK() {
+        try {
+            const key = localStorage.getItem("capybala_byok_key");
+            const inp = document.getElementById("byokKeyInput");
+            if (key && inp) {
+                inp.value = key;
+                const msg = document.getElementById("byokStatusMsg");
+                if (msg) {
+                    msg.innerText = "✓ Active: Unmetered runs enabled via personal key.";
+                    msg.classList.remove("hidden");
+                }
+            }
+        } catch (e) { }
+    },
+
+    saveBYOK() {
         const inp = document.getElementById("byokKeyInput");
         const msg = document.getElementById("byokStatusMsg");
-        if (inp) inp.value = "";
-        if (msg) {
-            msg.innerText = "Key cleared. Using free community quota.";
-            msg.classList.remove("hidden");
-        }
-    } catch (e) { }
-},
+        const val = inp ? inp.value.trim() : "";
+        if (!val) return;
+        try {
+            localStorage.setItem("capybala_byok_key", val);
+            if (msg) {
+                msg.innerText = "✓ Key saved in localStorage! Unmetered live runs active.";
+                msg.classList.remove("hidden");
+            }
+        } catch (e) { }
+    },
+
+    clearBYOK() {
+        try {
+            localStorage.removeItem("capybala_byok_key");
+            const inp = document.getElementById("byokKeyInput");
+            const msg = document.getElementById("byokStatusMsg");
+            if (inp) inp.value = "";
+            if (msg) {
+                msg.innerText = "Key cleared. Using free community quota.";
+                msg.classList.remove("hidden");
+            }
+        } catch (e) { }
+    },
 
     async fetchQuota() {
-    try {
-        const res = await fetch('/api/duel/quota');
-        if (res.ok) {
-            const data = await res.json();
-            const qText = document.getElementById("quotaRemainingText");
-            if (qText) {
-                qText.innerText = `${data.remaining}/${data.daily_cap}`;
+        try {
+            const res = await fetch('/api/duel/quota');
+            if (res.ok) {
+                const data = await res.json();
+                const qText = document.getElementById("quotaRemainingText");
+                if (qText) {
+                    qText.innerText = `${data.remaining}/${data.daily_cap}`;
+                }
             }
+        } catch (e) { }
+    },
+
+    selectScenario(key) {
+        if (this.isRunning) return;
+        this.currentKey = key;
+        this.resetDisplay();
+    },
+
+    getActiveScenario() {
+        const sel = document.getElementById("duelScenarioSelect");
+        if (sel && sel.value) {
+            this.currentKey = sel.value;
         }
-    } catch (e) { }
-},
+        return (this.scenarios && this.scenarios[this.currentKey]) || DUEL_FALLBACK_SCENARIOS[this.currentKey] || DUEL_FALLBACK_SCENARIOS['semantic_attractor'];
+    },
 
-selectScenario(key) {
-    if (this.isRunning) return;
-    this.currentKey = key;
-    this.resetDisplay();
-},
+    resetDisplay() {
+        const sc = this.getActiveScenario();
+        if (!sc) return;
 
-getActiveScenario() {
-    const sel = document.getElementById("duelScenarioSelect");
-    if (sel && sel.value) {
-        this.currentKey = sel.value;
-    }
-    return (this.scenarios && this.scenarios[this.currentKey]) || DUEL_FALLBACK_SCENARIOS[this.currentKey] || DUEL_FALLBACK_SCENARIOS['semantic_attractor'];
-},
+        const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
 
-resetDisplay() {
-    const sc = this.getActiveScenario();
-    if (!sc) return;
+        if (leftStream) {
+            leftStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Ready to simulate. Selected scenario: <b>${this.escapeHtml(sc.title)}</b>.<br>Press <b>'Run Live Duel'</b> to start head-to-head execution.</div>`;
+        }
+        if (rightStream) {
+            rightStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Capybala Armed (0.6ms sub-millisecond monitor active).<br>Watching for ergodic attractor collapse and tool oscillations.</div>`;
+        }
 
-    const leftStream = document.getElementById("leftStream");
-    const rightStream = document.getElementById("rightStream");
+        const elLeftCost = document.getElementById("duelCostLeft");
+        const elRightCost = document.getElementById("duelCostRight");
+        const elBadge = document.getElementById("duelOutcomeBadge");
+        const elLeftTicker = document.getElementById("leftCostTicker");
+        const elRightTicker = document.getElementById("rightCostTicker");
+        const elLeftStep = document.getElementById("leftStepIndicator");
+        const elRightStep = document.getElementById("rightStepIndicator");
+        const elMultiplier = document.getElementById("duelSavingsMultiplier");
 
-    if (leftStream) {
-        leftStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Ready to simulate. Selected scenario: <b>${this.escapeHtml(sc.title)}</b>.<br>Press <b>'Run Live Duel'</b> to start head-to-head execution.</div>`;
-    }
-    if (rightStream) {
-        rightStream.innerHTML = `<div class='text-slate-400 dark:text-slate-500 text-xs italic py-2'>Capybala Armed (0.6ms sub-millisecond monitor active).<br>Watching for ergodic attractor collapse and tool oscillations.</div>`;
-    }
-
-    const elLeftCost = document.getElementById("duelCostLeft");
-    const elRightCost = document.getElementById("duelCostRight");
-    const elBadge = document.getElementById("duelOutcomeBadge");
-    const elLeftTicker = document.getElementById("leftCostTicker");
-    const elRightTicker = document.getElementById("rightCostTicker");
-    const elLeftStep = document.getElementById("leftStepIndicator");
-    const elRightStep = document.getElementById("rightStepIndicator");
-    const elMultiplier = document.getElementById("duelSavingsMultiplier");
-
-    if (elLeftCost) elLeftCost.innerText = "$0.00";
-    if (elRightCost) elRightCost.innerText = "$0.00";
-    if (elBadge) {
-        elBadge.innerText = "Ready to execute";
-        elBadge.className = "text-base font-bold font-mono text-slate-800 dark:text-white mt-1";
-    }
-    if (elLeftTicker) {
-        elLeftTicker.innerText = "$0.00 Spent";
-        elLeftTicker.className = "text-slate-500 font-mono font-semibold";
-    }
-    if (elRightTicker) elRightTicker.innerText = "$0.00 Total";
-    if (elLeftStep) elLeftStep.innerText = "Step 0";
-    if (elRightStep) elRightStep.innerText = "Step 0";
-    if (elMultiplier) elMultiplier.innerText = "10.1x";
-},
+        if (elLeftCost) elLeftCost.innerText = "$0.00";
+        if (elRightCost) elRightCost.innerText = "$0.00";
+        if (elBadge) {
+            elBadge.innerText = "Ready to execute";
+            elBadge.className = "text-base font-bold font-mono text-slate-800 dark:text-white mt-1";
+        }
+        if (elLeftTicker) {
+            elLeftTicker.innerText = "$0.00 Spent";
+            elLeftTicker.className = "text-slate-500 font-mono font-semibold";
+        }
+        if (elRightTicker) elRightTicker.innerText = "$0.00 Total";
+        if (elLeftStep) elLeftStep.innerText = "Step 0";
+        if (elRightStep) elRightStep.innerText = "Step 0";
+        if (elMultiplier) elMultiplier.innerText = "10.1x";
+    },
 
     async runDuel() {
-    if (this.isRunning) return;
-    const sc = this.getActiveScenario();
-    if (!sc) return;
-    await this.executeTrajectoryAnimation(sc, false);
-},
+        if (this.isRunning) return;
+        const sc = this.getActiveScenario();
+        if (!sc) return;
+        await this.executeTrajectoryAnimation(sc, false);
+    },
 
     async runLiveMetaDuel() {
-    if (this.isRunning) return;
+        if (this.isRunning) return;
 
-    const inp = document.getElementById("customDuelPrompt");
-    const prompt = inp ? inp.value.trim() : "";
-    if (!prompt || prompt.length < 5) {
-        alert("Please enter a coding issue or prompt of at least 5 characters.");
-        if (inp) inp.focus();
-        return;
-    }
-
-    const btn = document.getElementById("liveDuelBtn");
-    const spinner = document.getElementById("liveDuelSpinner");
-    const userKey = localStorage.getItem("capybala_byok_key") || "";
-
-    this.isRunning = true;
-    if (btn) {
-        btn.disabled = true;
-        btn.classList.add("opacity-70");
-    }
-    if (spinner) spinner.classList.remove("hidden");
-
-    const leftStream = document.getElementById("leftStream");
-    const rightStream = document.getElementById("rightStream");
-    if (leftStream) {
-        leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Contacting Meta AI (muse-spark-1.3)... Executing autonomous reasoning...</div>`;
-    }
-    if (rightStream) {
-        rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Capybala Healer monitoring live token stream... Rate limiter active...</div>`;
-    }
-
-    try {
-        const res = await fetch('/api/duel/live', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-user-api-key': userKey
-            },
-            body: JSON.stringify({ prompt: prompt })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            const errMsg = data.error || "Execution failed";
-            alert(errMsg);
-            if (leftStream) leftStream.innerHTML = `<div class='text-rose-500 text-xs p-2'>⚠️ ${this.escapeHtml(errMsg)}</div>`;
-            if (rightStream) rightStream.innerHTML = `<div class='text-slate-400 text-xs p-2'>Try offline presets or bring your own API key.</div>`;
+        const inp = document.getElementById("customDuelPrompt");
+        const prompt = inp ? inp.value.trim() : "";
+        if (!prompt || prompt.length < 5) {
+            alert("Please enter a coding issue or prompt of at least 5 characters.");
+            if (inp) inp.focus();
             return;
         }
 
-        // Update remaining quota badge
-        if (typeof data.quota_remaining !== 'undefined') {
-            const qText = document.getElementById("quotaRemainingText");
-            if (qText) qText.innerText = `${data.quota_remaining}/35`;
+        const btn = document.getElementById("liveDuelBtn");
+        const spinner = document.getElementById("liveDuelSpinner");
+        const userKey = localStorage.getItem("capybala_byok_key") || "";
+
+        this.isRunning = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("opacity-70");
+        }
+        if (spinner) spinner.classList.remove("hidden");
+
+        const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
+        if (leftStream) {
+            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Contacting Meta AI (muse-spark-1.3)... Executing autonomous reasoning...</div>`;
+        }
+        if (rightStream) {
+            rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Capybala Healer monitoring live token stream... Rate limiter active...</div>`;
         }
 
-        await this.executeTrajectoryAnimation(data, true);
-    } catch (err) {
-        console.error("Live duel request failed:", err);
-        alert("Network connection error. Please try again.");
-    } finally {
-        this.isRunning = false;
-        if (btn) {
-            btn.disabled = false;
-            btn.classList.remove("opacity-70");
+        try {
+            const res = await fetch('/api/duel/live', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-api-key': userKey
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                const errMsg = data.error || "Execution failed";
+                alert(errMsg);
+                if (leftStream) leftStream.innerHTML = `<div class='text-rose-500 text-xs p-2'>⚠️ ${this.escapeHtml(errMsg)}</div>`;
+                if (rightStream) rightStream.innerHTML = `<div class='text-slate-400 text-xs p-2'>Try offline presets or bring your own API key.</div>`;
+                return;
+            }
+
+            // Update remaining quota badge
+            if (typeof data.quota_remaining !== 'undefined') {
+                const qText = document.getElementById("quotaRemainingText");
+                if (qText) qText.innerText = `${data.quota_remaining}/35`;
+            }
+
+            await this.executeTrajectoryAnimation(data, true);
+        } catch (err) {
+            console.error("Live duel request failed:", err);
+            alert("Network connection error. Please try again.");
+        } finally {
+            this.isRunning = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove("opacity-70");
+            }
+            if (spinner) spinner.classList.add("hidden");
         }
-        if (spinner) spinner.classList.add("hidden");
-    }
-},
+    },
 
     async executeTrajectoryAnimation(sc, isLive = false) {
-    this.isRunning = true;
-    const btn = document.getElementById("duelBtn");
-    if (btn && !isLive) {
-        btn.disabled = true;
-        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Simulating Duel...</span>`;
-    }
-
-    const leftStream = document.getElementById("leftStream");
-    const rightStream = document.getElementById("rightStream");
-    if (leftStream) leftStream.innerHTML = "";
-    if (rightStream) rightStream.innerHTML = "";
-
-    const bTurns = sc.baseline_turns || [];
-    const cTurns = sc.capybala_turns || [];
-    const maxSteps = Math.max(bTurns.length, cTurns.length);
-
-    try {
-        for (let i = 0; i < maxSteps; i++) {
-            const elLeftStep = document.getElementById("leftStepIndicator");
-            const elRightStep = document.getElementById("rightStepIndicator");
-            if (elLeftStep) elLeftStep.innerText = `Step ${Math.min(i + 1, bTurns.length)} / ${bTurns.length}`;
-            if (elRightStep) elRightStep.innerText = `Step ${Math.min(i + 1, cTurns.length)} / ${cTurns.length}`;
-
-            // Left: Baseline Execution
-            if (i < bTurns.length && leftStream) {
-                const t = bTurns[i];
-                const d = document.createElement("div");
-                d.className = "stream-item transition-all duration-300";
-
-                if (t.status === 'fatal_crash') {
-                    d.className += " p-3 rounded-lg bg-rose-200 dark:bg-rose-950/80 border-2 border-rose-500 text-rose-950 dark:text-rose-200 font-bold shadow-md";
-                    d.innerHTML = `💥 <b>[FATAL CONTEXT OVERFLOW]</b><br><span class='text-xs font-normal'>${this.escapeHtml(t.obs)}</span>`;
-                } else if (t.status === 'success') {
-                    d.className += " p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-sm";
-                    d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 dark:text-slate-400 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
-                } else {
-                    d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
-                    d.innerHTML = `<span class='text-rose-600 dark:text-rose-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
-                }
-                leftStream.appendChild(d);
-                leftStream.scrollTop = leftStream.scrollHeight;
-
-                const elLeftCost = document.getElementById("duelCostLeft");
-                const elLeftTicker = document.getElementById("leftCostTicker");
-                const elLeftTokens = document.getElementById("duelTokensLeft");
-                const isFailure = t.status === 'fatal_crash' || t.status === 'failing';
-                const tickerLabel = isFailure ? 'Wasted (Deadlock)' : 'Spent (Completed)';
-                if (elLeftCost) elLeftCost.innerText = this.formatCost(t.cost);
-                if (elLeftTicker) {
-                    elLeftTicker.className = isFailure ? "text-rose-600 dark:text-rose-400 font-bold font-mono" : "text-emerald-600 dark:text-emerald-400 font-bold font-mono";
-                    elLeftTicker.innerText = `${this.formatCost(t.cost)} ${tickerLabel}`;
-                }
-                if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} ${isFailure ? 'burned' : 'clean'}`;
-            }
-
-            // Right: Capybala Protected Execution
-            if (i < cTurns.length && rightStream) {
-                const t = cTurns[i];
-                const d = document.createElement("div");
-                d.className = "stream-item transition-all duration-300";
-
-                if (t.status === 'intercepted') {
-                    d.className += " p-3 rounded-lg bg-amber-100 dark:bg-amber-950/70 border-2 border-amber-400 dark:border-amber-500 text-amber-950 dark:text-amber-200 font-bold shadow-md animate-pulse";
-                    d.innerHTML = `🦫 <b>[CAPYBALA INTERCEPTED DEADLOCK]</b><br><span class='text-[11px] font-normal'>Phase transition caught in 0.6ms. Semantic velocity collapsed. Atomic Rollback performed &amp; Doctor Pivot injected!</span>`;
-                } else if (t.status === 'success') {
-                    d.className += " p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-200 font-bold shadow-md";
-                    d.innerHTML = `🎉 <b>[TASK COMPLETED]</b><br><span class='text-[11px] font-normal'>${this.escapeHtml(t.obs)}</span>`;
-                } else {
-                    d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
-                    d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
-                }
-                rightStream.appendChild(d);
-                rightStream.scrollTop = rightStream.scrollHeight;
-
-                const elRightCost = document.getElementById("duelCostRight");
-                const elRightTicker = document.getElementById("rightCostTicker");
-                const elRightTokens = document.getElementById("duelTokensRight");
-                if (elRightCost) elRightCost.innerText = this.formatCost(t.cost);
-                if (elRightTicker) elRightTicker.innerText = `${this.formatCost(t.cost)} Total`;
-                if (elRightTokens) elRightTokens.innerText = `${this.formatTokens(t.tokens)} clean`;
-            }
-
-            // Step animation delay
-            await new Promise(r => setTimeout(r, 650));
-        }
-
-        // Final Calculations & Scoreboard
-        const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 0.001;
-        const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.001;
-        const multiplier = sc.multiplier || (finalLeft / Math.max(0.00001, finalRight)).toFixed(1) + "x";
-
-        const elMultiplier = document.getElementById("duelSavingsMultiplier");
-        const elBadge = document.getElementById("duelOutcomeBadge");
-        const elSubMultiplier = document.getElementById("duelSavingsSubText");
-
-        const isIdentical = multiplier === '1.0x' || multiplier === '1.0';
-        if (elMultiplier) elMultiplier.innerText = isIdentical ? "1.0x" : (multiplier.endsWith("x") ? multiplier : `${multiplier}x`);
-        if (elSubMultiplier) elSubMultiplier.innerText = isIdentical ? "Optimal (No waste)" : "Cheaper per task";
-
-        if (elBadge) {
-            if (sc.task_outcome) {
-                elBadge.innerText = sc.task_outcome;
-                elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
-            } else if (isLive && sc.is_live) {
-                elBadge.innerText = isIdentical ? "Verified Meta AI (Single-Turn)" : `Verified Meta AI (${multiplier} cheaper)`;
-                elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
-            } else if (isLive && !sc.is_live) {
-                elBadge.innerText = `Offline Simulation (${multiplier} cheaper)`;
-                elBadge.className = "text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-1";
-            } else {
-                elBadge.innerText = `Capybala Solved (${multiplier} cheaper)`;
-                elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
-            }
-        }
-
-        // Real-Time Telemetry & Cryptographic Proof Inspector
-        const proofBox = document.getElementById("duelProofContainer");
-        if (proofBox) {
-            if (isLive && sc.telemetry_proof) {
-                proofBox.classList.remove("hidden");
-                const p = sc.telemetry_proof;
-                const pDot = document.getElementById("proofDot");
-                const pTitle = document.getElementById("proofTitle");
-                const pBadge = document.getElementById("proofBadge");
-                const pNotice = document.getElementById("proofNotice");
-                const pGrid = document.getElementById("proofStatsGrid");
-                const pRawBox = document.getElementById("proofRawContainer");
-
-                if (pDot) pDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-                if (pTitle) pTitle.innerText = "🔍 Real-Time Model Telemetry & Cryptographic Proof";
-                if (pBadge) {
-                    pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold";
-                    pBadge.innerText = "VERIFIED API CALL";
-                }
-                if (pNotice) pNotice.classList.add("hidden");
-                if (pGrid) pGrid.classList.remove("hidden");
-                if (pRawBox) pRawBox.classList.remove("hidden");
-
-                const elReqId = document.getElementById("proofReqId");
-                const elModel = document.getElementById("proofModel");
-                const elTokens = document.getElementById("proofTokens");
-                const elLatency = document.getElementById("proofLatency");
-                const elRawText = document.getElementById("proofRawText");
-
-                if (elReqId) elReqId.innerText = p.request_id || "chatcmpl-live";
-                if (elModel) elModel.innerText = p.model || "muse-spark-1.3 (Official Meta AI API)";
-                if (elTokens) elTokens.innerText = `${p.total_tokens} tokens (${p.reasoning_tokens} reasoning)`;
-                if (elLatency) elLatency.innerText = `${p.latency_ms} ms`;
-                if (elRawText) elRawText.innerText = p.raw_response_turn1 || "(No raw content)";
-            } else if (isLive && !sc.is_live && sc.simulation_reason) {
-                proofBox.classList.remove("hidden");
-                const pDot = document.getElementById("proofDot");
-                const pTitle = document.getElementById("proofTitle");
-                const pBadge = document.getElementById("proofBadge");
-                const pNotice = document.getElementById("proofNotice");
-                const pGrid = document.getElementById("proofStatsGrid");
-                const pRawBox = document.getElementById("proofRawContainer");
-
-                if (pDot) pDot.className = "w-2 h-2 rounded-full bg-amber-500";
-                if (pTitle) pTitle.innerText = "⚠️ Local Simulation Notice";
-                if (pBadge) {
-                    pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold";
-                    pBadge.innerText = "OFFLINE SIMULATION MOCK";
-                }
-                if (pNotice) {
-                    pNotice.innerText = sc.simulation_reason;
-                    pNotice.classList.remove("hidden");
-                }
-                if (pGrid) pGrid.classList.add("hidden");
-                if (pRawBox) pRawBox.classList.add("hidden");
-            } else {
-                proofBox.classList.add("hidden");
-            }
-        }
-    } catch (err) {
-        console.error("Error during live duel execution:", err);
-    } finally {
-        this.isRunning = false;
+        this.isRunning = true;
+        const btn = document.getElementById("duelBtn");
         if (btn && !isLive) {
-            btn.disabled = false;
-            btn.innerHTML = `<svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Run Live Duel</span>`;
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Simulating Duel...</span>`;
         }
-    }
-},
 
-formatCost(val) {
-    if (typeof val !== 'number') return "$0.00";
-    if (val === 0) return "$0.00";
-    if (val < 0.001) {
-        return "$" + val.toFixed(5);
-    }
-    if (val < 0.01) {
-        return "$" + val.toFixed(4);
-    }
-    return "$" + val.toFixed(2);
-},
+        const leftStream = document.getElementById("leftStream");
+        const rightStream = document.getElementById("rightStream");
+        if (leftStream) leftStream.innerHTML = "";
+        if (rightStream) rightStream.innerHTML = "";
 
-formatTokens(val) {
-    if (!val) return "0 tokens";
-    if (val >= 1000) {
-        return `${(val / 1000).toFixed(1)}k tokens`;
-    }
-    return `${val} tokens`;
-},
+        const bTurns = sc.baseline_turns || [];
+        const cTurns = sc.capybala_turns || [];
+        const maxSteps = Math.max(bTurns.length, cTurns.length);
 
-escapeHtml(str) {
-    return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
-}
+        try {
+            for (let i = 0; i < maxSteps; i++) {
+                const elLeftStep = document.getElementById("leftStepIndicator");
+                const elRightStep = document.getElementById("rightStepIndicator");
+                if (elLeftStep) elLeftStep.innerText = `Step ${Math.min(i + 1, bTurns.length)} / ${bTurns.length}`;
+                if (elRightStep) elRightStep.innerText = `Step ${Math.min(i + 1, cTurns.length)} / ${cTurns.length}`;
+
+                // Left: Baseline Execution
+                if (i < bTurns.length && leftStream) {
+                    const t = bTurns[i];
+                    const d = document.createElement("div");
+                    d.className = "stream-item transition-all duration-300";
+
+                    if (t.status === 'fatal_crash') {
+                        d.className += " p-3 rounded-lg bg-rose-200 dark:bg-rose-950/80 border-2 border-rose-500 text-rose-950 dark:text-rose-200 font-bold shadow-md";
+                        d.innerHTML = `💥 <b>[FATAL CONTEXT OVERFLOW]</b><br><span class='text-xs font-normal'>${this.escapeHtml(t.obs)}</span>`;
+                    } else if (t.status === 'success') {
+                        d.className += " p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-sm";
+                        d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 dark:text-slate-400 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
+                    } else {
+                        d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
+                        d.innerHTML = `<span class='text-rose-600 dark:text-rose-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
+                    }
+                    leftStream.appendChild(d);
+                    leftStream.scrollTop = leftStream.scrollHeight;
+
+                    const elLeftCost = document.getElementById("duelCostLeft");
+                    const elLeftTicker = document.getElementById("leftCostTicker");
+                    const elLeftTokens = document.getElementById("duelTokensLeft");
+                    const isFailure = t.status === 'fatal_crash' || t.status === 'failing';
+                    const tickerLabel = isFailure ? 'Wasted (Deadlock)' : 'Spent (Completed)';
+                    if (elLeftCost) elLeftCost.innerText = this.formatCost(t.cost);
+                    if (elLeftTicker) {
+                        elLeftTicker.className = isFailure ? "text-rose-600 dark:text-rose-400 font-bold font-mono" : "text-emerald-600 dark:text-emerald-400 font-bold font-mono";
+                        elLeftTicker.innerText = `${this.formatCost(t.cost)} ${tickerLabel}`;
+                    }
+                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} ${isFailure ? 'burned' : 'clean'}`;
+                }
+
+                // Right: Capybala Protected Execution
+                if (i < cTurns.length && rightStream) {
+                    const t = cTurns[i];
+                    const d = document.createElement("div");
+                    d.className = "stream-item transition-all duration-300";
+
+                    if (t.status === 'intercepted') {
+                        d.className += " p-3 rounded-lg bg-amber-100 dark:bg-amber-950/70 border-2 border-amber-400 dark:border-amber-500 text-amber-950 dark:text-amber-200 font-bold shadow-md animate-pulse";
+                        d.innerHTML = `🦫 <b>[CAPYBALA INTERCEPTED DEADLOCK]</b><br><span class='text-[11px] font-normal'>Phase transition caught in 0.6ms. Semantic velocity collapsed. Atomic Rollback performed &amp; Doctor Pivot injected!</span>`;
+                    } else if (t.status === 'success') {
+                        d.className += " p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-200 font-bold shadow-md";
+                        d.innerHTML = `🎉 <b>[TASK COMPLETED]</b><br><span class='text-[11px] font-normal'>${this.escapeHtml(t.obs)}</span>`;
+                    } else {
+                        d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
+                        d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
+                    }
+                    rightStream.appendChild(d);
+                    rightStream.scrollTop = rightStream.scrollHeight;
+
+                    const elRightCost = document.getElementById("duelCostRight");
+                    const elRightTicker = document.getElementById("rightCostTicker");
+                    const elRightTokens = document.getElementById("duelTokensRight");
+                    if (elRightCost) elRightCost.innerText = this.formatCost(t.cost);
+                    if (elRightTicker) elRightTicker.innerText = `${this.formatCost(t.cost)} Total`;
+                    if (elRightTokens) elRightTokens.innerText = `${this.formatTokens(t.tokens)} clean`;
+                }
+
+                // Step animation delay
+                await new Promise(r => setTimeout(r, 650));
+            }
+
+            // Final Calculations & Scoreboard
+            const finalLeft = bTurns.length > 0 ? bTurns[bTurns.length - 1].cost : 0.001;
+            const finalRight = cTurns.length > 0 ? cTurns[cTurns.length - 1].cost : 0.001;
+            const multiplier = sc.multiplier || (finalLeft / Math.max(0.00001, finalRight)).toFixed(1) + "x";
+
+            const elMultiplier = document.getElementById("duelSavingsMultiplier");
+            const elBadge = document.getElementById("duelOutcomeBadge");
+            const elSubMultiplier = document.getElementById("duelSavingsSubText");
+
+            const isIdentical = multiplier === '1.0x' || multiplier === '1.0';
+            if (elMultiplier) elMultiplier.innerText = isIdentical ? "1.0x" : (multiplier.endsWith("x") ? multiplier : `${multiplier}x`);
+            if (elSubMultiplier) elSubMultiplier.innerText = isIdentical ? "Optimal (No waste)" : "Cheaper per task";
+
+            if (elBadge) {
+                if (sc.task_outcome) {
+                    elBadge.innerText = sc.task_outcome;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                } else if (isLive && sc.is_live) {
+                    elBadge.innerText = isIdentical ? "Verified Meta AI (Single-Turn)" : `Verified Meta AI (${multiplier} cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                } else if (isLive && !sc.is_live) {
+                    elBadge.innerText = `Offline Simulation (${multiplier} cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-1";
+                } else {
+                    elBadge.innerText = `Capybala Solved (${multiplier} cheaper)`;
+                    elBadge.className = "text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1";
+                }
+            }
+
+            // Real-Time Telemetry & Cryptographic Proof Inspector
+            const proofBox = document.getElementById("duelProofContainer");
+            if (proofBox) {
+                if (isLive && sc.telemetry_proof) {
+                    proofBox.classList.remove("hidden");
+                    const p = sc.telemetry_proof;
+                    const pDot = document.getElementById("proofDot");
+                    const pTitle = document.getElementById("proofTitle");
+                    const pBadge = document.getElementById("proofBadge");
+                    const pNotice = document.getElementById("proofNotice");
+                    const pGrid = document.getElementById("proofStatsGrid");
+                    const pRawBox = document.getElementById("proofRawContainer");
+
+                    if (pDot) pDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                    if (pTitle) pTitle.innerText = "🔍 Real-Time Model Telemetry & Cryptographic Proof";
+                    if (pBadge) {
+                        pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold";
+                        pBadge.innerText = "VERIFIED API CALL";
+                    }
+                    if (pNotice) pNotice.classList.add("hidden");
+                    if (pGrid) pGrid.classList.remove("hidden");
+                    if (pRawBox) pRawBox.classList.remove("hidden");
+
+                    const elReqId = document.getElementById("proofReqId");
+                    const elModel = document.getElementById("proofModel");
+                    const elTokens = document.getElementById("proofTokens");
+                    const elLatency = document.getElementById("proofLatency");
+                    const elRawText = document.getElementById("proofRawText");
+
+                    if (elReqId) elReqId.innerText = p.request_id || "chatcmpl-live";
+                    if (elModel) elModel.innerText = p.model || "muse-spark-1.3 (Official Meta AI API)";
+                    if (elTokens) elTokens.innerText = `${p.total_tokens} tokens (${p.reasoning_tokens} reasoning)`;
+                    if (elLatency) elLatency.innerText = `${p.latency_ms} ms`;
+                    if (elRawText) elRawText.innerText = p.raw_response_turn1 || "(No raw content)";
+                } else if (isLive && !sc.is_live && sc.simulation_reason) {
+                    proofBox.classList.remove("hidden");
+                    const pDot = document.getElementById("proofDot");
+                    const pTitle = document.getElementById("proofTitle");
+                    const pBadge = document.getElementById("proofBadge");
+                    const pNotice = document.getElementById("proofNotice");
+                    const pGrid = document.getElementById("proofStatsGrid");
+                    const pRawBox = document.getElementById("proofRawContainer");
+
+                    if (pDot) pDot.className = "w-2 h-2 rounded-full bg-amber-500";
+                    if (pTitle) pTitle.innerText = "⚠️ Local Simulation Notice";
+                    if (pBadge) {
+                        pBadge.className = "px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold";
+                        pBadge.innerText = "OFFLINE SIMULATION MOCK";
+                    }
+                    if (pNotice) {
+                        pNotice.innerText = sc.simulation_reason;
+                        pNotice.classList.remove("hidden");
+                    }
+                    if (pGrid) pGrid.classList.add("hidden");
+                    if (pRawBox) pRawBox.classList.add("hidden");
+                } else {
+                    proofBox.classList.add("hidden");
+                }
+            }
+        } catch (err) {
+            console.error("Error during live duel execution:", err);
+        } finally {
+            this.isRunning = false;
+            if (btn && !isLive) {
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-4 h-4 fill-current mr-1.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Run Live Duel</span>`;
+            }
+        }
+    },
+
+    formatCost(val) {
+        if (typeof val !== 'number') return "$0.00";
+        if (val === 0) return "$0.00";
+        if (val < 0.001) {
+            return "$" + val.toFixed(5);
+        }
+        if (val < 0.01) {
+            return "$" + val.toFixed(4);
+        }
+        return "$" + val.toFixed(2);
+    },
+
+    formatTokens(val) {
+        if (!val) return "0 tokens";
+        if (val >= 1000) {
+            return `${(val / 1000).toFixed(1)}k tokens`;
+        }
+        return `${val} tokens`;
+    },
+
+    escapeHtml(str) {
+        return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
+    }
 };
 
 // Immediate synchronous ready state
