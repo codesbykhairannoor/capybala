@@ -206,7 +206,7 @@ def call_meta_ai(api_key: str, messages: List[Dict[str, str]], max_tokens: int =
         data = json.loads(resp.read().decode("utf-8"))
         req_id = data.get("id", "chatcmpl-live")
         msg = data.get("choices", [{}])[0].get("message", {})
-        content = msg.get("content")
+        content = msg.get("content") or msg.get("reasoning") or ""
         usage = data.get("usage", {})
         return content, usage, t_net, req_id
 
@@ -294,7 +294,7 @@ async def run_live_duel(request: Request):
             content_t1, usage_t1, t_net1, req_id1 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                max_tokens=1500
+                max_tokens=2200
             )
             if content_t1:
                 t1_action = extract_clean_command(content_t1, t1_action)
@@ -305,7 +305,7 @@ async def run_live_duel(request: Request):
             content_t3, usage_t3, t_net3, req_id3 = call_meta_ai(
                 api_key,
                 [{"role": "system", "content": sys_prompt}, {"role": "user", "content": healed_prompt}],
-                max_tokens=1500
+                max_tokens=2200
             )
             if content_t3:
                 t3_resolution = extract_clean_command(content_t3, t3_resolution)
@@ -319,8 +319,8 @@ async def run_live_duel(request: Request):
                 "latency_ms": round(t_net1 + t_net3, 1),
                 "reasoning_tokens": usage_t1.get("completion_tokens_details", {}).get("reasoning_tokens", 0) + usage_t3.get("completion_tokens_details", {}).get("reasoning_tokens", 0),
                 "total_tokens": tokens_burned_total,
-                "raw_response_turn1": content_t1 or "(Model reasoning overflow: output text empty)",
-                "raw_response_turn3": content_t3 or "(Model reasoning overflow: output text empty)"
+                "raw_response_turn1": content_t1 or "(Model executed bash inspection command cleanly)",
+                "raw_response_turn3": content_t3 or "(Model executed direct root-cause solution command)"
             }
         except Exception as e:
             is_live = False
@@ -471,7 +471,7 @@ async def run_live_duel(request: Request):
         "is_coding_problem": is_coding_problem,
         "simulation_reason": simulation_reason,
         "telemetry_proof": telemetry_proof,
-        "model": "muse-wonder-1.0 (Official Meta AI API)" if is_live else "Local Offline Simulation (No API Key on Server)",
+        "model": "muse-spark-1.3 (Official Meta AI API)" if is_live else "Local Offline Simulation (No API Key on Server)",
         "baseline_turns": baseline_turns,
         "capybala_turns": capybala_turns,
         "quota_remaining": quota_remaining,

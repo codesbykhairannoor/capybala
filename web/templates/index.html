@@ -181,6 +181,7 @@
                         <option value="semantic_attractor">Vortex: Semantic Paraphrase Loop</option>
                         <option value="direct_repetition">Loop: Direct Pytest Repetition</option>
                         <option value="oscillation">Conflict: Git Edit-Revert Ping-Pong</option>
+                        <option value="pip_dependency">Deadlock: Circular Pip Dependency Hell</option>
                     </select>
 
                     <button onclick="DuelEngine.runDuel()" id="duelBtn"
@@ -210,6 +211,10 @@
                             <span>⚔️ Run Meta AI Duel</span>
                         </button>
                     </div>
+
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                        💡 <b>Zero-Gimmick Transparency:</b> Single-turn prompts (e.g. general QA) complete normally with 0ms passive standby overhead and identical 1:1 cost. Multi-turn coding bugs test Capybala's active deadlock interception.
+                    </p>
 
                     <div
                         class="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 gap-2 pt-1">
@@ -304,7 +309,7 @@
                     <div id="leftStatusBar"
                         class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-500 flex justify-between items-center">
                         <span>Status: Idle</span>
-                        <span id="leftCostTicker" class="text-rose-600 font-bold">$0.00 Wasted</span>
+                        <span id="leftCostTicker" class="text-slate-500 font-mono font-semibold">$0.00 Spent</span>
                     </div>
                 </div>
 

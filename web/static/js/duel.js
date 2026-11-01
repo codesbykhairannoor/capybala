@@ -242,7 +242,10 @@ const DuelEngine = {
             elBadge.innerText = "Ready to execute";
             elBadge.className = "text-base font-bold font-mono text-slate-800 dark:text-white mt-1";
         }
-        if (elLeftTicker) elLeftTicker.innerText = "$0.00 Wasted";
+        if (elLeftTicker) {
+            elLeftTicker.innerText = "$0.00 Spent";
+            elLeftTicker.className = "text-slate-500 font-mono font-semibold";
+        }
         if (elRightTicker) elRightTicker.innerText = "$0.00 Total";
         if (elLeftStep) elLeftStep.innerText = "Step 0";
         if (elRightStep) elRightStep.innerText = "Step 0";
@@ -281,7 +284,7 @@ const DuelEngine = {
         const leftStream = document.getElementById("leftStream");
         const rightStream = document.getElementById("rightStream");
         if (leftStream) {
-            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Contacting Meta AI (muse-wonder-1.0)... Reasoning step executing...</div>`;
+            leftStream.innerHTML = `<div class='text-amber-500 font-mono text-xs py-2 animate-pulse'>⚡ Contacting Meta AI (muse-spark-1.3)... Executing autonomous reasoning...</div>`;
         }
         if (rightStream) {
             rightStream.innerHTML = `<div class='text-emerald-500 font-mono text-xs py-2 animate-pulse'>🦫 Capybala Healer monitoring live token stream... Rate limiter active...</div>`;
@@ -360,6 +363,9 @@ const DuelEngine = {
                     if (t.status === 'fatal_crash') {
                         d.className += " p-3 rounded-lg bg-rose-200 dark:bg-rose-950/80 border-2 border-rose-500 text-rose-950 dark:text-rose-200 font-bold shadow-md";
                         d.innerHTML = `💥 <b>[FATAL CONTEXT OVERFLOW]</b><br><span class='text-xs font-normal'>${this.escapeHtml(t.obs)}</span>`;
+                    } else if (t.status === 'success') {
+                        d.className += " p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-sm";
+                        d.innerHTML = `<span class='text-emerald-700 dark:text-emerald-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 dark:text-slate-400 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
                     } else {
                         d.className += " p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 shadow-sm";
                         d.innerHTML = `<span class='text-rose-600 dark:text-rose-400 font-bold'>[Turn ${t.turn}] ${this.escapeHtml(t.action)}</span><br><span class='text-slate-500 text-[11px] font-mono'>${this.escapeHtml(t.obs)}</span>`;
@@ -371,10 +377,13 @@ const DuelEngine = {
                     const elLeftTicker = document.getElementById("leftCostTicker");
                     const elLeftTokens = document.getElementById("duelTokensLeft");
                     const isFailure = t.status === 'fatal_crash' || t.status === 'failing';
-                    const tickerLabel = isFailure ? 'Wasted' : 'Spent';
+                    const tickerLabel = isFailure ? 'Wasted (Deadlock)' : 'Spent (Completed)';
                     if (elLeftCost) elLeftCost.innerText = this.formatCost(t.cost);
-                    if (elLeftTicker) elLeftTicker.innerText = `${this.formatCost(t.cost)} ${tickerLabel}`;
-                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} ${isFailure ? 'burned' : 'used'}`;
+                    if (elLeftTicker) {
+                        elLeftTicker.className = isFailure ? "text-rose-600 dark:text-rose-400 font-bold font-mono" : "text-emerald-600 dark:text-emerald-400 font-bold font-mono";
+                        elLeftTicker.innerText = `${this.formatCost(t.cost)} ${tickerLabel}`;
+                    }
+                    if (elLeftTokens) elLeftTokens.innerText = `${this.formatTokens(t.tokens)} ${isFailure ? 'burned' : 'clean'}`;
                 }
 
                 // Right: Capybala Protected Execution
@@ -467,7 +476,7 @@ const DuelEngine = {
                     const elRawText = document.getElementById("proofRawText");
 
                     if (elReqId) elReqId.innerText = p.request_id || "chatcmpl-live";
-                    if (elModel) elModel.innerText = p.model || "muse-wonder-1.0";
+                    if (elModel) elModel.innerText = p.model || "muse-spark-1.3 (Official Meta AI API)";
                     if (elTokens) elTokens.innerText = `${p.total_tokens} tokens (${p.reasoning_tokens} reasoning)`;
                     if (elLatency) elLatency.innerText = `${p.latency_ms} ms`;
                     if (elRawText) elRawText.innerText = p.raw_response_turn1 || "(No raw content)";

@@ -148,5 +148,24 @@ DUEL_SCENARIOS: Dict[str, Any] = {
             {"turn": 5, "action": "git mergetool --tool=vimdiff && git commit -m 'resolve conflict manually'", "obs": "Conflict resolved cleanly. Commit 7c1e82 created.", "tokens": 2100, "cost": 0.15, "status": "solving"},
             {"turn": 6, "action": "python -m unittest discover -s tests", "obs": "Ran 83 tests in 0.15s ... OK. Task Solved!", "tokens": 2350, "cost": 0.17, "status": "success"}
         ]
+    },
+    "pip_dependency": {
+        "title": "Deadlock: Circular Pip Dependency Hell",
+        "task": "Resolve ImportError: urllib3 v2 requires OpenSSL 1.1.1+, current is 1.0.2",
+        "description": "Agent repeatedly executes pip install --upgrade, requests reinstall, and requirements.txt in a circular loop without solving the underlying version incompatibility.",
+        "baseline_turns": [
+            {"turn": 1, "action": "pip install --upgrade urllib3", "obs": "Successfully installed urllib3-2.2.1. ImportError: urllib3 v2 requires OpenSSL 1.1.1+", "tokens": 1600, "cost": 0.11, "status": "failing"},
+            {"turn": 2, "action": "pip install requests --force-reinstall", "obs": "Installing requests-2.31.0. Dependencies include urllib3>=2.0. Error persists.", "tokens": 3400, "cost": 0.23, "status": "failing"},
+            {"turn": 3, "action": "pip install -r requirements.txt", "obs": "Collecting urllib3>=2.0. OpenSSL warning re-triggered (exit code 1).", "tokens": 5800, "cost": 0.39, "status": "failing"},
+            {"turn": 4, "action": "pip install --upgrade urllib3 requests", "obs": "Requirement already up-to-date. Incompatible SSL library detected.", "tokens": 8700, "cost": 0.58, "status": "failing"},
+            {"turn": 5, "action": "python -m pip install -r requirements.txt --no-cache-dir", "obs": "Context Overflow: Circular dependency loop consumed 14,000 tokens.", "tokens": 14000, "cost": 0.94, "status": "fatal_crash"}
+        ],
+        "capybala_turns": [
+            {"turn": 1, "action": "pip install --upgrade urllib3", "obs": "Successfully installed urllib3-2.2.1. ImportError: urllib3 v2 requires OpenSSL 1.1.1+", "tokens": 1600, "cost": 0.11, "status": "failing"},
+            {"turn": 2, "action": "pip install requests --force-reinstall", "obs": "Installing requests-2.31.0. Dependencies include urllib3>=2.0. Error persists.", "tokens": 3400, "cost": 0.23, "status": "failing"},
+            {"turn": 3, "action": "pip install -r requirements.txt", "obs": "Collecting urllib3>=2.0. Incompatible SSL library detected.", "tokens": 5800, "cost": 0.39, "status": "intercepted", "intervention": True},
+            {"turn": 4, "action": "pip install 'urllib3<2.0.0' && python -c 'import urllib3; print(urllib3.__version__)'", "obs": "Installed urllib3 1.26.18. Compatible with legacy OpenSSL environment.", "tokens": 2050, "cost": 0.14, "status": "solving"},
+            {"turn": 5, "action": "python -m pytest tests/test_network.py", "obs": "16 passed in 0.12s. All network integration tests passing! Task Solved!", "tokens": 2300, "cost": 0.16, "status": "success"}
+        ]
     }
 }
