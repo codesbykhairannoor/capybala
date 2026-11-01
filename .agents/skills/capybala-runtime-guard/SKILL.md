@@ -73,3 +73,4 @@ Before calling any tool:
 - [ ] Am I polling a background task that will notify me automatically when done?
 - [ ] Have I read the same file more than once without modifying it?
 - [ ] If tests are failing, am I actively mutating the code or just running more diagnostic checks?
+

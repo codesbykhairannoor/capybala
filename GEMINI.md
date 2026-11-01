@@ -10,3 +10,4 @@
 
 ## 3. Git Synchronization
 - Always ensure changes are verified with unit tests (`python -m unittest discover -s capybala/tests`) and pushed to `origin/main`.
+
