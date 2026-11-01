@@ -135,12 +135,34 @@ class VirtualRepository:
 
     def execute_command(self, cmd: str) -> Tuple[int, str]:
         """
-        Executes a shell command against the virtual repository and returns (exit_code, stdout).
+        Executes a shell command (or chained commands with && or ;) against the virtual repository.
         """
         cmd_clean = cmd.strip()
         self.history.append(cmd_clean)
 
-        # 1. pytest execution
+        # Handle chained commands (e.g. sed ... && pytest ...)
+        if "&&" in cmd_clean:
+            parts = [p.strip() for p in cmd_clean.split("&&") if p.strip()]
+            logs = []
+            for p in parts:
+                code, out = self._execute_single(p)
+                logs.append(out)
+                if code != 0:
+                    return code, "\n".join(logs)
+            return 0, "\n".join(logs)
+
+        return self._execute_single(cmd_clean)
+
+    def _execute_single(self, cmd_clean: str) -> Tuple[int, str]:
+        # 1. sed -i / modification command (patch file)
+        if ("sed -i" in cmd_clean or "s/RS256/HS256" in cmd_clean) and ("auth/jwt_handler.py" in cmd_clean or "jwt_handler" in cmd_clean):
+            jwt_code = self.files.get("auth/jwt_handler.py", "")
+            if "RS256" in jwt_code:
+                self.files["auth/jwt_handler.py"] = jwt_code.replace("RS256", "HS256")
+                return (0, "File patched: Replaced 'RS256' with 'HS256' in auth/jwt_handler.py.")
+            return (0, "File already up to date: 'HS256' active.")
+
+        # 2. pytest execution
         if "pytest" in cmd_clean:
             jwt_content = self.files.get("auth/jwt_handler.py", "")
             is_fixed = 'DEFAULT_ALGORITHM = "HS256"' in jwt_content or "DEFAULT_ALGORITHM = 'HS256'" in jwt_content or ("HS256" in jwt_content and "RS256" not in jwt_content)
@@ -174,29 +196,56 @@ class VirtualRepository:
                     "=========================== 2 failed in 0.12s ==========================="
                 )
 
-        # 2. cat / view command
-        m_cat = re.search(r"cat\s+([^\s\|]+)", cmd_clean)
+        # 3. cat / view command
+        m_cat = re.search(r"cat\s+([^\s\|;]+)", cmd_clean)
         if m_cat:
-            target = m_cat.group(1).strip()
+            target = m_cat.group(1).strip().rstrip(";")
             content = self.get_file(target)
             if content:
                 return (0, content)
             return (1, f"cat: {target}: No such file or directory")
 
-        # 3. grep command
-        m_grep = re.search(r"grep\s+(?:-[a-zA-Z]+\s+)?['\"]?([^'\"\|]+)['\"]?\s+([^\s\|]+)?", cmd_clean)
-        if m_grep:
-            query = m_grep.group(1).strip()
+        # 3. sed -n (read/print specific lines, NOT modify)
+        if "sed -n" in cmd_clean or "sed '" in cmd_clean and "p'" in cmd_clean:
+            m_target = re.search(r"([a-zA-Z0-9_\-\./]+\.py)", cmd_clean)
+            if m_target:
+                content = self.get_file(m_target.group(1))
+                if content:
+                    lines = content.splitlines()
+                    m_range = re.search(r"(\d+),(\d+)p", cmd_clean)
+                    if m_range:
+                        start_l = max(0, int(m_range.group(1)) - 1)
+                        end_l = min(len(lines), int(m_range.group(2)))
+                        return (0, "\n".join(lines[start_l:end_l]))
+                    return (0, "\n".join(lines[:20]))
+            return (0, "sed: printed slice")
+
+        # 4. sed -i / modification command (patch file)
+        if ("sed -i" in cmd_clean or "s/RS256/HS256" in cmd_clean) and ("auth/jwt_handler.py" in cmd_clean or "jwt_handler" in cmd_clean):
+            jwt_code = self.files.get("auth/jwt_handler.py", "")
+            if "RS256" in jwt_code:
+                self.files["auth/jwt_handler.py"] = jwt_code.replace("RS256", "HS256")
+                return (0, "File patched: Replaced 'RS256' with 'HS256' in auth/jwt_handler.py.")
+            return (0, "File already up to date: 'HS256' active.")
+
+        # 5. grep command
+        if "grep" in cmd_clean:
+            # Strip grep flags like -rn, -r, -i, -E, -n
+            clean_grep = re.sub(r"grep\s+(?:-[a-zA-Z]+\s+)*", "", cmd_clean)
+            m_pattern = re.search(r"['\"]?([^'\"\|\s]+)['\"]?", clean_grep)
+            query = m_pattern.group(1).strip() if m_pattern else ""
+            query_clean = query.replace("\\|", "|").split("|")[0].lower()
+            
             matches = []
             for path, code in self.files.items():
                 for idx, line in enumerate(code.splitlines(), start=1):
-                    if query.lower() in line.lower():
-                        matches.append(f"{path}:{idx}:{line}")
+                    if query_clean and query_clean in line.lower():
+                        matches.append(f"{path}:{idx}:{line.strip()}")
             if matches:
                 return (0, "\n".join(matches[:15]))
             return (1, f"grep: 0 matching symbols found across repository for '{query}'")
 
-        # 4. find command
+        # 6. find command
         if "find " in cmd_clean:
             m_find = re.search(r"-name\s+['\"]?([^'\"\|\s]+)['\"]?", cmd_clean)
             if m_find:
@@ -205,15 +254,7 @@ class VirtualRepository:
                 return (0, "\n".join(results) if results else "find: 0 matching files found")
             return (0, "\n".join(self.files.keys()))
 
-        # 5. sed / patch file replacement
-        if "sed " in cmd_clean or "replace" in cmd_clean or "HS256" in cmd_clean:
-            jwt_code = self.files.get("auth/jwt_handler.py", "")
-            if "RS256" in jwt_code:
-                self.files["auth/jwt_handler.py"] = jwt_code.replace("RS256", "HS256")
-                return (0, "File patched: Replaced 'RS256' with 'HS256' in auth/jwt_handler.py.")
-            return (0, "File already up to date: 'HS256' active.")
-
-        # 6. git status / git diff
+        # 7. git status / git diff
         if "git status" in cmd_clean:
             is_fixed = "HS256" in self.files.get("auth/jwt_handler.py", "")
             if is_fixed:
