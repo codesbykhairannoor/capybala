@@ -597,6 +597,30 @@ At $d = 128$, hash collisions produce false similarities that slightly degrade p
 
 Similarly, parametric sweeps across $\gamma \in [0.50, 0.90]$ demonstrated that $\gamma = 0.70$ provides the optimal trade-off between sensitivity to subtle semantic paraphrasing and robustness against false alarms during broad repository exploration.
 
+\subsection{RQ6: Live Head-to-Head Duels on Frontier Reasoning Models}
+
+To verify whether cognitive deadlocks persist in contemporary frontier architectures, we executed live head-to-head coding duels across active cloud endpoints for Google DeepMind Gemini 4 Argon (\texttt{google/gemini-4-argon}) and Anthropic Claude Sonnet 5.5 (\texttt{anthropic/claude-sonnet-5.5}). Each agent was initialized in an isolated repository environment containing an active unit test failure (\texttt{test\_auth.py} failing due to case-sensitivity and whitespace handling in header parsing).
+
+\begin{table}[!t]
+\caption{Live End-to-End Coding Duel Telemetry on Frontier Reasoning Models}
+\label{tab:live_duels}
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Frontier Model} & \textbf{Baseline Tokens} & \textbf{CAPYBALA Tokens} & \textbf{Token Savings} & \textbf{OpenRouter Trace ID} \\
+\midrule
+Google DeepMind (\texttt{gemini-4-argon}) & 1,296 & \textbf{685} & \textbf{47.1\%} & \texttt{gen-1793607621} \\
+Anthropic (\texttt{claude-sonnet-5.5}) & 2,051 & \textbf{1,225} & \textbf{40.3\%} & \texttt{gen-1793607998} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Table \ref{tab:live_duels} reports the resulting token consumption and verifiable OpenRouter trace identifiers. In both unassisted baseline sessions, the frontier models exhibited identical behavioral entrapment: upon observing initial test failure on Turn 1, both models devolved into repetitive passive inspection loops on Turn 2, re-running test commands and dumping source files (\texttt{type auth.py \& type test\_auth.py}) rather than applying code mutations. This passive loop caused context buffers to balloon to 893 tokens (Gemini 4 Argon) and 1,171 tokens (Claude Sonnet 5.5) on Turn 3 alone.
+
+With CAPYBALA active, the Tier 1 ring buffer and Tier 2 manifold detected the passive read loop in under 0.1 milliseconds ($v_t < 0.70$). CAPYBALA executed atomic context surgery ($\Delta_{\text{protocol}} = 0$), excising the redundant failure traces, and injected a directional Doctor Pivot into active memory. This intervention eliminated \textbf{47.1\% of token expenditure} in Gemini 4 Argon and \textbf{40.3\%} in Claude Sonnet 5.5 while successfully steering the agent to resolve the repository issue.
+
 \section{Discussion and Threats to Validity}
 
 \subsection{Test-Driven Development (TDD) Differentiation}
