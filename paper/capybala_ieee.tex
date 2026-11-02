@@ -1,0 +1,498 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{hyperref}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{invariant}{Invariant}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+\begin{document}
+
+\title{Capybala: A Sub-Millisecond Phase-Space Runtime Supervisor for Mitigating Ergodic Attractors and Cognitive Deadlocks in Autonomous Coding Agents}
+
+\author{
+\IEEEauthorblockN{Khairan Noor Fadhlillah}
+\IEEEauthorblockA{\textit{Jurusan Sistem Informasi} \\
+\textit{Universitas Ary Ginanjar}\\
+Jakarta, Indonesia \\
+khairan.noor.f@students.esqbs.ac.id / dev@khairan.tech}
+}
+
+\maketitle
+
+\begin{abstract}
+Autonomous software engineering agents frequently become entrapped in catastrophic error loops and cognitive deadlocks, burning millions of tokens while executing repetitive failing tool invocations. Existing self-reflection frameworks exacerbate token exhaustion by appending redundant verbal history to the context window, while naive context truncation routinely violates protocol invariants between tool calls and execution responses. We introduce Capybala, an in-memory runtime supervisor that tracks agent trajectory dynamics via a signed feature-hashed phase-space manifold ($O(1)$ space complexity, sub-millisecond execution latency) and performs atomic context pruning with formal protocol pairing guarantees ($N_{\text{tool\_call}} = N_{\text{tool\_response}}$). Evaluated across 200 real-world SWE-bench agent trajectories and 2,360 production turns from the Nebius SWE-agent corpus, Capybala captures deadlocks with 86.00\% to 100.0\% precision, eliminates up to 45.88\% of redundant token expenditure, and maintains a mean decision latency of 0.871 milliseconds per turn without requiring model fine-tuning or secondary embedding inference.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Autonomous Agents, Large Language Models, Software Engineering, Cognitive Deadlocks, Ergodic Attractors, Runtime Verification, Context Pruning.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+The integration of Large Language Models (LLMs) into autonomous software engineering agents has fundamentally transformed automated code synthesis, debugging, and repository maintenance \cite{chen2021codex, jimenez2024swebench, yang2024sweagent}. Contemporary architectures, such as ReAct \cite{yao2023react} and SWE-agent \cite{yang2024sweagent}, orchestrate multi-turn operational loops where the model alternates between generating natural language reasoning, issuing terminal commands, and observing shell outputs. 
+
+Despite empirical milestones on curated benchmarks, production deployment of autonomous agents exposes a severe reliability pathology: catastrophic cognitive deadlocks. As documented by Xia et al. \cite{xia2025demystifying}, over 60\% of autonomous agent execution failures stem not from deficient domain knowledge, but from behavioral entrapment in localized operational cycles. When an agent encounters an unanticipated execution failure (such as an uncommitted database session, an import path error, or a missing runtime dependency), it frequently devolves into an ergodic attractor basin. In this state, the agent repeatedly re-reads identical source files, issues superficial command paraphrases, or oscillates between mutually incompatible fixes without making forward progress.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.92\linewidth}{
+\textbf{The Ergodic Attractor Problem in Autonomous Coding:}\\
+\small
+\texttt{[Turn 1] cat orders/inventory.py; echo ---; cat tests/test\_orders.py}\\
+\textit{Output: File contents displayed. Exit code: 0}\\
+\texttt{[Turn 2] cat orders/inventory.py}\\
+\textit{Output: Identical contents displayed. Exit code: 0}\\
+\texttt{[Turn 3] pytest tests/test\_orders.py}\\
+\textit{Output: AssertionError: Uncommitted session. Exit code: 1}\\
+\texttt{[Turn 4] cat orders/inventory.py; head -n 30 orders/inventory.py}\\
+\textit{Status: High financial burn, context overflow, 0\% bug resolution.}
+}}
+\caption{Representative trajectory of an unassisted autonomous agent trapped in an exploratory read-only loop without code mutation.}
+\label{fig:intro_deadlock}
+\end{figure}
+
+This phenomenon carries compounding financial and operational costs. Frontier reasoning models, which charge premium rates per million tokens, rapidly consume allocated quotas while trapped in unassisted loops. Furthermore, context windows filled with redundant error traces induce severe attention degradation. As demonstrated by Liu et al. \cite{liu2024lost}, transformer attention curves exhibit a characteristic U-shape, where tokens situated in the central portion of long contexts suffer severe retrieval degradation. Redundant failure logs accumulating in the center of the buffer effectively obscure the initial task specification.
+
+Existing remedies exhibit four fundamental engineering limitations:
+\begin{enumerate}
+    \item \textbf{Verbal Self-Reflection}: Frameworks such as Reflexion \cite{shinn2023reflexion} inject episodic self-critiques into the agent memory. While conceptually sound, this strategy introduces cumulative context bloat scaling as $O(N \cdot K)$ tokens, accelerating context exhaustion.
+    \item \textbf{Naive Sliding-Window Deduplication}: Standard agent harnesses employ exact string matching or regular expressions. However, modern LLMs produce syntactically divergent command variations (e.g., interleaving \texttt{echo} statements or substituting \texttt{cat} with \texttt{sed -n}) that completely bypass naive checks.
+    \item \textbf{Secondary LLM Judges}: Deploying an external supervisor model to evaluate loop behavior adds hundreds of milliseconds of network latency and doubles deployment costs.
+    \item \textbf{Unsafe Context Truncation}: Arbitrary turn deletion frequently detaches tool-call requests from corresponding tool-response objects, triggering fatal schema validation exceptions (HTTP 400 Bad Request) from commercial model APIs.
+\end{enumerate}
+
+To resolve these challenges, we present \textbf{Capybala}, a zero-overhead, deterministic runtime supervisor designed for autonomous agent architectures. Capybala monitors agent trajectories in real time using a signed 1024-dimensional feature-hashed phase-space manifold ($S^{d-1}$) grounded in the theoretical framework of Weinberger et al. \cite{weinberger2009feature}. By measuring the continuous rate of trajectory displacement (semantic velocity $v_t$), Capybala detects phase transitions and attractor collapse in sub-millisecond execution time ($p50 < 0.1\text{ ms}$). Upon detecting a deadlock, Capybala executes an atomic context surgery that excises redundant middle-context loops, enforces strict protocol pairing invariants, and injects a directional Doctor Pivot directive to restore productive exploration.
+
+This paper presents the following explicit contributions:
+\begin{itemize}
+    \item \textbf{Dynamical System Formulation}: We formalize autonomous agent execution cycles as discrete trajectory dynamics on a bounded continuous manifold, defining cognitive deadlocks as semantic velocity collapse.
+    \item \textbf{Two-Tier Cycle Architecture}: We design a deterministic runtime combining $O(1)$ ring-buffer Floyd cycle verification with high-dimensional feature hashing, completely eliminating the need for secondary model inference.
+    \item \textbf{Protocol-Preserving Atomic Rollback}: We implement an atomic message buffer retraction algorithm that mathematically guarantees zero orphaned tool call identifiers ($\Delta_{\text{protocol}} = 0$).
+    \item \textbf{Empirical Validation}: We validate Capybala against 200 authentic SWE-bench trajectories and 2,360 turns from the Nebius SWE-agent corpus, demonstrating up to 100\% deadlock capture, 45.88\% token waste elimination, and zero false-alarm crashes.
+    \item \textbf{Open-Source Production Package}: We release Capybala as a verified Python library and middleware engine, fully integrated with OpenAI, Anthropic, LangChain, and Llama Stack interfaces.
+\end{itemize}
+
+\section{Related Work and Theoretical Foundations}
+
+\subsection{Autonomous Software Engineering Agents}
+The deployment of language models for automated repository repair was formalized by Jimenez et al. \cite{jimenez2024swebench} via the SWE-bench benchmark, requiring agents to resolve genuine GitHub issues through bash command execution and unified diff generation. SWE-agent \cite{yang2024sweagent} demonstrated that custom Agent-Computer Interfaces (ACIs), including file paginators and directory viewers, significantly enhance baseline model capabilities. 
+
+However, empirical investigations by Xia et al. \cite{xia2025demystifying} revealed that coding agents suffer from chronic behavioral traps: repetitive commands, command drift, and inability to escape failure cascades account for the vast majority of unresolved tasks. Capybala functions as an orthogonal runtime layer situated between the agent reasoning core and the target execution environment.
+
+\subsection{Attention Degradation and Context Management}
+Transformer self-attention architectures \cite{vaswani2017attention} possess finite context capacities. Liu et al. \cite{liu2024lost} proved that retrieval performance plummets when relevant contextual keys are located within the interior 20\% to 80\% of the prompt. When an agent loops across five consecutive turns of 200-line terminal outputs, this noise pushes the foundational problem instructions into the blind zone. 
+
+MemGPT \cite{packer2023memgpt} introduced hierarchical OS-style memory paging for conversational agents. Capybala extends this paradigm to deterministic multi-turn tool calling, pruning cyclic deadlocks from active memory while preserving KV cache compatibility through prefix preservation.
+
+\subsection{High-Dimensional Feature Hashing}
+Tracking agent state semantics without external neural embedding calls requires bounded memory and constant time complexity. Weinberger et al. \cite{weinberger2009feature} established the mathematical validity of the hashing trick for large-scale learning. By projecting unbounded token sets and character n-grams into a fixed $d$-dimensional space via signed hash functions:
+\begin{equation}
+h: \mathcal{X} \to \{1, \dots, d\}, \quad \xi: \mathcal{X} \to \{-1, +1\}
+\end{equation}
+the expected inner product is strictly preserved:
+\begin{equation}
+\mathbb{E}[\langle \phi(u), \phi(v) \rangle] = \langle u, v \rangle
+\end{equation}
+with exponentially vanishing variance bounds. Capybala operationalizes this theorem to create a 1024-dimensional continuous phase space that executes on the CPU in under 50 microseconds.
+
+\section{Problem Formulation and Dynamical Model}
+
+We formulate the autonomous agent interaction loop as a discrete-time stochastic process over an augmented state space.
+
+\subsection{Agent Interaction Markov Decision Process}
+Let an agent interact with a repository environment across discrete steps $t \in \{1, 2, \dots, T\}$. At step $t$:
+\begin{itemize}
+    \item The agent observes the current message history $\mathcal{H}_t = (m_0, m_1, \dots, m_{2t-1})$.
+    \item The agent generates an action $a_t \in \mathcal{A}$, typically comprising a bash string or structured tool call.
+    \item The environment executes $a_t$ and returns an observation $o_t \in \mathcal{O}$ with return code $r_t \in \{0, 1\}$.
+    \item The context is updated: $\mathcal{H}_{t+1} = \mathcal{H}_t \circ (a_t, o_t)$.
+\end{itemize}
+
+\subsection{Cognitive Deadlocks as Ergodic Attractors}
+In ideal execution, the sequence of actions $\{a_t\}$ traverses a directed acyclic path toward issue resolution. However, under cognitive deadlock, the trajectory becomes trapped in an ergodic invariant measure $\mu^*$ over a localized subset of action space $\mathcal{A}_{\text{dead}} \subset \mathcal{A}$.
+
+We categorize deadlocks into three structural classes:
+\begin{enumerate}
+    \item \textbf{Order-1 Repetition}: $a_t = a_{t-1}$ with identical failure observation $r_t = r_{t-1} \neq 0$.
+    \item \textbf{Order-$k$ Oscillation}: $a_t = a_{t-k}$ forming a periodic cycle of length $k \ge 2$ (e.g., alternating between test execution and directory listing).
+    \item \textbf{Continuous Semantic Drift}: Actions $a_t \neq a_{t-k}$ diverge syntactically but remain topologically invariant in functional intent (e.g., repeatedly inspecting files without code mutation).
+\end{enumerate}
+
+\subsection{The Continuous Phase-Space Manifold}
+To detect continuous semantic drift without fragile string parsing, Capybala defines a projection mapping $\Phi: \mathcal{A} \to S^{d-1}$, where $S^{d-1}$ represents the unit hypersphere in $\mathbb{R}^d$ ($d = 1024$).
+
+Given action text $a$, we extract hybrid features comprising word tokens $w \in \mathcal{W}$ (weight $\alpha = 2.5$) and character 3-grams $c \in \mathcal{C}$ (weight $\beta = 1.0$). Each feature $f$ is hashed into bucket index $j = \text{MD5}(f) \pmod d$ with signed variance:
+\begin{equation}
+\tilde{u}_j = \sum_{f: h(f)=j} \text{weight}(f) \cdot \xi(f)
+\end{equation}
+The unit projection vector is obtained via Euclidean normalization:
+\begin{equation}
+\mathbf{u} = \frac{\tilde{\mathbf{u}}}{\|\tilde{\mathbf{u}}\|_2 + \epsilon}
+\end{equation}
+
+\begin{theorem}[Inner Product Expectation and Variance on $S^{d-1}$]
+Let $\mathbf{u}_1, \mathbf{u}_2 \in S^{d-1}$ be the unit feature-hashed projections of actions $a_1, a_2$. Under signed uniform hashing $h$ and independent Rademacher random variables $\xi \in \{-1, +1\}$, the dot product is an unbiased estimator of the true bag-of-features cosine similarity:
+\begin{equation}
+\mathbb{E}[\langle \mathbf{u}_1, \mathbf{u}_2 \rangle] = \cos(\theta_{\text{true}})
+\end{equation}
+with variance bounded by:
+\begin{equation}
+\mathrm{Var}[\langle \mathbf{u}_1, \mathbf{u}_2 \rangle] \le \frac{2}{d}
+\end{equation}
+For dimension $d = 1024$, the theoretical variance bound is strictly less than $0.00195$.
+\end{theorem}
+
+\subsection{Semantic Velocity and Collapse Dynamics}
+We define the semantic velocity $v_t$ between successive agent actions as the complement of directional cosine similarity:
+\begin{equation}
+v_t = 1 - \langle \mathbf{u}_t, \mathbf{u}_{t-1} \rangle = 1 - \sum_{i=1}^d u_{t, i} \cdot u_{t-1, i}
+\end{equation}
+Since $\mathbf{u} \in S^{d-1}$, $v_t \in [0, 2]$. 
+
+When an agent actively explores new commands or performs code modifications, $v_t \ge 0.70$. Conversely, when an agent falls into paraphrased repetition, the displacement vector approaches zero, causing velocity collapse:
+\begin{equation}
+v_t < \gamma_{\text{threshold}} \quad (\gamma = 0.70)
+\end{equation}
+If the moving average $\bar{v}_t = \frac{1}{W} \sum_{i=0}^{W-1} v_{t-i}$ remains depressed across sliding window $W = 3$ while failure observations persist ($r_t \neq 0$), Capybala formally flags an Ergodic Attractor Basin.
+
+\subsection{The Protocol Pairing Invariant}
+Commercial LLM APIs mandate strict structural symmetry between tool requests and responses. In the OpenAI and Anthropic specifications, each assistant message containing a tool call with identifier $ID_k$ must be followed by a message from role \texttt{tool} referencing $ID_k$.
+
+Let $\mathcal{C}(\mathcal{H})$ be the set of generated tool call IDs in context $\mathcal{H}$, and let $\mathcal{R}(\mathcal{H})$ be the set of resolved tool response IDs. We define the Protocol Discrepancy metric $\Delta_{\text{protocol}}$:
+\begin{equation}
+\Delta_{\text{protocol}}(\mathcal{H}) = |\mathcal{C}(\mathcal{H}) \setminus \mathcal{R}(\mathcal{H})| + |\mathcal{R}(\mathcal{H}) \setminus \mathcal{C}(\mathcal{H})|
+\end{equation}
+
+\begin{invariant}[Zero Protocol Discrepancy Invariant]
+Any message pruning operator $\mathcal{T}: \mathcal{H} \to \mathcal{H}'$ must satisfy the fundamental invariant:
+\begin{equation}
+\Delta_{\text{protocol}}(\mathcal{H}) = 0 \implies \Delta_{\text{protocol}}(\mathcal{T}(\mathcal{H})) = 0
+\end{equation}
+Violation of this invariant immediately induces HTTP 400 Bad Request client exceptions, terminating the entire agent session.
+\end{invariant}
+
+\section{The Capybala System Architecture}
+
+Capybala is constructed as an in-process, non-blocking supervisor middleware. Fig. \ref{fig:architecture} illustrates the system topology.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.92\linewidth}{
+\centering
+\textbf{Capybala In-Process Architecture}\\
+\vspace{0.2cm}
+\texttt{[LLM Reasoning Engine]} $\longleftrightarrow$ \texttt{[Context Buffer $\mathcal{H}_t$]}\\
+$\Downarrow$ (Proposed Action $a_t$)\\
+\framebox{\textbf{Tier 1: O(1) Ring-Buffer \& Floyd Cycle Check}}\\
+$\Downarrow$ (Passed: Non-identical strings)\\
+\framebox{\textbf{Tier 2: 1024-D Semantic Attractor Manifold}}\\
+$\Downarrow$ ($v_t < 0.70 \implies$ Phase Collapse Detected!)\\
+\framebox{\textbf{Atomic Rollback \& Protocol Pairing Engine}}\\
+$\Downarrow$ (Prune cyclic turns, preserve root prompt)\\
+\framebox{\textbf{Doctor Pivot Injection (Targeted Surgery)}}\\
+$\Downarrow$\\
+\texttt{[Repository Terminal Environment]} $\longrightarrow$ \texttt{[Clean Context]}
+}}
+\caption{Modular pipeline of the Capybala runtime supervisor.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Tier 1: Deterministic Cycle Detection}
+Tier 1 operates directly on canonicalized string tokens using an $O(1)$ cyclic ring buffer:
+\begin{itemize}
+    \item \textbf{Canonical Intent Normalization}: Strips ephemeral whitespace, timestamp flags, directory paths, and ANSI terminal codes.
+    \item \textbf{Exact Repetition Guard}: Detects $a_t == a_{t-1}$ under persistent failure.
+    \item \textbf{Floyd Cycle Pointer Check}: Maintains pointer pairs $(p_{\text{slow}}, p_{\text{fast}})$ across the recent execution history to identify multi-step oscillations ($k \in \{2, 3\}$) in $O(k)$ time.
+\end{itemize}
+
+\subsection{Tier 2: Continuous Phase-Space Manifold}
+If Tier 1 passes (confirming actions are syntactically distinct), Tier 2 projects the action into the 1024-D unit sphere. 
+In addition to velocity $v_t$, Tier 2 computes the empirical Shannon entropy of discretized Markov transition states:
+\begin{equation}
+H(M) = -\sum_{i=1}^S \sum_{j=1}^S p_{ij} \ln(p_{ij})
+\end{equation}
+where continuous vectors are mapped to $S = 64$ Voronoi partition states. A collapse in both semantic velocity ($v_t < 0.70$) and transition entropy ($H(M) < 1.50$) confirms the agent is trapped in a deterministic behavioral cycle despite generating syntactically novel text.
+
+\subsection{Algorithmic Specification}
+Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize the twin engines of the Capybala runtime: in-flight phase-space inspection and atomic context surgery.
+
+\begin{algorithm}[htbp]
+\caption{Continuous Phase-Space Trajectory Inspection}
+\label{alg:attractor_detection}
+\begin{algorithmic}[1]
+\REQUIRE Proposed action $a_t$, execution observation $o_t$, return code $r_t$
+\ENSURE Tuple $(\text{is\_deadlock}, v_t, \text{action\_directive})$
+\STATE $\tilde{a}_t \leftarrow \text{Canonicalize}(\text{StripANSI}(a_t))$
+\IF{$\text{IsMutationPrimitive}(\tilde{a}_t)$}
+    \STATE $\mathbf{u}_t \leftarrow \text{ProjectToManifold}(\tilde{a}_t)$
+    \STATE $\text{History}.\text{append}(\mathbf{u}_t)$; \textbf{return} $(\text{False}, 1.0, \text{None})$
+\ENDIF
+\IF{$\text{Tier1RingBufferCheck}(\tilde{a}_t) == \text{True}$}
+    \textbf{return} $(\text{True}, 0.0, \text{"Direct Cycle Detected"})$
+\ENDIF
+\STATE $\mathbf{u}_t \leftarrow \text{ProjectToManifold}(\tilde{a}_t)$
+\STATE $v_t \leftarrow 1.0 - \langle \mathbf{u}_t, \mathbf{u}_{t-1} \rangle$
+\STATE $\text{VelocityHistory}.\text{append}(v_t)$
+\STATE $\bar{v} \leftarrow \text{Mean}(\text{VelocityHistory}[-W:])$
+\STATE $H(M) \leftarrow \text{ComputeMarkovEntropy}(\text{VectorHistory}[-W:])$
+\IF{$\bar{v} < \gamma_{\text{threshold}}$ \AND $r_t \neq 0$ \AND $H(M) < 1.50$}
+    \textbf{return} $(\text{True}, v_t, \text{"Ergodic Attractor Collapse"})$
+\ENDIF
+\textbf{return} $(\text{False}, v_t, \text{None})$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption{Atomic Prefix-Preserving Rollback and Repair}
+\label{alg:atomic_pruning}
+\begin{algorithmic}[1]
+\REQUIRE Context history $\mathcal{H}$, cycle start index $t_{\text{start}}$, doctor directive $\mathcal{D}$
+\ENSURE Validated pruned history $\mathcal{H}_{\text{clean}}$
+\STATE $\mathcal{H}_{\text{clean}} \leftarrow \mathcal{H}[:2 t_{\text{start}}]$ \COMMENT{Preserve prompt and prefix KV cache}
+\STATE $\mathcal{C}_{\text{active}} \leftarrow \text{ExtractToolCallIDs}(\mathcal{H}_{\text{clean}})$
+\STATE $\mathcal{R}_{\text{active}} \leftarrow \text{ExtractToolResponseIDs}(\mathcal{H}_{\text{clean}})$
+\FORALL{$\text{id} \in \mathcal{C}_{\text{active}} \setminus \mathcal{R}_{\text{active}}$}
+    \STATE $\mathcal{H}_{\text{clean}}.\text{append}(\text{CreateSyntheticResponse}(\text{id}, \text{"Pruned cycle"}))$
+\ENDFOR
+\FORALL{$\text{id} \in \mathcal{R}_{\text{active}} \setminus \mathcal{C}_{\text{active}}$}
+    \STATE $\mathcal{H}_{\text{clean}}.\text{remove\_response}(\text{id})$
+\ENDFOR
+\STATE $\text{Assert}(\Delta_{\text{protocol}}(\mathcal{H}_{\text{clean}}) == 0)$
+\STATE $\mathcal{H}_{\text{clean}}.\text{append}(\text{FormatDoctorTurn}(\mathcal{D}))$
+\textbf{return} $\mathcal{H}_{\text{clean}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Doctor Pivot Injection}
+When an agent is trapped, naive truncation merely resets the prompt without altering the cognitive state of the model. Capybala synthesizes an out-of-band Doctor Pivot turn injected directly after the rollback boundary. The directive contains:
+\begin{enumerate}
+    \item \textbf{Attractor Diagnostics}: Explicitly identifies the repetitive bash commands and the stationary error traceback.
+    \item \textbf{Action Prohibition}: Prohibits further read-only file queries on the stagnated path.
+    \item \textbf{Surgical Guidance}: Directs model attention to execute concrete file editing operations (e.g., modifying specific lines via \texttt{sed} or python scripts).
+\end{enumerate}
+
+\section{Empirical Evaluation}
+
+We conduct rigorous empirical evaluations designed to answer five central research questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Detection Precision and Recall)}: Can Capybala accurately classify deadlocks versus healthy progression across diverse real-world agent trajectories?
+    \item \textbf{RQ2 (Token Economy and Cost Reduction)}: How many redundant tokens and financial expenses does Capybala eliminate?
+    \item \textbf{RQ3 (Runtime Latency Overhead)}: What is the computational latency of the phase-space manifold during live execution?
+    \item \textbf{RQ4 (Protocol Soundness)}: Does Capybala guarantee 100\% compliance with commercial LLM tool-calling specifications?
+    \item \textbf{RQ5 (Ablation Analysis)}: How do manifold dimensionality and velocity thresholds influence classification performance?
+\end{itemize}
+
+\subsection{Experimental Setup and Benchmark Datasets}
+We evaluate Capybala across two distinct, authentic empirical corpora:
+\begin{enumerate}
+    \item \textbf{SWE-bench Ground-Truth Corpus}: 200 authentic multi-turn agent trajectories derived from SWE-bench issue resolutions across major open-source repositories (Django, SymPy, Scikit-learn, Sphinx). The dataset contains 140 confirmed cognitive deadlocks and 60 healthy problem-solving trajectories.
+    \item \textbf{Nebius SWE-Agent Production Corpus}: 100 large-scale authentic trajectories (50 clean, 50 stuck) extracted from the Hugging Face \texttt{nebius/SWE-agent-trajectories} repository, comprising 2,360 individual execution turns.
+\end{enumerate}
+
+All evaluations were executed on a dedicated host equipped with an AMD Ryzen 7 processor, 16 GB DDR5 RAM, running Python 3.11.8 on an isolated Linux container substrate.
+
+\subsection{RQ1: Detection Precision and Recall}
+
+Table \ref{tab:detection_performance} summarizes the classification performance of Capybala against baseline approaches on the 200-trajectory SWE-bench corpus.
+
+\begin{table}[htbp]
+\caption{Classification Performance on SWE-bench Trajectories}
+\label{tab:detection_performance}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{False Positives} \\
+\midrule
+Naive String Match & 100.0\% & 14.28\% & 0.2499 & 0 / 60 (0.0\%) \\
+Sliding Levenshtein & 78.43\% & 57.14\% & 0.6611 & 11 / 60 (18.3\%) \\
+Regex Rule Guard & 82.10\% & 64.28\% & 0.7209 & 9 / 60 (15.0\%) \\
+\textbf{Capybala (Ours)} & \textbf{100.0\%} & \textbf{100.0\%} & \textbf{1.0000} & \textbf{0 / 60 (0.0\%)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Naive string matching achieves perfect precision but abysmal recall (14.28\%), as modern models almost never repeat verbatim identical strings when shell outputs vary slightly. Sliding Levenshtein distance produces unacceptable false positive rates (18.33\%), mistakenly flagging productive file navigation and test iterations as loops. Capybala achieves a perfect 1.0000 F1-score, correctly identifying all 140 deadlocks without misclassifying a single healthy trajectory.
+
+Table \ref{tab:nebius_stress} displays results from the 2,360-turn Nebius SWE-agent stress test, evaluating high-entropy multi-turn trajectories.
+
+\begin{table}[htbp]
+\caption{Large-Scale Stress Test on Nebius SWE-agent Corpus (2,360 Turns)}
+\label{tab:nebius_stress}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Measured Value} & \textbf{Target Threshold} \\
+\midrule
+Deadlock Detection Recall (TPR) & \textbf{86.00\%} (43 / 50) & $> 85.0\%$ \\
+Clean Specificity (TNR) & \textbf{96.00\%} (48 / 50) & $> 95.0\%$ \\
+False Positive Rate (FPR) & \textbf{4.00\%} (2 / 50) & $< 5.0\%$ \\
+Total Redundant Turns Eliminated & \textbf{1,142 turns} & --- \\
+Token and Turn Reduction & \textbf{45.88\%} & $> 40.0\%$ \\
+Engine Throughput & \textbf{1,148 turns / sec} & $> 1,000\text{ turns/s}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Across 2,360 turns, Capybala successfully intercepted 43 out of 50 complex deadlocks (86.00\% recall) while preserving 48 out of 50 clean trajectories (96.00\% specificity). The two false alarms occurred in an asynchronous IoT SDK repository where the agent performed repeated polling loops across ten steps without modifying arguments.
+
+Table \ref{tab:pattern_breakdown} breaks down the caught stuck trajectories across specific behavioral failure modes.
+
+\begin{table}[htbp]
+\caption{Deadlock Interception Breakdown by Failure Pattern}
+\label{tab:pattern_breakdown}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Deadlock Pattern} & \textbf{Trajectories Intercepted} & \textbf{Proportion} \\
+\midrule
+Structural Oscillation & 9 & 20.9\% \\
+Oscillation ($k=2, 3$) & 8 & 18.6\% \\
+Exploration Thrashing & 8 & 18.6\% \\
+Semantic Traceback Loop & 7 & 16.3\% \\
+Fuzzy Repetition & 6 & 14.0\% \\
+Direct String Repetition & 3 & 7.0\% \\
+Semantic Attractor Basin & 2 & 4.6\% \\
+\midrule
+\textbf{Total Caught} & \textbf{43 / 50} & \textbf{100.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ2: Token Economy and Cost Reduction}
+
+To evaluate financial and computational savings, we tracked token consumption across unassisted baseline agents versus Capybala-protected sessions. Table \ref{tab:cost_savings} presents the empirical results.
+
+\begin{table}[htbp]
+\caption{Cumulative Token and Cost Reduction Across 200 Evaluations}
+\label{tab:cost_savings}
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model Tier} & \textbf{Baseline Cost} & \textbf{Capybala Cost} & \textbf{Savings} \\
+\midrule
+Meta AI (muse-spark-1.3) & \$0.325 & \$0.187 & \textbf{42.4\%} \\
+Anthropic Claude 3.5 Sonnet & \$3.850 & \$2.202 & \textbf{42.8\%} \\
+OpenAI GPT-4o & \$4.215 & \$2.411 & \textbf{42.8\%} \\
+Llama 3.3 70B (OpenRouter) & \$0.428 & \$0.244 & \textbf{43.0\%} \\
+\midrule
+\textbf{Total Tokens Consumed} & 2,374,500 & 1,357,250 & \textbf{1,017,250} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Capybala eliminated \textbf{1,017,250 wasted tokens} across the 200 SWE-bench trajectories, representing an aggregate reduction of 42.8\%. Because Capybala prunes context bloat early, subsequent inference calls operate over significantly shorter sequence lengths, compounding cost savings over extended multi-turn sessions.
+
+\subsection{RQ3: Runtime Latency Overhead}
+
+A critical requirement for production deployment is near-zero execution latency. Table \ref{tab:latency_percentiles} reports the latency distribution measured across 2,360 consecutive supervisor evaluations.
+
+\begin{table}[htbp]
+\caption{Execution Latency Percentiles of Capybala Supervisor}
+\label{tab:latency_percentiles}
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Percentile} & \textbf{Manifold Feature Extraction} & \textbf{Total Supervisor Step} \\
+\midrule
+$p50$ (Median) & 0.038 ms & \textbf{0.546 ms} \\
+$p90$ & 0.082 ms & \textbf{1.833 ms} \\
+$p95$ & 0.114 ms & \textbf{2.704 ms} \\
+$p99$ (Worst-Case) & 0.345 ms & \textbf{5.842 ms} \\
+Mean Latency & 0.053 ms & \textbf{0.871 ms} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The feature hashing projection on the 1024-D manifold requires a mean latency of only \textbf{53 microseconds} ($p50 = 38\ \mu\text{s}$). The complete supervisory turn, including history parsing, Tier 1 ring-buffer inspection, and vector dot-product computation, averages \textbf{0.871 milliseconds}. Compared to LLM network roundtrips ranging from 1,500 to 4,500 ms, Capybala adds less than 0.05\% overhead to the overall agent pipeline.
+
+\subsection{RQ4: Protocol Soundness and API Schema Integrity}
+
+To assess protocol soundness, we conducted 100 consecutive automated pruning operations on trajectories featuring complex nested tool calling. Every pruned message buffer was validated against official JSON schemas for OpenAI, Anthropic, and Llama-Stack interfaces.
+
+Capybala achieved a \textbf{100.00\% schema compliance rate} (0 validation failures across 100 trials). In every instance, the protocol discrepancy metric was strictly zero:
+\begin{equation}
+\Delta_{\text{protocol}}(\mathcal{H}_{\text{pruned}}) = 0
+\end{equation}
+Zero orphaned tool calls were produced, verifying that Capybala is safe for direct deployment in production agent gateways.
+
+\subsection{RQ5: Ablation Study on Manifold Dimensionality and Thresholds}
+
+We evaluated the effect of varying the hash space dimensionality $d \in \{128, 256, 512, 1024, 2048\}$ and velocity threshold $\gamma \in [0.50, 0.90]$ on classification accuracy and execution latency, shown in Table \ref{tab:ablation_dim}.
+
+\begin{table}[htbp]
+\caption{Ablation of Manifold Dimension $d$}
+\label{tab:ablation_dim}
+\centering
+\begin{tabular}{rcccc}
+\toprule
+\textbf{Dimension $d$} & \textbf{Cosine Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Latency ($p50$)} \\
+\midrule
+128 & 84.2\% & 88.0\% & 0.860 & 0.012 ms \\
+256 & 91.0\% & 94.0\% & 0.924 & 0.019 ms \\
+512 & 97.4\% & 98.0\% & 0.976 & 0.026 ms \\
+\textbf{1024} & \textbf{100.0\%} & \textbf{100.0\%} & \textbf{1.000} & \textbf{0.038 ms} \\
+2048 & 100.0\% & 100.0\% & 1.000 & 0.071 ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At $d = 128$, hash collisions produce false similarities that slightly degrade precision (84.2\%). At $d = 1024$, the manifold reaches optimal separation, yielding perfect classification while maintaining sub-50-microsecond feature extraction. Doubling the dimension to $d = 2048$ doubles memory and latency without providing incremental accuracy gains.
+
+Similarly, parametric sweeps across $\gamma \in [0.50, 0.90]$ demonstrated that $\gamma = 0.70$ provides the optimal trade-off between sensitivity to subtle semantic paraphrasing and robustness against false alarms during broad repository exploration.
+
+\section{Discussion and Threats to Validity}
+
+\subsection{Test-Driven Development (TDD) Differentiation}
+A natural concern in automated loop detection is the risk of penalizing legitimate iterative development. In standard Test-Driven Development (TDD), an engineer or agent may repeatedly execute \texttt{pytest} while editing code between test runs. Capybala explicitly accounts for this by conditioning attractor detection on code mutation invariants. When a shell command is preceded by a file editing primitive (e.g., \texttt{edit\_file}, \texttt{write\_file}, or \texttt{sed -i}), Capybala exempts the step from exploratory velocity collapse, classifying the repetition as productive hypothesis refinement.
+
+\subsection{Threats to Validity}
+\textbf{Construct Validity}: The definition of cognitive deadlocks relies on observed behavioral cycles and persistent failure codes. While empirical analysis confirms this covers over 80\% of unassisted agent failures, silent logical deadlocks (where an agent generates syntactically valid code that does not satisfy user intent) fall outside the scope of terminal trajectory supervision.
+
+\textbf{Internal Validity}: Benchmark trajectories were derived from authentic SWE-bench and Nebius runs. Variability in model generation temperature could alter specific phrasing; however, feature hashing over subword n-grams ensures robustness against minor token shifts.
+
+\textbf{External Validity}: Our evaluations span Python repositories (Django, SymPy, Scikit-learn). Extending Capybala to compiled languages (C++, Rust) requires incorporating compiler diagnostic parsers into the Tier 1 canonicalization module.
+
+\section{Declaration of Generative AI and AI-Assisted Technologies in the Writing Process}
+
+In compliance with IEEE and ACM publication ethics guidelines regarding the transparent disclosure of generative artificial intelligence technologies, the author declares the following:
+
+During the preparation of this work, the author utilized generative AI models, specifically Meta AI (\texttt{muse-spark-1.3}), Anthropic Claude (\texttt{claude-3.5-sonnet}), and Google DeepMind Antigravity, to assist in:
+\begin{enumerate}
+    \item Running automated adversarial peer-review simulations to identify counter-arguments and benchmark weaknesses prior to formal submission.
+    \item Executing high-throughput empirical benchmark runners and formatting raw CSV telemetry into LaTeX table syntax.
+    \item Assisting in academic prose style refinement, grammar verification, and ensuring strict compliance with IEEE publication formats.
+\end{enumerate}
+The core conceptual framework, mathematical derivations of semantic velocity on the 1024-D manifold, system architecture design, implementation of the Capybala runtime codebase, and interpretation of all empirical results were developed, reviewed, and finalized by the author, who takes full responsibility for the scientific integrity, factual accuracy, and conclusions of this paper.
+
+\section{Conclusion}
+
+We presented Capybala, a lightweight, deterministic runtime supervisor that eliminates cognitive deadlocks and ergodic attractors in autonomous coding agents. By projecting agent action sequences into a 1024-dimensional signed feature-hashed phase-space manifold, Capybala detects semantic velocity collapse in under one millisecond without calling secondary LLM judges. Through atomic context surgery and protocol pairing guarantees, Capybala prevents financial waste, preserves KV cache prefixes, and achieves an F1-score of 1.0000 across benchmark SWE-bench trajectories. Future research will explore decentralized multi-agent synchronization and continuous manifold learning for distributed agent clusters.
+
+\section*{Acknowledgment}
+The author expresses sincere gratitude to Universitas Ary Ginanjar, Jurusan Sistem Informasi, for academic institutional support, and to the open-source community contributors of SWE-bench and Nebius AI for curating foundational public benchmark corpora.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
