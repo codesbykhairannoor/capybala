@@ -23,12 +23,15 @@
 \newtheorem{lemma}{Lemma}
 \newtheorem{invariant}{Invariant}
 
+\definecolor{darkblue}{rgb}{0.0, 0.0, 0.54}
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
-    filecolor=magenta,      
-    urlcolor=cyan,
-    citecolor=blue,
+    linkcolor=darkblue,
+    filecolor=darkblue,      
+    urlcolor=darkblue,
+    citecolor=darkblue,
+    breaklinks=true,
+    pdfborder={0 0 0}
 }
 
 \begin{document}
@@ -37,11 +40,8 @@
 
 \author{
 \IEEEauthorblockN{Khairan Noor Fadhlillah}
-\IEEEauthorblockA{\textit{Department of Information Systems} \\
-\textit{Universitas Ary Ginanjar} \\
-Jakarta, Indonesia \\
-khairan.noor.f@students.esqbs.ac.id \\
-dev@khairan.tech}
+\IEEEauthorblockA{Department of Information Systems, Universitas Ary Ginanjar, Jakarta, Indonesia \\
+Email: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech}
 }
 
 \maketitle
@@ -65,38 +65,45 @@ Despite empirical milestones on curated benchmarks, production deployment of aut
 \resizebox{0.95\textwidth}{!}{
 \begin{tikzpicture}[
     node distance=1.1cm and 1.2cm,
-    box/.style={rectangle, draw=black!70, rounded corners=3pt, fill=blue!8, text centered, minimum height=0.9cm, text width=2.4cm, font=\small},
-    proc/.style={rectangle, draw=black!70, rounded corners=3pt, fill=cyan!12, text centered, minimum height=0.9cm, text width=2.3cm, font=\small},
-    tier/.style={rectangle, draw=orange!80!black, rounded corners=3pt, fill=orange!10, text centered, minimum height=0.9cm, text width=2.3cm, font=\small},
-    gate/.style={diamond, draw=purple!80!black, fill=purple!10, text centered, aspect=1.8, inner sep=2pt, font=\small},
-    heal/.style={rectangle, draw=red!70!black, rounded corners=3pt, fill=red!10, text centered, minimum height=0.9cm, text width=2.5cm, font=\small},
-    env/.style={rectangle, draw=green!60!black, rounded corners=3pt, fill=green!10, text centered, minimum height=0.9cm, text width=2.3cm, font=\small},
+    box/.style={rectangle, draw=blue!80!black, rounded corners=3pt, fill=blue!8, text centered, minimum height=1.0cm, text width=2.4cm, font=\small\bfseries},
+    proc/.style={rectangle, draw=cyan!80!black, rounded corners=3pt, fill=cyan!10, text centered, minimum height=1.0cm, text width=2.3cm, font=\small\bfseries},
+    tier/.style={rectangle, draw=orange!80!black, rounded corners=3pt, fill=orange!10, text centered, minimum height=1.0cm, text width=2.3cm, font=\small\bfseries},
+    gate/.style={diamond, draw=purple!80!black, fill=purple!10, text centered, aspect=1.8, inner sep=2pt, font=\small\bfseries},
+    heal/.style={rectangle, draw=red!70!black, rounded corners=3pt, fill=red!10, text centered, minimum height=1.0cm, text width=2.5cm, font=\small\bfseries},
+    env/.style={rectangle, draw=green!60!black, rounded corners=3pt, fill=green!10, text centered, minimum height=1.0cm, text width=2.4cm, font=\small\bfseries},
     arr/.style={-{Stealth[length=2.5mm]}, thick, draw=black!75}
 ]
 
-% First Row: Agent Pipeline
-\node[box] (llm) {\textbf{Agent LLM Core}\\Reasoning / Action $a_t$};
-\node[proc, right=of llm] (canon) {\textbf{Canonicalizer}\\Path / ANSI Normalizer};
-\node[tier, right=of canon] (t1) {\textbf{Tier 1 Guard}\\$O(1)$ Floyd Ring Buffer};
-\node[tier, right=of t1] (t2) {\textbf{Tier 2 Manifold}\\1024-D Unit Space $S^{d-1}$};
-\node[gate, right=of t2] (dec) {$v_t < 0.70$?};
+% First Row: Agent Evaluation Pipeline (Left to Right)
+\node[box] (llm) {Agent LLM Core\\Reasoning / $a_t$};
+\node[proc, right=0.9cm of llm] (canon) {Canonicalizer\\Path / ANSI Norm};
+\node[tier, right=0.9cm of canon] (t1) {Tier 1 Guard\\$O(1)$ Floyd Ring};
+\node[tier, right=0.9cm of t1] (t2) {Tier 2 Manifold\\1024-D Space $S^{d-1}$};
+\node[gate, right=0.9cm of t2] (dec) {$v_t < 0.70$?};
 
-% Second Row: Branches
-\node[env, below=1.2cm of dec] (exec) {\textbf{Terminal Shell}\\Execute Action $a_t$};
-\node[heal, below=1.2cm of t2] (prune) {\textbf{Atomic Pruning}\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
-\node[box, below=1.2cm of t1] (pivot) {\textbf{Doctor Pivot}\\Directional Surgery};
+% Second Row: Execution & Recovery (Cleanly Positioned Below)
+\node[env, below=1.4cm of dec] (exec) {Terminal Shell\\Execute Action $a_t$};
+\node[heal, below=1.4cm of t2] (prune) {Atomic Pruning\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
+\node[box, below=1.4cm of t1] (pivot) {Doctor Pivot\\Directional Surgery};
 
-% Connections
+% Forward Pipeline Connections
 \draw[arr] (llm) -- (canon);
 \draw[arr] (canon) -- (t1);
 \draw[arr] (t1) -- (t2);
 \draw[arr] (t2) -- (dec);
 
-\draw[arr] (dec) -- node[right, font=\footnotesize] {No (Healthy)} (exec);
-\draw[arr] (dec) |- node[above, font=\footnotesize] {Yes (Deadlock)} (prune);
+% Decision Branch 1: Healthy Execution Path
+\draw[arr] (dec) -- node[right, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {No (Healthy)} (exec);
+
+% Decision Branch 2: Deadlock Interception & Recovery Path (Collision-Free Routing)
+\draw[arr] (dec.west) -- ++(-0.6, 0) |- node[pos=0.25, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Yes (Deadlock)} (prune.east);
 \draw[arr] (prune) -- (pivot);
-\draw[arr] (pivot) -| (llm);
-\draw[arr] (exec) -| node[near start, below, font=\footnotesize] {Observation $o_t$} (llm);
+
+% Recovery Injection into Active Memory
+\draw[arr] (pivot.west) -| node[pos=0.3, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Doctor Surgery} ([xshift=2mm]llm.south);
+
+% Healthy Feedback Loop (Dedicated Lower Clearance Bus 0.8cm Below Second Row)
+\draw[arr] (exec.south) -- ++(0,-0.8cm) -| node[pos=0.25, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Observation $o_t$ (Uninterrupted Environment Feedback)} ([xshift=-4mm]llm.south);
 
 \end{tikzpicture}
 }
@@ -182,35 +189,40 @@ We categorize deadlocks into three structural classes:
 \begin{figure}[htbp]
 \centering
 \resizebox{0.85\columnwidth}{!}{
-\begin{tikzpicture}[scale=0.95]
-    % Coordinate Axes
-    \draw[->, thick, gray!60] (-2.5,0) -- (2.5,0) node[right, font=\footnotesize] {$\text{Re}(\mathbf{u})$};
-    \draw[->, thick, gray!60] (0,-2.5) -- (0,2.5) node[above, font=\footnotesize] {$\text{Im}(\mathbf{u})$};
+\begin{tikzpicture}[scale=1.05]
+    % Coordinate Axes with clear margin
+    \draw[->, thick, gray!60] (-2.7,0) -- (2.8,0) node[below right, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Re}(\mathbf{u})$};
+    \draw[->, thick, gray!60] (0,-2.7) -- (0,2.8) node[above left, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Im}(\mathbf{u})$};
     
-    % Unit Hypersphere Projection Circle
-    \draw[dashed, blue!40, thick] (0,0) circle (2.0cm);
-    \node[blue!70, font=\scriptsize] at (1.5, 1.7) {Manifold $S^{d-1}$};
+    % Unit Hypersphere Projection Circle (Boundary S^{d-1})
+    \draw[dashed, blue!50, thick] (0,0) circle (2.2cm);
+    \node[blue!80!black, font=\scriptsize\bfseries, fill=white, inner sep=2pt, draw=blue!30, rounded corners=2pt] at (1.4, 1.8) {Manifold $S^{d-1}$};
     
-    % Unassisted Agent Trajectory (Inward Spiral into Attractor Well)
-    \draw[thick, red!80, dashed, domain=0:14.5, samples=200, smooth, variable=\t] 
-        plot ({2.0*exp(-0.25*\t)*cos(\t*70)}, {2.0*exp(-0.25*\t)*sin(\t*70)});
+    % Unassisted Agent Trajectory (Inward Logarithmic Spiral)
+    \draw[thick, red!75!black, dashed, domain=0:13.2, samples=200, smooth, variable=\t] 
+        plot ({2.2*exp(-0.26*\t)*cos(\t*72)}, {2.2*exp(-0.26*\t)*sin(\t*72)});
     
-    % Trapping Basin Center
-    \filldraw[red!90] (0.05,-0.05) circle (3pt) node[below right, font=\scriptsize, text=red!90] {Attractor Basin ($v_t \to 0$)};
+    % Trapping Basin Center (Attractor Well)
+    \filldraw[red!90] (0,0) circle (3pt);
+    \node[red!85!black, font=\scriptsize\bfseries, fill=white, inner sep=2pt, draw=red!40, rounded corners=2pt, anchor=north east] 
+        at (-0.3, -0.3) {Attractor Basin ($v_t \to 0$)};
+    \draw[->, red!80, thin] (-0.3, -0.3) -- (-0.05, -0.05);
     
-    % Interception Point
-    \coordinate (inter) at ({2.0*exp(-0.25*5)*cos(5*70)}, {2.0*exp(-0.25*5)*sin(5*70)});
-    \filldraw[orange!90!black] (inter) circle (2.5pt);
-    \node[orange!90!black, font=\scriptsize, above right] at (inter) {Interception ($v_t < 0.70$)};
+    % Interception Point (Quadrant I)
+    \coordinate (inter) at (0.75, 0.65);
+    \filldraw[orange!90!black] (inter) circle (3pt);
+    \node[orange!90!black, font=\scriptsize\bfseries, fill=white, inner sep=2pt, draw=orange!50, rounded corners=2pt, anchor=south west] 
+        at (0.9, 0.75) {Interception ($v_t < 0.70$)};
     
     % Doctor Pivot Outward Perturbation Vector
-    \draw[-{Stealth[length=2.5mm]}, very thick, purple!80!black] 
-        (inter) -- ++(1.4, 1.1) node[midway, above left, font=\scriptsize] {Doctor Pivot $\Delta \mathbf{u}$};
+    \draw[-{Stealth[length=3mm]}, line width=1.5pt, purple!80!black] 
+        (inter) -- ++(1.1, 0.9) coordinate (pivoted)
+        node[midway, above left, fill=white, inner sep=1.5pt, font=\scriptsize\bfseries] {Doctor Pivot $\Delta \mathbf{u}$};
     
-    % Recovered Trajectory (Solid Green)
-    \draw[very thick, green!60!black] 
-        ($(inter)+(1.4,1.1)$) .. controls (1.6,1.4) and (1.9,0.8) .. (2.3, 0.4) 
-        node[right, font=\scriptsize] {Resolved};
+    % Recovered Trajectory (Smooth Escaping Curve in Green)
+    \draw[line width=1.5pt, green!60!black] 
+        (pivoted) .. controls (2.1, 1.4) and (2.3, 0.7) .. (2.5, 0.1) 
+        node[right, font=\scriptsize\bfseries, fill=white, inner sep=2pt, draw=green!40, rounded corners=2pt] {Resolved Trajectory};
 
 \end{tikzpicture}
 }
