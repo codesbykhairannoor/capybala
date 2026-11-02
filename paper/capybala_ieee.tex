@@ -491,14 +491,14 @@ To evaluate financial and computational savings, we tracked token consumption ac
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
-\textbf{Model Tier} & \textbf{Baseline Cost} & \textbf{CAPYBALA Cost} & \textbf{Savings} \\
+\textbf{Model Tier} & \textbf{Baseline Cost} & \textbf{CAPYBALA Cost} & \textbf{Cost Reduction (\%)} \\
 \midrule
 Meta AI (\texttt{llama-4-scout}) & \$0.475 & \$0.271 & \textbf{42.9\%} \\
 Google DeepMind (\texttt{gemini-4-argon}) & \$14.247 & \$8.144 & \textbf{42.8\%} \\
 Anthropic (\texttt{claude-sonnet-5.5}) & \$14.247 & \$8.144 & \textbf{42.8\%} \\
 OpenAI (\texttt{gpt-5.4}) & \$20.777 & \$11.876 & \textbf{42.8\%} \\
 \midrule
-\textbf{Total Tokens Consumed} & 2,374,500 & 1,357,250 & \textbf{1,017,250} \\
+\textbf{Total Tokens} & 2,374,500 & 1,357,250 & \textbf{42.8\% ($-1,017,250$)} \\
 \bottomrule
 \end{tabular}%
 }
@@ -613,10 +613,10 @@ To verify whether cognitive deadlocks persist in cutting-edge reasoning architec
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Frontier Model Endpoint} & \textbf{Baseline Tokens} & \textbf{CAPYBALA Tokens} & \textbf{Token Savings} & \textbf{OpenRouter Trace ID} \\
+\textbf{Frontier Model Endpoint} & \textbf{Baseline Tokens} & \textbf{Protected Tokens} & \textbf{Token Reduction} & \textbf{OpenRouter Trace ID} \\
 \midrule
-Google DeepMind (\texttt{gemini-4-argon}) & 1,296 & \textbf{685} & \textbf{47.1\%} & \texttt{gen-1793607621} \\
-Anthropic (\texttt{claude-sonnet-5.5}) & 2,051 & \textbf{1,225} & \textbf{40.3\%} & \texttt{gen-1793607998} \\
+Google DeepMind (\texttt{gemini-4-argon}) & 1,296 & \textbf{685} & \textbf{47.1\% ($-611$)} & \texttt{gen-1793607621} \\
+Anthropic (\texttt{claude-sonnet-5.5}) & 2,051 & \textbf{1,225} & \textbf{40.3\% ($-826$)} & \texttt{gen-1793607998} \\
 \bottomrule
 \end{tabular}%
 }
