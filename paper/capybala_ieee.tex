@@ -82,27 +82,26 @@ Despite empirical milestones on curated benchmarks, production deployment of aut
 \node[gate] (dec) at (13.2, 0) {$v_t < 0.70$?};
 \node[env] (exec) at (16.6, 0) {Terminal Shell\\Execute Action $a_t$};
 
-% Row 2: Deadlock Recovery Pipeline (y = -2.0)
-\node[heal] (prune) at (9.9, -2.0) {Atomic Pruning\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
-\node[box] (pivot) at (4.5, -2.0) {Doctor Pivot\\Directional Surgery};
+% Row 2: Deadlock Recovery Pipeline (y = -1.9)
+\node[heal] (prune) at (9.9, -1.9) {Atomic Pruning\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
+\node[box] (pivot) at (4.5, -1.9) {Doctor Pivot\\Directional Surgery};
 
 % Forward Pipeline Connections (Straight Line Flow)
 \draw[arr] (llm) -- (canon);
 \draw[arr] (canon) -- (t1);
 \draw[arr] (t1) -- (t2);
 \draw[arr] (t2) -- (dec);
-\draw[arr] (dec) -- node[above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {No (Healthy)} (exec);
+\draw[arr] (dec) -- node[midway, above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {No (Healthy)} (exec);
 
 % Decision Branch: Deadlock Interception (Straight Drop to Recovery Pipeline)
-\draw[arr] (dec.south) -- (13.2, -2.0) -- node[above, font=\footnotesize\bfseries, text=red!70!black, fill=white, inner sep=2pt] {Yes (Deadlock)} (prune.east);
+\draw[arr] (dec.south) -- (13.2, -1.9) -- node[midway, above, font=\footnotesize\bfseries, text=red!70!black, fill=white, inner sep=2pt] {Yes (Deadlock)} (prune.east);
 \draw[arr] (prune) -- (pivot);
 
 % Recovery Injection into Agent Active Memory (Injection Up to LLM)
-\draw[arr] (pivot.west) -- (0, -2.0) -- node[left, font=\footnotesize\bfseries, text=blue!80!black, fill=white, inner sep=2pt] {Doctor Surgery} (llm.south);
+\draw[arr] (pivot.west) -- (0, -1.9) -- node[midway, left, font=\footnotesize\bfseries, text=blue!80!black, fill=white, inner sep=2pt] {Doctor Surgery} (llm.south);
 
-% Healthy Execution Feedback Loop (Dedicated Lowest Rail at y = -3.4)
-\draw[arr] (exec.south) -- (16.6, -3.4) -- (-0.8, -3.4) -- (-0.8, 0) -- (llm.west)
-    node[pos=0.35, above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {Observation $o_t$ (Uninterrupted Environment Feedback)};
+% Healthy Execution Feedback Loop (Dedicated Lowest Rail at y = -3.3, routing cleanly around llm)
+\draw[arr] (exec.south) -- (16.6, -3.3) -- node[midway, above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {Observation $o_t$ (Uninterrupted Environment Feedback)} (-2.2, -3.3) -- (-2.2, 0) -- (llm.west);
 
 \end{tikzpicture}%
 }
@@ -188,44 +187,49 @@ We categorize deadlocks into three structural classes:
 
 \begin{figure}[!t]
 \centering
-\resizebox{0.88\columnwidth}{!}{%
-\begin{tikzpicture}[scale=1.1]
-    % Coordinate Axes with generous clearance
-    \draw[->, thick, gray!60] (-2.8,0) -- (3.3,0) node[below right, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Re}(\mathbf{u})$};
-    \draw[->, thick, gray!60] (0,-2.8) -- (0,3.1) node[above left, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Im}(\mathbf{u})$};
+\resizebox{0.86\columnwidth}{!}{%
+\begin{tikzpicture}[scale=1.05]
+    % Coordinate Axes (Perfect Symmetry [-2.7, 2.7])
+    \draw[->, thick, gray!60] (-2.7,0) -- (2.8,0) node[below right, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Re}(\mathbf{u})$};
+    \draw[->, thick, gray!60] (0,-2.7) -- (0,2.8) node[above left, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Im}(\mathbf{u})$};
     
-    % Unit Hypersphere Projection Circle (Boundary S^{d-1})
+    % Unit Hypersphere Projection Circle (Boundary S^{d-1}, R = 2.2cm)
     \draw[dashed, blue!50, thick] (0,0) circle (2.2cm);
-    % Quadrant II: completely empty, ideal placement for Manifold label
+    
+    % Quadrant II: Manifold Label (Clean White Fill Box)
     \node[blue!80!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=blue!40, rounded corners=2pt] 
         at (-1.4, 1.7) {Manifold $S^{d-1}$};
     
     % Unassisted Agent Trajectory (Inward Logarithmic Spiral into Attractor Well)
-    \draw[thick, red!75!black, dashed, domain=0:13.5, samples=220, smooth, variable=\t] 
-        plot ({2.2*exp(-0.24*\t)*cos(\t*72)}, {2.2*exp(-0.24*\t)*sin(\t*72)});
+    \draw[thick, red!75!black, dashed, domain=0:1440, samples=300, smooth, variable=\t] 
+        plot ({2.2*exp(-0.0016*\t)*cos(\t)}, {2.2*exp(-0.0016*\t)*sin(\t)});
     
-    % Trapping Basin Center (Attractor Well) in Quadrant III with generous clearance
+    % Attractor Basin Center (Red Point at Origin)
     \filldraw[red!90] (0,0) circle (3pt);
+    
+    % Quadrant III: Attractor Basin Callout (Pointing directly to center)
     \node[red!85!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=red!40, rounded corners=2pt] (basin)
-        at (-1.6, -1.0) {Attractor Basin ($v_t \to 0$)};
-    \draw[->, red!80!black, thick] (basin.east) -- (-0.15, -0.15);
+        at (-1.4, -1.6) {Attractor Basin ($v_t \to 0$)};
+    \draw[->, red!80!black, thick] (basin.north east) -- (-0.1, -0.1);
     
-    % Interception Point (Quadrant I)
-    \coordinate (inter) at (0.95, 0.45);
-    \filldraw[orange!90!black] (inter) circle (3pt);
-    % Label placed strictly with callout pointer to eliminate axis and vector overlap
+    % Interception Point on Spiral at theta = 405 deg (r = 1.15, Quadrant I)
+    \coordinate (inter) at (0.81, 0.81);
+    \filldraw[orange!90!black] (inter) circle (3.5pt);
+    
+    % Quadrant IV: Interception Label Callout (Clear open space below horizontal axis)
     \node[orange!90!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=orange!50, rounded corners=2pt] (interlabel)
-        at (2.0, 0.35) {Interception ($v_t < 0.70$)};
-    \draw[->, orange!80!black, thin] (interlabel.west) -- (inter);
+        at (1.5, -1.1) {Interception ($v_t < 0.70$)};
+    \draw[->, orange!80!black, thick] (interlabel.north) -- (0.83, 0.73);
     
-    % Doctor Pivot Outward Perturbation Vector (Shoots sharply Upward & Outward)
+    % Doctor Pivot Outward Perturbation Vector (Shoots sharply Upward & Outward to boundary)
+    \coordinate (pivoted) at (1.05, 1.75);
     \draw[-{Stealth[length=3.5mm]}, line width=1.6pt, purple!85!black] 
-        (inter) -- (1.75, 1.85) coordinate (pivoted)
-        node[midway, above left=1pt, fill=white, inner sep=2pt, font=\scriptsize\bfseries] {Doctor Pivot $\Delta \mathbf{u}$};
+        (inter) -- (pivoted)
+        node[pos=0.55, left=2pt, fill=white, inner sep=2pt, draw=purple!30, rounded corners=2pt, font=\scriptsize\bfseries, text=purple!90!black] {Doctor Pivot $\Delta \mathbf{u}$};
     
-    % Recovered Trajectory (Smooth Escaping Curve, y >= 1.4cm well above the horizontal axis)
+    % Recovered Trajectory (Smooth Escaping Curve along Boundary, well inside [0, 2.4])
     \draw[line width=1.6pt, green!60!black] 
-        (pivoted) .. controls (2.1, 2.1) and (2.5, 1.9) .. (2.6, 1.4) 
+        (pivoted) .. controls (1.4, 2.1) and (1.8, 1.8) .. (1.9, 1.2) 
         node[above right=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=green!40, rounded corners=2pt] {Resolved Trajectory};
 
 \end{tikzpicture}%
