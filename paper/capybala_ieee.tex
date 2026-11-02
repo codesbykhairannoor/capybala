@@ -13,7 +13,7 @@
 \usepackage{enumitem}
 \usepackage{url}
 \def\UrlBreaks{\do\/\do-}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, patterns}
 \usepackage{pgfplots}
@@ -29,17 +29,10 @@
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 \renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$~\textit{#1}}
 
-\definecolor{darkblue}{rgb}{0.0, 0.0, 0.54}
 \hypersetup{
     pdftitle={CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Coding Agents},
     pdfauthor={Khairan Noor Fadhlillah},
-    colorlinks=true,
-    linkcolor=darkblue,
-    filecolor=darkblue,
-    urlcolor=darkblue,
-    citecolor=darkblue,
-    breaklinks=true,
-    pdfborder={0 0 0}
+    breaklinks=true
 }
 
 \begin{document}
