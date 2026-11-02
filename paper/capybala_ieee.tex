@@ -258,7 +258,7 @@ with variance bounded by:
 For dimension $d = 1024$, the theoretical variance bound satisfies $\mathrm{Var} \le 1.953 \times 10^{-3}$.
 \end{proposition}
 \begin{IEEEproof}[Proof Sketch]
-By the Johnson-Lindenstrauss lemma and feature hashing variance bounds \cite{weinberger2009feature}, for independent Rademacher signs $\xi(f)$, the collision expectation vanishes across distinct features: $\mathbb{E}[\xi(f)\xi(f')] = 0$ for $f \neq f'$. Normalization induces a second-order delta-method Taylor expansion around $\|\tilde{\mathbf{u}}\|_2 \approx \sqrt{\mathbb{E}[\|\tilde{\mathbf{u}}\|_2^2]}$, yielding an $\mathcal{O}(1/d)$ Jensen bias term. Because cross-bucket covariance vanishes under 2-wise independent hashing, the variance decomposes as $\mathrm{Var}[\sum_j u_{1,j} u_{2,j}] \le \frac{1}{d} (1 + \cos^2\theta) \le \frac{2}{d}$.
+By the Johnson-Lindenstrauss lemma and feature hashing variance bounds \cite{weinberger2009feature}, for independent Rademacher signs $\xi(f)$, the collision expectation vanishes across distinct features: $\mathbb{E}[\xi(f)\xi(f')] = 0$ for $f \neq f'$. Normalization induces a second-order delta-method Taylor expansion around $\|\tilde{\mathbf{u}}\|_2 \approx \sqrt{\mathbb{E}[\|\tilde{\mathbf{u}}\|_2^2]}$, yielding an $\mathcal{O}(1/d)$ Jensen bias term. Because cross-bucket covariance vanishes under 2-wise independent hashing, the variance decomposes as $\mathrm{Var}[\sum_j u_{1,j} u_{2,j}] \le \frac{1}{d} (1 + \cos^2\theta) \le \frac{2}{d}$. In practice, standard cryptographic digest algorithms (such as MD5 or MurmurHash3) are employed as pseudo-random oracles following established machine learning hashing conventions \cite{weinberger2009feature}, providing uniform bucket dispersion and uncorrelated signs across features.
 \end{IEEEproof}
 
 \subsection{Semantic Velocity and Collapse Dynamics}
@@ -313,7 +313,7 @@ H(M) = 2.0 \cdot \frac{-\sum_{i=1}^S \sum_{j=1}^S p_{ij} \ln(p_{ij})}{\ln(\max(2
 where continuous vectors are mapped to $S = 64$ Voronoi partition centroids and $K$ denotes the number of observed transitions ($K \le 11$). Normalizing against the maximum attainable transition entropy $\ln(K)$ scales $H(M) \in [0, 2.0]$. A majority of recent failed steps ($\text{HasRecentFailures}()$) combined with a simultaneous collapse in velocity ($\bar{v}_t < \gamma_{\text{threshold}} = 0.70$) and normalized transition entropy ($H(M) < 1.50$) confirms the agent is trapped in an unproductive ergodic attractor basin, filtering out unconstrained exploratory steps.
 
 \subsection{Algorithmic Specification}
-Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize the twin engines of the CAPYBALA runtime: in-flight phase-space inspection and atomic context surgery.
+Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize the twin engines of the CAPYBALA runtime: in-flight phase-space inspection and atomic context surgery. In Algorithm \ref{alg:attractor_detection}, the predicate $\text{IsMutationPrimitive}(\tilde{a}_t)$ evaluates whether the action executes an in-place code modification (e.g., \texttt{edit\_file}, \texttt{write\_file}, \texttt{patch}, \texttt{git apply}, or stream editing \texttt{sed -i}), distinguishing active code development from passive observation commands (\texttt{cat}, \texttt{grep}, \texttt{head}, \texttt{ls}).
 
 \begin{algorithm}[!t]
 \caption{Continuous Phase-Space Trajectory Inspection}
@@ -327,7 +327,7 @@ Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize 
 \IF{$\text{IsMutationPrimitive}(\tilde{a}_t)$}
     \STATE $\mathbf{u}_t \leftarrow \text{ProjectToManifold}(\tilde{a}_t)$
     \STATE $\text{History}.\text{append}(\mathbf{u}_t)$
-    \RETURN $(\text{False}, \infty, \text{None})$ \COMMENT{Exempt code mutation; bypass attractor check}
+    \RETURN $(\text{False}, \infty, \text{None})$ \COMMENT{Exempt code mutation: edit\_file, write\_file, git apply}
 \ENDIF
 \IF{$\text{Tier1RingBufferCheck}(\tilde{a}_t) == \text{True}$}
     \RETURN $(\text{True}, 0.0, \text{``Direct Cycle Detected''})$ \COMMENT{Catches syntactic read/command loops}
@@ -485,7 +485,7 @@ Table \ref{tab:pattern_breakdown} breaks down the caught stuck trajectories acro
 To evaluate financial and computational savings, we tracked token consumption across unassisted baseline agents versus CAPYBALA-protected sessions. Table \ref{tab:cost_savings} presents the empirical results.
 
 \begin{table}[!t]
-\caption{Cumulative Token and Cost Reduction Across 200 Trajectory Replay Evaluations (calculated using published OpenRouter foundation model list pricing with an empirical 60/40 prompt-completion sequence weighting; Gemini 4 Argon and Claude Sonnet 5.5 share parity pricing at \$2.00/\$10.00 per million tokens)}
+\caption{Cumulative Token and Cost Reduction Across 200 Trajectory Replay Evaluations (calculated using published OpenRouter foundation model list pricing with an empirical 60/40 prompt-completion sequence weighting; Gemini 4 Argon and Claude Sonnet 5.5 share parity pricing at \$2.00/\$10.00 per million tokens; aggregate reduction is 42.84\%, yielding 42.8\% to 42.9\% across tiers due to integer rounding)}
 \label{tab:cost_savings}
 \centering
 \resizebox{\columnwidth}{!}{%
@@ -639,7 +639,7 @@ Consequently, legitimate edit-and-test iteration proceeds unhindered. A false al
 \subsection{Threats to Validity}
 \textbf{Construct Validity}: The definition of cognitive deadlocks relies on observed behavioral cycles and persistent failure codes. This aligns with empirical findings by Xia et al. \cite{xia2025demystifying}, who demonstrated that multi-turn autonomous coding agents suffer from severe tool-calling complexity, repetitive commands, and compounding error cascades. Silent logical deadlocks (where an agent generates syntactically valid code that does not satisfy user intent) fall outside the scope of terminal trajectory supervision.
 
-\textbf{Internal Validity}: Benchmark trajectories were derived from authentic SWE-bench and Nebius runs. Variability in model generation temperature could alter specific phrasing; however, feature hashing over subword n-grams ensures robustness against minor token shifts.
+\textbf{Internal Validity}: Benchmark trajectories were derived from authentic SWE-bench and Nebius runs. While our offline replay evaluations encompass 200 trajectories and 3,209 execution turns, live online coding duels (Table \ref{tab:live_duels}) represent qualitative exploratory probes ($n=1$ per endpoint) due to commercial API costs; large-scale multi-trial online evaluations remain future work. Variability in model generation temperature could alter specific phrasing; however, feature hashing over subword n-grams ensures robustness against minor token shifts.
 
 \textbf{External Validity}: Our evaluations span Python repositories (Django, SymPy, Scikit-learn). Extending CAPYBALA to compiled languages (C++, Rust) requires incorporating compiler diagnostic parsers into the Tier 1 canonicalization module.
 
