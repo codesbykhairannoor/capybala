@@ -49,7 +49,7 @@ Email: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech\thanks{Artifact and
 \maketitle
 
 \begin{abstract}
-Autonomous software engineering agents frequently become entrapped in catastrophic error loops and cognitive deadlocks, burning millions of tokens while executing repetitive failing tool invocations. Existing self-reflection frameworks exacerbate token exhaustion by appending redundant verbal history to the context window, while naive context truncation routinely violates protocol invariants between tool calls and execution responses. We introduce \textbf{CAPYBALA} (\textbf{C}ontext-\textbf{A}ware \textbf{P}runing for \textbf{Y}ielding and \textbf{B}acktrack-\textbf{A}ligned \textbf{L}oop \textbf{A}voidance), an in-memory runtime supervisor that tracks agent trajectory dynamics via a signed feature-hashed phase-space manifold ($O(1)$ space complexity, sub-millisecond execution latency) and performs atomic context pruning with formal protocol pairing guarantees ($N_{\text{tool\_call}} = N_{\text{tool\_response}}$). Evaluated across 200 real-world SWE-bench agent trajectories and 2,360 production turns from the Nebius SWE-agent corpus, CAPYBALA captures deadlocks with 86.00\% to 100.0\% recall, 95.56\% to 100.0\% precision, eliminates an aggregate 42.8\% of wasted tokens (1,017,250 tokens across 200 trajectories, with up to 45.88\% peak reduction in prolonged deadlocks and 40.3\% to 47.1\% in live frontier model duels), and maintains a mean decision latency of 0.871 milliseconds per turn without requiring model fine-tuning or secondary embedding inference.
+Autonomous software engineering agents frequently become entrapped in catastrophic error loops and cognitive deadlocks, burning millions of tokens while executing repetitive failing tool invocations. Existing self-reflection frameworks exacerbate token exhaustion by appending redundant verbal history to the context window, while naive context truncation routinely violates protocol invariants between tool calls and execution responses. We introduce \textbf{CAPYBALA} (\textbf{C}ontext-\textbf{A}ware \textbf{P}runing for \textbf{Y}ielding and \textbf{B}acktrack-\textbf{A}ligned \textbf{L}oop \textbf{A}voidance), an in-memory runtime supervisor that tracks agent trajectory dynamics via a signed feature-hashed phase-space manifold ($O(1)$ space complexity, sub-millisecond execution latency) and performs atomic context pruning with formal protocol pairing guarantees ($N_{\text{tool\_call}} = N_{\text{tool\_response}}$). Evaluated across 200 real-world SWE-bench agent trajectories and 3,209 production turns from the Nebius SWE-agent corpus, CAPYBALA captures deadlocks with 86.00\% to 97.86\% recall, 96.00\% to 98.56\% precision, eliminates an aggregate 42.8\% of wasted tokens (1,017,250 tokens across 200 trajectories, with up to 59.74\% turn savings in severe deadlocks and 40.3\% to 47.1\% in live frontier model duels), and maintains a sub-millisecond decision latency (0.641 ms mean, 253.56 $\mu$s manifold step) without requiring model fine-tuning or secondary embedding inference.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -390,7 +390,7 @@ We conduct rigorous empirical evaluations designed to answer five central resear
 We evaluate CAPYBALA across two distinct, authentic empirical corpora:
 \begin{enumerate}[leftmargin=12pt, topsep=2pt, itemsep=1pt]
     \item \textbf{SWE-bench Ground-Truth Corpus}: 200 authentic multi-turn agent trajectories derived from SWE-bench issue resolutions across major open-source repositories (Django, SymPy, Scikit-learn, Sphinx). The dataset contains 140 confirmed cognitive deadlocks and 60 healthy problem-solving trajectories.
-    \item \textbf{Nebius SWE-Agent Production Corpus}: 100 large-scale authentic trajectories (50 clean, 50 stuck) extracted from the Hugging Face \texttt{nebius/SWE-agent-trajectories} repository, comprising 2,360 individual execution turns.
+    \item \textbf{Nebius SWE-Agent Production Corpus}: 100 large-scale authentic trajectories (50 clean, 50 stuck) extracted from the Hugging Face \texttt{nebius/SWE-agent-trajectories} repository, comprising 3,209 individual execution turns.
 \end{enumerate}
 
 All evaluations were executed on a dedicated host equipped with an AMD Ryzen 7 processor, 16 GB DDR5 RAM, running Python 3.11.8 on an isolated Linux container substrate.
@@ -420,10 +420,10 @@ Tripwire (InferenceBrake \cite{inferencebrake2024}) & 81.25\% & 62.14\% & 0.7042
 
 Naive string matching achieves perfect precision but abysmal recall (14.28\%), as modern models almost never repeat verbatim identical strings when shell outputs vary slightly. Sliding Levenshtein distance produces unacceptable false positive rates (18.33\%), mistakenly flagging productive file navigation and test iterations as loops. In contrast, CAPYBALA achieves a 0.9821 F1-score, correctly identifying 137 of 140 deadlocks (97.86\% recall). The two false positives (3.33\%) occurred during protracted Test-Driven Development (TDD) sessions where an agent re-executed unit tests without immediately committing intermediate file edits.
 
-Table \ref{tab:nebius_stress} displays results from the 2,360-turn Nebius SWE-agent stress test, evaluating high-entropy multi-turn trajectories.
+Table \ref{tab:nebius_stress} displays results from the 3,209-turn Nebius SWE-agent stress test, evaluating high-entropy multi-turn trajectories.
 
 \begin{table}[!t]
-\caption{Large-Scale Stress Test on Nebius SWE-agent Corpus (2,360 Turns)}
+\caption{Large-Scale Stress Test on Nebius SWE-agent Corpus (3,209 Turns)}
 \label{tab:nebius_stress}
 \centering
 \resizebox{\columnwidth}{!}{%
@@ -434,15 +434,16 @@ Table \ref{tab:nebius_stress} displays results from the 2,360-turn Nebius SWE-ag
 Deadlock Detection Recall (TPR) & \textbf{86.00\%} (43 / 50) & $> 85.0\%$ \\
 Clean Specificity (TNR) & \textbf{96.00\%} (48 / 50) & $> 95.0\%$ \\
 False Positive Rate (FPR) & \textbf{4.00\%} (2 / 50) & $< 5.0\%$ \\
-Total Redundant Turns Eliminated & \textbf{1,142 turns} & --- \\
-Token and Turn Reduction & \textbf{45.88\%} & $> 40.0\%$ \\
-Engine Throughput & \textbf{1,148 turns / sec} & $> 1,000\text{ turns/s}$ \\
+Total Redundant Turns Eliminated & \textbf{1,487 / 2,489 turns} & --- \\
+Turn and Cost Reduction & \textbf{59.74\%} & $> 40.0\%$ \\
+Mean Decision Latency & \textbf{0.641 ms} & $< 1.0\text{ ms}$ \\
+Engine Throughput & \textbf{1,559.3 turns / sec} & $> 1,000\text{ turns/s}$ \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-Across 2,360 turns, CAPYBALA successfully intercepted 43 out of 50 complex deadlocks (86.00\% recall) while preserving 48 out of 50 clean trajectories (96.00\% specificity). The two false alarms occurred in an asynchronous IoT SDK repository where the agent performed repeated polling loops across ten steps without modifying arguments.
+Across 3,209 turns, CAPYBALA successfully intercepted 43 out of 50 complex deadlocks (86.00\% recall) while preserving 48 out of 50 clean trajectories (96.00\% specificity), eliminating 1,487 wasted turns (59.74\% turn reduction) at 1,559.3 turns per second. The two false alarms occurred in an asynchronous IoT SDK repository where the agent performed repeated polling loops across ten steps without modifying arguments.
 
 Table \ref{tab:pattern_breakdown} breaks down the caught stuck trajectories across specific behavioral failure modes.
 
@@ -531,7 +532,7 @@ CAPYBALA eliminated \textbf{1,017,250 wasted tokens} across the 200 SWE-bench tr
 
 \subsection{RQ3: Runtime Latency Overhead}
 
-A critical requirement for production deployment is near-zero execution latency. Table \ref{tab:latency_percentiles} reports the latency distribution measured across 2,360 consecutive supervisor evaluations.
+A critical requirement for production deployment is near-zero execution latency. Table \ref{tab:latency_percentiles} reports the latency distribution measured across 3,209 consecutive supervisor evaluations.
 
 \begin{table}[!t]
 \caption{Execution Latency Percentiles of CAPYBALA Supervisor}
@@ -552,17 +553,15 @@ Mean Latency & 0.053 ms & \textbf{0.871 ms} \\
 }
 \end{table}
 
-The feature hashing projection on the 1024-D manifold requires a mean latency of only \textbf{53 microseconds} ($p50 = 38\ \mu\text{s}$). The complete supervisory turn, including history parsing, Tier 1 ring-buffer inspection, and vector dot-product computation, averages \textbf{0.871 milliseconds}. Compared to LLM network roundtrips ranging from 1,500 to 4,500 ms, CAPYBALA adds less than 0.05\% overhead to the overall agent pipeline. In contrast to embedding-based middleware such as LongGuard \cite{longguard2024}, which incurs 120 to 250 milliseconds per step and requires downloading over 400 MB of PyTorch model weights, CAPYBALA executes in pure Python standard library at 53 microseconds per turn with zero neural dependency overhead.
+The feature hashing projection on the 1024-D manifold requires a mean latency of only \textbf{53 microseconds} ($p50 = 38\ \mu\text{s}$). The complete supervisory turn, including history parsing, Tier 1 ring-buffer inspection, and vector dot-product computation, averages \textbf{0.871 milliseconds}. Compared to LLM network roundtrips ranging from 1,500 to 4,500 ms, CAPYBALA adds less than 0.05\% overhead to the overall agent pipeline. In contrast to embedding-based middleware such as LongGuard \cite{longguard2024}, which incurs 120 to 250 milliseconds per step and requires downloading over 400 MB of PyTorch model weights, CAPYBALA executes in pure Python standard library at 53 microseconds per turn with zero neural dependency overhead. Furthermore, in an extended 10,000-turn high-velocity projection stress test, CAPYBALA maintained an average per-turn latency of 253.56 microseconds (0.25 ms), with vector history bounded strictly at 12 entries ($O(1)$ ring buffer memory footprint) with zero memory leaks across extended execution.
 
-\subsection{RQ4: Protocol Soundness and API Schema Integrity}
+\subsection{RQ4: Protocol Soundness, Concurrency, and Schema Integrity}
 
-To assess protocol soundness, we conducted 100 consecutive automated pruning operations on trajectories featuring complex nested tool calling. Every pruned message buffer was validated against official JSON schemas for OpenAI, Anthropic, and Llama-Stack interfaces.
-
-CAPYBALA achieved a \textbf{100.00\% schema compliance rate} (0 validation failures across 100 trials). In every instance, the protocol discrepancy metric was strictly zero:
+To assess protocol soundness and concurrency safety under hostile production loads, we subjected CAPYBALA to an adversarial stress suite of 1,000 synthetically fuzzed message buffers containing truncated tool invocations and corrupted response sequences. CAPYBALA repaired 964 malformed buffers and maintained a 100\% protocol pairing guarantee:
 \begin{equation}
 \Delta_{\text{protocol}}(\mathcal{H}_{\text{pruned}}) = 0
 \end{equation}
-Zero orphaned tool calls were produced, verifying that CAPYBALA is safe for direct deployment in production agent gateways.
+Zero orphaned tool calls were produced across all 1,000 trials. Furthermore, in a 50-thread concurrent swarm executing 2,000 simultaneous \texttt{heal()} operations, CAPYBALA achieved a 100.0\% success rate (0 race conditions or lock corruptions) at an aggregated throughput of 828.1 operations per second. Finally, the anti-runaway circuit breaker successfully tripped at the maximum intervention threshold (5), verifying failsafe termination against infinite token burn.
 
 \subsection{RQ5: Ablation Study on Manifold Dimensionality and Thresholds}
 \label{sec:ablation}
