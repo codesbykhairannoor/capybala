@@ -246,10 +246,11 @@ Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize 
 \STATE $\tilde{a}_t \leftarrow \text{Canonicalize}(\text{StripANSI}(a_t))$
 \IF{$\text{IsMutationPrimitive}(\tilde{a}_t)$}
     \STATE $\mathbf{u}_t \leftarrow \text{ProjectToManifold}(\tilde{a}_t)$
-    \STATE $\text{History}.\text{append}(\mathbf{u}_t)$; \textbf{return} $(\text{False}, 1.0, \text{None})$
+    \STATE $\text{History}.\text{append}(\mathbf{u}_t)$
+    \STATE \textbf{return} $(\text{False}, 1.0, \text{None})$
 \ENDIF
 \IF{$\text{Tier1RingBufferCheck}(\tilde{a}_t) == \text{True}$}
-    \textbf{return} $(\text{True}, 0.0, \text{"Direct Cycle Detected"})$
+    \STATE \textbf{return} $(\text{True}, 0.0, \text{"Direct Cycle Detected"})$
 \ENDIF
 \STATE $\mathbf{u}_t \leftarrow \text{ProjectToManifold}(\tilde{a}_t)$
 \STATE $v_t \leftarrow 1.0 - \langle \mathbf{u}_t, \mathbf{u}_{t-1} \rangle$
@@ -257,9 +258,9 @@ Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize 
 \STATE $\bar{v} \leftarrow \text{Mean}(\text{VelocityHistory}[-W:])$
 \STATE $H(M) \leftarrow \text{ComputeMarkovEntropy}(\text{VectorHistory}[-W:])$
 \IF{$\bar{v} < \gamma_{\text{threshold}}$ \AND $r_t \neq 0$ \AND $H(M) < 1.50$}
-    \textbf{return} $(\text{True}, v_t, \text{"Ergodic Attractor Collapse"})$
+    \STATE \textbf{return} $(\text{True}, v_t, \text{"Ergodic Attractor Collapse"})$
 \ENDIF
-\textbf{return} $(\text{False}, v_t, \text{None})$
+\STATE \textbf{return} $(\text{False}, v_t, \text{None})$
 \end{algorithmic}
 \end{algorithm}
 
@@ -280,7 +281,7 @@ Algorithms \ref{alg:attractor_detection} and \ref{alg:atomic_pruning} formalize 
 \ENDFOR
 \STATE $\text{Assert}(\Delta_{\text{protocol}}(\mathcal{H}_{\text{clean}}) == 0)$
 \STATE $\mathcal{H}_{\text{clean}}.\text{append}(\text{FormatDoctorTurn}(\mathcal{D}))$
-\textbf{return} $\mathcal{H}_{\text{clean}}$
+\STATE \textbf{return} $\mathcal{H}_{\text{clean}}$
 \end{algorithmic}
 \end{algorithm}
 
