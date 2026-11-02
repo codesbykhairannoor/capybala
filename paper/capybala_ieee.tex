@@ -30,7 +30,7 @@
 \renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$~\textit{#1}}
 
 \hypersetup{
-    pdftitle={CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Coding Agents},
+    pdftitle={CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents},
     pdfauthor={Khairan Noor Fadhlillah},
     breaklinks=true
 }
@@ -38,7 +38,7 @@
 \begin{document}
 \flushbottom
 
-\title{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Coding Agents}
+\title{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}
 
 \author{Khairan~Noor~Fadhlillah%
 \thanks{K. N. Fadhlillah is with the Department of Information Systems, Universitas Ary Ginanjar, Jakarta 12560, Indonesia (e-mail: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech). Note: Universitas Ary Ginanjar was established as ESQ Business School.}%
@@ -136,7 +136,7 @@ This paper presents the following explicit contributions:
 \subsection{Autonomous Software Engineering Agents}
 The deployment of language models for automated repository repair was formalized by Jimenez et al. \cite{jimenez2024swebench} via the SWE-bench benchmark, requiring agents to resolve genuine GitHub issues through bash command execution and unified diff generation. SWE-agent \cite{yang2024sweagent} demonstrated that custom Agent-Computer Interfaces (ACIs), including file paginators and directory viewers, significantly enhance baseline model capabilities. 
 
-However, empirical investigations by Xia et al. \cite{xia2025demystifying} revealed that multi-turn autonomous coding agents suffer from compounding tool-calling complexity: repetitive commands, command drift, and error cascades frequently derail agent progress. CAPYBALA functions as an orthogonal runtime layer situated between the agent reasoning core and the target execution environment.
+However, empirical investigations by Xia et al. \cite{xia2025demystifying} revealed that multi-turn autonomous software engineering agents suffer from compounding tool-calling complexity: repetitive commands, command drift, and error cascades frequently derail agent progress. CAPYBALA functions as an orthogonal runtime layer situated between the agent reasoning core and the target execution environment.
 
 \subsection{Attention Degradation and Context Management}
 Transformer self-attention architectures \cite{vaswani2017attention} possess finite context capacities. Liu et al. \cite{liu2024lost} proved that retrieval performance plummets when relevant contextual keys are located within the interior 20\% to 80\% of the prompt. When an agent loops across five consecutive turns of 200-line terminal outputs, this noise pushes the foundational problem instructions into the blind zone. 
@@ -637,11 +637,11 @@ A natural concern in automated loop detection is the risk of penalizing legitima
 Consequently, legitimate edit-and-test iteration proceeds unhindered. A false alarm can only occur if an agent executes consecutive failing test runs across multiple steps without performing intermediate code edits, as observed in the two false positives reported in RQ1.
 
 \subsection{Threats to Validity}
-\textbf{Construct Validity}: The definition of cognitive deadlocks relies on observed behavioral cycles and persistent failure codes. This aligns with empirical findings by Xia et al. \cite{xia2025demystifying}, who demonstrated that multi-turn autonomous coding agents suffer from severe tool-calling complexity, repetitive commands, and compounding error cascades. Silent logical deadlocks (where an agent generates syntactically valid code that does not satisfy user intent) fall outside the scope of terminal trajectory supervision.
+\textbf{Construct Validity}: The definition of cognitive deadlocks relies on observed behavioral cycles and persistent failure codes. This aligns with empirical findings by Xia et al. \cite{xia2025demystifying}, who demonstrated that multi-turn autonomous software engineering agents suffer from severe tool-calling complexity, repetitive commands, and compounding error cascades. Silent logical deadlocks (where an agent generates syntactically valid code that does not satisfy user intent) fall outside the scope of terminal trajectory supervision.
 
 \textbf{Internal Validity}: Benchmark trajectories were derived from authentic SWE-bench and Nebius runs. While our offline replay evaluations encompass 200 trajectories and 3,209 execution turns, live online coding duels (Table \ref{tab:live_duels}) represent qualitative exploratory probes ($n=1$ per endpoint) due to commercial API costs; large-scale multi-trial online evaluations remain future work. Variability in model generation temperature could alter specific phrasing; however, feature hashing over subword n-grams ensures robustness against minor token shifts.
 
-\textbf{External Validity}: Our evaluations span Python repositories (Django, SymPy, Scikit-learn). Extending CAPYBALA to compiled languages (C++, Rust) requires incorporating compiler diagnostic parsers into the Tier 1 canonicalization module.
+\textbf{External Validity and Generalizability Beyond Software Engineering}: Our empirical evaluations focus on software engineering benchmarks across Python repositories (Django, SymPy, Scikit-learn). Extending CAPYBALA to compiled languages (C++, Rust) requires incorporating compiler diagnostic parsers into the Tier 1 canonicalization module. Crucially, the mathematical foundations of CAPYBALA---the signed 1024-D manifold projection, continuous semantic velocity $v_t$, Voronoi Markov entropy, and protocol pairing surgery ($\Delta_{\text{protocol}} = 0$)---are strictly domain-agnostic. The supervisor operates over arbitrary tool-calling action strings and structured schema payloads without domain-specific neural weights. Consequently, CAPYBALA generalizes naturally to other multi-turn agentic workflows prone to cognitive deadlocks, including autonomous web browsing agents (e.g., oscillating pagination loops or recurring authentication traps), automated DevOps deployment pipelines (e.g., container restart oscillations and repetitive infrastructure polling), and SQL data-analytics agents (e.g., cyclic query reformulation under persistent syntax exceptions). To facilitate widespread cross-domain deployment, the open-source CAPYBALA distribution incorporates native middleware adapters for major agentic frameworks, including LangChain, CrewAI, AutoGen, and Llama Stack.
 
 \subsection{Open Science, Artifact, and Data Availability}
 To support verifiable scientific inquiry, reproducibility, and rigorous peer scrutiny, all research artifacts associated with this work are permanently and publicly accessible:
@@ -658,7 +658,7 @@ To support verifiable scientific inquiry, reproducibility, and rigorous peer scr
 
 \section{Conclusion}
 
-We presented CAPYBALA, a lightweight, deterministic runtime supervisor that eliminates cognitive deadlocks and ergodic attractors in autonomous coding agents. By projecting agent action sequences into a 1024-dimensional signed feature-hashed phase-space manifold, CAPYBALA detects semantic velocity collapse in under one millisecond without calling secondary LLM judges. Through atomic context surgery and protocol pairing guarantees, CAPYBALA prevents financial waste, preserves KV cache prefixes, and achieves an F1-score of 0.9821 on benchmark SWE-bench trajectories (with 97.86\% recall, 98.56\% precision, and 96.67\% clean specificity, while maintaining 86.00\% recall and 95.56\% precision on the 3,209-turn Nebius stress corpus). Future research will explore decentralized multi-agent synchronization and continuous manifold learning for distributed agent clusters.
+We presented CAPYBALA, a lightweight, deterministic runtime supervisor that eliminates cognitive deadlocks and ergodic attractors in autonomous software engineering agents. By projecting agent action sequences into a 1024-dimensional signed feature-hashed phase-space manifold, CAPYBALA detects semantic velocity collapse in under one millisecond without calling secondary LLM judges. Through atomic context surgery and protocol pairing guarantees, CAPYBALA prevents financial waste, preserves KV cache prefixes, and achieves an F1-score of 0.9821 on benchmark SWE-bench trajectories (with 97.86\% recall, 98.56\% precision, and 96.67\% clean specificity, while maintaining 86.00\% recall and 95.56\% precision on the 3,209-turn Nebius stress corpus). Future research will explore decentralized multi-agent synchronization and continuous manifold learning for distributed agent clusters.
 
 \section*{Declaration of Generative AI and Human-AI Collaborative Methodology}
 In strict alignment with IEEE and ACM publication ethics guidelines on the transparent disclosure of artificial intelligence systems in scientific research, the author explicitly articulates the human-AI collaborative methodology utilized throughout this work:
