@@ -75,3 +75,15 @@ htmlcov/
 *.zip
 *.tar.gz
 
+# Research Paper Manuscripts & LaTeX Drafts
+paper/
+*.tex
+*.bib
+*.cls
+*.sty
+*.bbl
+*.blg
+*.aux
+*.out
+*.synctex.gz
+
