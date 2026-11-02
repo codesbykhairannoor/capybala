@@ -16,6 +16,7 @@
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, patterns}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\hyphenation{Context-Aware Backtrack-Aligned}
 
 \newtheorem{definition}{Definition}
 \newtheorem{theorem}{Theorem}
@@ -37,9 +38,10 @@
 \author{
 \IEEEauthorblockN{Khairan Noor Fadhlillah}
 \IEEEauthorblockA{\textit{Department of Information Systems} \\
-\textit{Universitas Ary Ginanjar}\\
+\textit{Universitas Ary Ginanjar} \\
 Jakarta, Indonesia \\
-khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech}
+khairan.noor.f@students.esqbs.ac.id \\
+dev@khairan.tech}
 }
 
 \maketitle
@@ -60,6 +62,7 @@ Despite empirical milestones on curated benchmarks, production deployment of aut
 
 \begin{figure*}[t]
 \centering
+\resizebox{0.95\textwidth}{!}{
 \begin{tikzpicture}[
     node distance=1.1cm and 1.2cm,
     box/.style={rectangle, draw=black!70, rounded corners=3pt, fill=blue!8, text centered, minimum height=0.9cm, text width=2.4cm, font=\small},
@@ -96,6 +99,7 @@ Despite empirical milestones on curated benchmarks, production deployment of aut
 \draw[arr] (exec) -| node[near start, below, font=\footnotesize] {Observation $o_t$} (llm);
 
 \end{tikzpicture}
+}
 \caption{The modular runtime architecture of CAPYBALA. Proposed agent tool calls pass sequentially through canonicalization, Tier 1 exact cycle detection, and Tier 2 continuous 1024-D manifold evaluation. When semantic velocity collapses ($v_t < 0.70$), CAPYBALA intercepts execution, executes atomic context pruning with zero protocol orphans ($\Delta_{\text{protocol}} = 0$), and injects a directional Doctor Pivot into active memory.}
 \label{fig:pipeline_architecture}
 \end{figure*}
@@ -177,6 +181,7 @@ We categorize deadlocks into three structural classes:
 
 \begin{figure}[htbp]
 \centering
+\resizebox{0.85\columnwidth}{!}{
 \begin{tikzpicture}[scale=0.95]
     % Coordinate Axes
     \draw[->, thick, gray!60] (-2.5,0) -- (2.5,0) node[right, font=\footnotesize] {$\text{Re}(\mathbf{u})$};
@@ -208,6 +213,7 @@ We categorize deadlocks into three structural classes:
         node[right, font=\scriptsize] {Resolved};
 
 \end{tikzpicture}
+}
 \caption{Continuous 2D projection of agent trajectories on the unit phase-space manifold $S^{d-1}$. Unprotected agents collapse into a localized attractor well (red dashed line, $v_t \to 0$). CAPYBALA detects velocity collapse, applies an atomic rollback, and executes an orthogonal Doctor Pivot jump (purple vector), restoring forward exploratory momentum (green solid line).}
 \label{fig:phase_space_spiral}
 \end{figure}
@@ -254,7 +260,10 @@ Commercial LLM APIs mandate strict structural symmetry between tool requests and
 
 Let $\mathcal{C}(\mathcal{H})$ be the set of generated tool call IDs in context $\mathcal{H}$, and let $\mathcal{R}(\mathcal{H})$ be the set of resolved tool response IDs. We define the Protocol Discrepancy metric $\Delta_{\text{protocol}}$:
 \begin{equation}
-\Delta_{\text{protocol}}(\mathcal{H}) = |\mathcal{C}(\mathcal{H}) \setminus \mathcal{R}(\mathcal{H})| + |\mathcal{R}(\mathcal{H}) \setminus \mathcal{C}(\mathcal{H})|
+\begin{split}
+\Delta_{\text{protocol}}(\mathcal{H}) ={} & |\mathcal{C}(\mathcal{H}) \setminus \mathcal{R}(\mathcal{H})| \\
+& + |\mathcal{R}(\mathcal{H}) \setminus \mathcal{C}(\mathcal{H})|
+\end{split}
 \end{equation}
 
 \begin{invariant}[Zero Protocol Discrepancy Invariant]
@@ -372,6 +381,7 @@ Table \ref{tab:detection_performance} summarizes the classification performance 
 \caption{Classification Performance on SWE-bench Trajectories}
 \label{tab:detection_performance}
 \centering
+\resizebox{\columnwidth}{!}{
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Method} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{False Positives} \\
@@ -383,6 +393,7 @@ Tripwire (InferenceBrake \cite{inferencebrake2024}) & 81.25\% & 62.14\% & 0.7042
 \textbf{CAPYBALA (Ours)} & \textbf{100.0\%} & \textbf{100.0\%} & \textbf{1.0000} & \textbf{0 / 60 (0.0\%)} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 Naive string matching achieves perfect precision but abysmal recall (14.28\%), as modern models almost never repeat verbatim identical strings when shell outputs vary slightly. Sliding Levenshtein distance produces unacceptable false positive rates (18.33\%), mistakenly flagging productive file navigation and test iterations as loops. CAPYBALA achieves a perfect 1.0000 F1-score, correctly identifying all 140 deadlocks without misclassifying a single healthy trajectory.
@@ -440,6 +451,7 @@ To evaluate financial and computational savings, we tracked token consumption ac
 \caption{Cumulative Token and Cost Reduction Across 200 Evaluations}
 \label{tab:cost_savings}
 \centering
+\resizebox{\columnwidth}{!}{
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model Tier} & \textbf{Baseline Cost} & \textbf{CAPYBALA Cost} & \textbf{Savings} \\
@@ -452,10 +464,12 @@ Llama 3.3 70B (OpenRouter) & \$0.428 & \$0.244 & \textbf{43.0\%} \\
 \textbf{Total Tokens Consumed} & 2,374,500 & 1,357,250 & \textbf{1,017,250} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
+\resizebox{\columnwidth}{!}{
 \begin{tikzpicture}
 \begin{axis}[
     ybar,
@@ -482,6 +496,7 @@ Llama 3.3 70B (OpenRouter) & \$0.428 & \$0.244 & \textbf{43.0\%} \\
 \legend{Unassisted Baseline, CAPYBALA Protected}
 \end{axis}
 \end{tikzpicture}
+}
 \caption{Empirical cost expenditure comparison across four foundation model tiers over 200 SWE-bench trajectories. CAPYBALA consistently eliminates 42.4\% to 43.0\% of financial waste by early interception of non-productive execution cycles.}
 \label{fig:cost_bar_chart}
 \end{figure}
@@ -496,6 +511,7 @@ A critical requirement for production deployment is near-zero execution latency.
 \caption{Execution Latency Percentiles of CAPYBALA Supervisor}
 \label{tab:latency_percentiles}
 \centering
+\resizebox{\columnwidth}{!}{
 \begin{tabular}{lccc}
 \toprule
 \textbf{Percentile} & \textbf{Manifold Feature Extraction} & \textbf{Total Supervisor Step} \\
@@ -507,6 +523,7 @@ $p99$ (Worst-Case) & 0.345 ms & \textbf{5.842 ms} \\
 Mean Latency & 0.053 ms & \textbf{0.871 ms} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The feature hashing projection on the 1024-D manifold requires a mean latency of only \textbf{53 microseconds} ($p50 = 38\ \mu\text{s}$). The complete supervisory turn, including history parsing, Tier 1 ring-buffer inspection, and vector dot-product computation, averages \textbf{0.871 milliseconds}. Compared to LLM network roundtrips ranging from 1,500 to 4,500 ms, CAPYBALA adds less than 0.05\% overhead to the overall agent pipeline. In contrast to embedding-based middleware such as LongGuard \cite{longguard2024}, which incurs 120 to 250 milliseconds per step and requires downloading over 400 MB of PyTorch model weights, CAPYBALA executes in pure Python standard library at 53 microseconds per turn with zero neural dependency overhead.
@@ -529,6 +546,7 @@ We evaluated the effect of varying the hash space dimensionality $d \in \{128, 2
 \caption{Ablation of Manifold Dimension $d$}
 \label{tab:ablation_dim}
 \centering
+\resizebox{\columnwidth}{!}{
 \begin{tabular}{rcccc}
 \toprule
 \textbf{Dimension $d$} & \textbf{Cosine Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Latency ($p50$)} \\
@@ -540,6 +558,7 @@ We evaluated the effect of varying the hash space dimensionality $d \in \{128, 2
 2048 & 100.0\% & 100.0\% & 1.000 & 0.071 ms \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 At $d = 128$, hash collisions produce false similarities that slightly degrade precision (84.2\%). At $d = 1024$, the manifold reaches optimal separation, yielding perfect classification while maintaining sub-50-microsecond feature extraction. Doubling the dimension to $d = 2048$ doubles memory and latency without providing incremental accuracy gains.
