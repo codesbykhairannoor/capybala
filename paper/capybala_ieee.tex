@@ -56,7 +56,7 @@ Email: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech\thanks{Artifact and
 \maketitle
 
 \begin{abstract}
-Autonomous software engineering agents frequently become entrapped in catastrophic error loops and cognitive deadlocks, burning millions of tokens while executing repetitive failing tool invocations. Existing self-reflection frameworks exacerbate token exhaustion by appending redundant verbal history to the context window, while naive context truncation routinely violates protocol invariants between tool calls and execution responses. We introduce \textbf{CAPYBALA} (\textbf{C}ontext-\textbf{A}ware \textbf{P}runing for \textbf{Y}ielding and \textbf{B}acktrack-\textbf{A}ligned \textbf{L}oop \textbf{A}voidance), an in-memory runtime supervisor that tracks agent trajectory dynamics via a signed feature-hashed phase-space manifold ($O(1)$ space complexity, sub-millisecond execution latency) and performs atomic context pruning with formal protocol pairing guarantees ($N_{\text{tool\_call}} = N_{\text{tool\_response}}$). Evaluated across 200 real-world SWE-bench agent trajectories and 2,360 production turns from the Nebius SWE-agent corpus, CAPYBALA captures deadlocks with 86.00\% to 100.0\% precision, eliminates up to 45.88\% of redundant token expenditure, and maintains a mean decision latency of 0.871 milliseconds per turn without requiring model fine-tuning or secondary embedding inference.
+Autonomous software engineering agents frequently become entrapped in catastrophic error loops and cognitive deadlocks, burning millions of tokens while executing repetitive failing tool invocations. Existing self-reflection frameworks exacerbate token exhaustion by appending redundant verbal history to the context window, while naive context truncation routinely violates protocol invariants between tool calls and execution responses. We introduce \textbf{CAPYBALA} (\textbf{C}ontext-\textbf{A}ware \textbf{P}runing for \textbf{Y}ielding and \textbf{B}acktrack-\textbf{A}ligned \textbf{L}oop \textbf{A}voidance), an in-memory runtime supervisor that tracks agent trajectory dynamics via a signed feature-hashed phase-space manifold ($O(1)$ space complexity, sub-millisecond execution latency) and performs atomic context pruning with formal protocol pairing guarantees ($N_{\text{tool\_call}} = N_{\text{tool\_response}}$). Evaluated across 200 real-world SWE-bench agent trajectories and 2,360 production turns from the Nebius SWE-agent corpus, CAPYBALA captures deadlocks with 86.00\% to 100.0\% recall, 95.56\% to 100.0\% precision, eliminates an aggregate 42.8\% of wasted tokens (1,017,250 tokens across 200 trajectories, with up to 45.88\% peak reduction in prolonged deadlocks and 40.3\% to 47.1\% in live frontier model duels), and maintains a mean decision latency of 0.871 milliseconds per turn without requiring model fine-tuning or secondary embedding inference.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -253,30 +253,30 @@ The unit projection vector is obtained via Euclidean normalization:
 \mathbf{u} = \frac{\tilde{\mathbf{u}}}{\|\tilde{\mathbf{u}}\|_2 + \epsilon}
 \end{equation}
 
-\begin{theorem}[Inner Product Expectation and Variance on $S^{d-1}$]
-Let $\mathbf{u}_1, \mathbf{u}_2 \in S^{d-1}$ be the unit feature-hashed projections of actions $a_1, a_2$. Under signed uniform hashing $h$ and independent Rademacher random variables $\xi \in \{-1, +1\}$, the dot product is an unbiased estimator of the true bag-of-features cosine similarity:
+\begin{theorem}[Asymptotic Consistency and Variance Bounds on $S^{d-1}$]
+Let $\mathbf{u}_1, \mathbf{u}_2 \in S^{d-1}$ be the unit feature-hashed projections of actions $a_1, a_2$. While unnormalized feature hashing satisfies exact unbiasedness $\mathbb{E}[\langle \tilde{\mathbf{u}}_1, \tilde{\mathbf{u}}_2 \rangle] = \langle \mathbf{x}_1, \mathbf{x}_2 \rangle$ \cite{weinberger2009feature}, Euclidean normalization onto the unit sphere introduces a bounded $\mathcal{O}(1/d)$ Jensen approximation bias. Under 2-universal hash family $h$ and independent Rademacher random signs $\xi \in \{-1, +1\}$, the normalized inner product is an asymptotically consistent estimator of true bag-of-features cosine similarity:
 \begin{equation}
-\mathbb{E}[\langle \mathbf{u}_1, \mathbf{u}_2 \rangle] = \cos(\theta_{\text{true}})
+\mathbb{E}[\langle \mathbf{u}_1, \mathbf{u}_2 \rangle] = \cos(\theta_{\text{true}}) + \mathcal{O}(1/d)
 \end{equation}
 with variance bounded by:
 \begin{equation}
 \mathrm{Var}[\langle \mathbf{u}_1, \mathbf{u}_2 \rangle] \le \frac{2}{d}
 \end{equation}
-For dimension $d = 1024$, the theoretical variance bound is strictly less than $0.00195$.
+For dimension $d = 1024$, the theoretical variance bound satisfies $\mathrm{Var} \le 1.96 \times 10^{-3}$.
 \end{theorem}
 
 \subsection{Semantic Velocity and Collapse Dynamics}
-We define the semantic velocity $v_t$ between successive agent actions as the complement of directional cosine similarity:
+We define the semantic velocity $v_t$ between successive agent actions as the complement of directional cosine similarity. Since $\mathbf{u}_t, \mathbf{u}_{t-1} \in S^{d-1}$ are unit vectors, $v_t$ is identically proportional to the squared Euclidean chord distance on the hypersphere:
 \begin{equation}
-v_t = 1 - \langle \mathbf{u}_t, \mathbf{u}_{t-1} \rangle = 1 - \sum_{i=1}^d u_{t, i} \cdot u_{t-1, i}
+v_t = 1 - \langle \mathbf{u}_t, \mathbf{u}_{t-1} \rangle = \frac{1}{2} \|\mathbf{u}_t - \mathbf{u}_{t-1}\|_2^2
 \end{equation}
-Since $\mathbf{u} \in S^{d-1}$, $v_t \in [0, 2]$. 
+Because $\mathbf{u} \in S^{d-1}$, $v_t \in [0, 2]$. 
 
 When an agent actively explores new commands or performs code modifications, $v_t \ge 0.70$. Conversely, when an agent falls into paraphrased repetition, the displacement vector approaches zero, causing velocity collapse:
 \begin{equation}
 v_t < \gamma_{\text{threshold}} \quad (\gamma = 0.70)
 \end{equation}
-If the moving average $\bar{v}_t = \frac{1}{W} \sum_{i=0}^{W-1} v_{t-i}$ remains depressed across sliding window $W = 3$ while failure observations persist ($r_t \neq 0$), CAPYBALA formally flags an Ergodic Attractor Basin.
+The threshold $\gamma_{\text{threshold}} = 0.70$ corresponds to a minimum angular separation of $\theta \approx 72.5^\circ$ ($\arccos(1 - 0.70)$), derived from the empirical sensitivity sweep detailed in Section \ref{sec:ablation}. If the moving average $\bar{v}_t = \frac{1}{W} \sum_{i=0}^{W-1} v_{t-i}$ remains depressed across sliding window $W = 3$ while failure observations persist ($r_t \neq 0$), CAPYBALA formally flags an Ergodic Attractor Basin.
 
 \subsection{The Protocol Pairing Invariant}
 Commercial LLM APIs mandate strict structural symmetry between tool requests and responses. In the OpenAI and Anthropic specifications, each assistant message containing a tool call with identifier $ID_k$ must be followed by a message from role \texttt{tool} referencing $ID_k$.
@@ -379,6 +379,8 @@ When an agent is trapped, naive truncation merely resets the prompt without alte
     \item \textbf{Action Prohibition}: Prohibits further read-only file queries on the stagnated path.
     \item \textbf{Surgical Guidance}: Directs model attention to execute concrete file editing operations (e.g., modifying specific lines via \texttt{sed} or python scripts).
 \end{enumerate}
+
+To comply with provider-specific role alternation rules (such as Anthropic's strict requirement for alternating \texttt{user} and \texttt{assistant} messages), \texttt{FormatDoctorTurn} dynamically formats the intervention as a \texttt{user} environment observation when preceding turns end with an \texttt{assistant} tool invocation. Furthermore, because the initial prefix subsequence $\mathcal{H}[:2 t_{\text{start}}]$ remains strictly untouched from token index 0, modern radix-tree KV-cache runtimes (e.g., vLLM RadixAttention and Anthropic Prompt Caching) retain a 100\% prefix cache hit, completely avoiding prefill recomputation costs up to the rollback boundary.
 
 \section{Empirical Evaluation}
 
@@ -570,6 +572,7 @@ CAPYBALA achieved a \textbf{100.00\% schema compliance rate} (0 validation failu
 Zero orphaned tool calls were produced, verifying that CAPYBALA is safe for direct deployment in production agent gateways.
 
 \subsection{RQ5: Ablation Study on Manifold Dimensionality and Thresholds}
+\label{sec:ablation}
 
 We evaluated the effect of varying the hash space dimensionality $d \in \{128, 256, 512, 1024, 2048\}$ and velocity threshold $\gamma \in [0.50, 0.90]$ on classification accuracy and execution latency, shown in Table \ref{tab:ablation_dim}.
 
