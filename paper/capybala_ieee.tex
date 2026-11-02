@@ -50,7 +50,7 @@
 \author{
 \IEEEauthorblockN{Khairan Noor Fadhlillah}
 \IEEEauthorblockA{Department of Information Systems, Universitas Ary Ginanjar, Jakarta, Indonesia \\
-Email: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech}
+Email: khairan.noor.f@students.esqbs.ac.id, dev@khairan.tech\thanks{Artifact and Data Availability: The CAPYBALA open-source runtime engine is hosted at \url{https://github.com/codesbykhairannoor/capybala} and distributed via PyPI (\url{https://pypi.org/project/capybala/}). The full 200-trajectory benchmark dataset is accessible on Kaggle (\url{https://www.kaggle.com/datasets/khairan7/ai-agent-cognitive-deadlock-benchmark/data}), and an interactive live telemetry dashboard is deployed at \url{https://capybala.onrender.com}.}}
 }
 
 \maketitle
@@ -73,50 +73,48 @@ Despite empirical milestones on curated benchmarks, production deployment of aut
 \centering
 \resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    node distance=1.1cm and 1.2cm,
-    box/.style={rectangle, draw=blue!80!black, rounded corners=3pt, fill=blue!8, text centered, minimum height=1.0cm, text width=2.4cm, font=\small\bfseries},
-    proc/.style={rectangle, draw=cyan!80!black, rounded corners=3pt, fill=cyan!10, text centered, minimum height=1.0cm, text width=2.3cm, font=\small\bfseries},
-    tier/.style={rectangle, draw=orange!80!black, rounded corners=3pt, fill=orange!10, text centered, minimum height=1.0cm, text width=2.3cm, font=\small\bfseries},
-    gate/.style={diamond, draw=purple!80!black, fill=purple!10, text centered, aspect=1.8, inner sep=2pt, font=\small\bfseries},
-    heal/.style={rectangle, draw=red!70!black, rounded corners=3pt, fill=red!10, text centered, minimum height=1.0cm, text width=2.5cm, font=\small\bfseries},
-    env/.style={rectangle, draw=green!60!black, rounded corners=3pt, fill=green!10, text centered, minimum height=1.0cm, text width=2.4cm, font=\small\bfseries},
+    box/.style={rectangle, draw=blue!80!black, rounded corners=3pt, fill=blue!8, text centered, minimum height=1.1cm, text width=2.4cm, font=\small\bfseries},
+    proc/.style={rectangle, draw=cyan!80!black, rounded corners=3pt, fill=cyan!10, text centered, minimum height=1.1cm, text width=2.3cm, font=\small\bfseries},
+    tier/.style={rectangle, draw=orange!80!black, rounded corners=3pt, fill=orange!10, text centered, minimum height=1.1cm, text width=2.3cm, font=\small\bfseries},
+    gate/.style={diamond, draw=purple!80!black, fill=purple!10, text centered, aspect=1.8, inner sep=3pt, font=\small\bfseries},
+    heal/.style={rectangle, draw=red!70!black, rounded corners=3pt, fill=red!10, text centered, minimum height=1.1cm, text width=2.5cm, font=\small\bfseries},
+    env/.style={rectangle, draw=green!60!black, rounded corners=3pt, fill=green!10, text centered, minimum height=1.1cm, text width=2.4cm, font=\small\bfseries},
     arr/.style={-{Stealth[length=2.5mm]}, thick, draw=black!75}
 ]
 
-% First Row: Agent Evaluation Pipeline (Left to Right)
-\node[box] (llm) {Agent LLM Core\\Reasoning / $a_t$};
-\node[proc, right=0.9cm of llm] (canon) {Canonicalizer\\Path / ANSI Norm};
-\node[tier, right=0.9cm of canon] (t1) {Tier 1 Guard\\$O(1)$ Floyd Ring};
-\node[tier, right=0.9cm of t1] (t2) {Tier 2 Manifold\\1024-D Space $S^{d-1}$};
-\node[gate, right=0.9cm of t2] (dec) {$v_t < 0.70$?};
+% Row 1: Forward Execution & Verification Pipeline (y = 0)
+\node[box] (llm) at (0, 0) {Agent LLM Core\\Reasoning / $a_t$};
+\node[proc] (canon) at (3.3, 0) {Canonicalizer\\Path / ANSI Norm};
+\node[tier] (t1) at (6.6, 0) {Tier 1 Guard\\$O(1)$ Floyd Ring};
+\node[tier] (t2) at (9.9, 0) {Tier 2 Manifold\\1024-D Space $S^{d-1}$};
+\node[gate] (dec) at (13.2, 0) {$v_t < 0.70$?};
+\node[env] (exec) at (16.6, 0) {Terminal Shell\\Execute Action $a_t$};
 
-% Second Row: Execution & Recovery (Cleanly Positioned Below)
-\node[env, below=1.4cm of dec] (exec) {Terminal Shell\\Execute Action $a_t$};
-\node[heal, below=1.4cm of t2] (prune) {Atomic Pruning\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
-\node[box, below=1.4cm of t1] (pivot) {Doctor Pivot\\Directional Surgery};
+% Row 2: Deadlock Recovery Pipeline (y = -2.0)
+\node[heal] (prune) at (9.9, -2.0) {Atomic Pruning\\Prefix Safe ($\Delta_{\text{proto}}=0$)};
+\node[box] (pivot) at (4.5, -2.0) {Doctor Pivot\\Directional Surgery};
 
-% Forward Pipeline Connections
+% Forward Pipeline Connections (Straight Line Flow)
 \draw[arr] (llm) -- (canon);
 \draw[arr] (canon) -- (t1);
 \draw[arr] (t1) -- (t2);
 \draw[arr] (t2) -- (dec);
+\draw[arr] (dec) -- node[above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {No (Healthy)} (exec);
 
-% Decision Branch 1: Healthy Execution Path
-\draw[arr] (dec) -- node[right, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {No (Healthy)} (exec);
-
-% Decision Branch 2: Deadlock Interception & Recovery Path (Collision-Free Routing)
-\draw[arr] (dec.west) -- ++(-0.6, 0) |- node[pos=0.25, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Yes (Deadlock)} (prune.east);
+% Decision Branch: Deadlock Interception (Straight Drop to Recovery Pipeline)
+\draw[arr] (dec.south) -- (13.2, -2.0) -- node[above, font=\footnotesize\bfseries, text=red!70!black, fill=white, inner sep=2pt] {Yes (Deadlock)} (prune.east);
 \draw[arr] (prune) -- (pivot);
 
-% Recovery Injection into Active Memory
-\draw[arr] (pivot.west) -| node[pos=0.3, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Doctor Surgery} ([xshift=2mm]llm.south);
+% Recovery Injection into Agent Active Memory (Injection Up to LLM)
+\draw[arr] (pivot.west) -- (0, -2.0) -- node[left, font=\footnotesize\bfseries, text=blue!80!black, fill=white, inner sep=2pt] {Doctor Surgery} (llm.south);
 
-% Healthy Feedback Loop (Dedicated Lower Clearance Bus 0.8cm Below Second Row)
-\draw[arr] (exec.south) -- ++(0,-0.8cm) -| node[pos=0.25, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {Observation $o_t$ (Uninterrupted Environment Feedback)} ([xshift=-4mm]llm.south);
+% Healthy Execution Feedback Loop (Dedicated Lowest Rail at y = -3.4)
+\draw[arr] (exec.south) -- (16.6, -3.4) -- (-0.8, -3.4) -- (-0.8, 0) -- (llm.west)
+    node[pos=0.35, above, font=\footnotesize\bfseries, text=green!50!black, fill=white, inner sep=2pt] {Observation $o_t$ (Uninterrupted Environment Feedback)};
 
 \end{tikzpicture}%
 }
-\caption{The modular runtime architecture of CAPYBALA. Proposed agent tool calls pass sequentially through canonicalization, Tier 1 exact cycle detection, and Tier 2 continuous 1024-D manifold evaluation. When semantic velocity collapses ($v_t < 0.70$), CAPYBALA intercepts execution, executes atomic context pruning with zero protocol orphans ($\Delta_{\text{protocol}} = 0$), and injects a directional Doctor Pivot into active memory.}
+\caption{The modular runtime architecture of CAPYBALA. Proposed agent tool calls pass sequentially through canonicalization, Tier 1 exact cycle detection, and Tier 2 continuous 1024-D manifold evaluation. When semantic velocity is healthy ($v_t \ge 0.70$), actions execute directly in the terminal shell. When velocity collapses ($v_t < 0.70$), CAPYBALA intercepts execution, executes atomic context pruning with zero protocol orphans ($\Delta_{\text{protocol}} = 0$), and injects a directional Doctor Pivot into active memory.}
 \label{fig:pipeline_architecture}
 \end{figure*}
 
@@ -138,7 +136,7 @@ This paper presents the following explicit contributions:
     \item \textbf{Two-Tier Cycle Architecture}: We design a deterministic runtime combining $O(1)$ ring-buffer Floyd cycle verification with high-dimensional feature hashing, completely eliminating the need for secondary model inference.
     \item \textbf{Protocol-Preserving Atomic Rollback}: We implement an atomic message buffer retraction algorithm that mathematically guarantees zero orphaned tool call identifiers ($\Delta_{\text{protocol}} = 0$).
     \item \textbf{Empirical Validation}: We validate CAPYBALA against 200 authentic SWE-bench trajectories and 2,360 turns from the Nebius SWE-agent corpus, demonstrating up to 100\% deadlock capture, 45.88\% token waste elimination, and zero false-alarm crashes.
-    \item \textbf{Open-Source Production Package}: We release CAPYBALA as a verified Python library and middleware engine, fully integrated with OpenAI, Anthropic, LangChain, and Llama Stack interfaces.
+    \item \textbf{Open Science and Artifact Release}: We release the complete CAPYBALA framework as an installable Python package on PyPI (\texttt{pip install capybala}) \cite{capybala_pypi_2026}, open-source the verified codebase on GitHub \cite{capybala_github_2026}, publish the 200-trajectory benchmark corpus on Kaggle \cite{capybala_kaggle_2026}, and deploy a live interactive telemetry dashboard on Render \cite{capybala_render_2026}.
 \end{itemize}
 
 \section{Related Work and Theoretical Foundations}
@@ -200,40 +198,41 @@ We categorize deadlocks into three structural classes:
 \resizebox{0.88\columnwidth}{!}{%
 \begin{tikzpicture}[scale=1.1]
     % Coordinate Axes with generous clearance
-    \draw[->, thick, gray!60] (-2.8,0) -- (3.2,0) node[below right, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Re}(\mathbf{u})$};
-    \draw[->, thick, gray!60] (0,-2.8) -- (0,3.0) node[above left, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Im}(\mathbf{u})$};
+    \draw[->, thick, gray!60] (-2.8,0) -- (3.3,0) node[below right, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Re}(\mathbf{u})$};
+    \draw[->, thick, gray!60] (0,-2.8) -- (0,3.1) node[above left, font=\footnotesize, fill=white, inner sep=1pt] {$\text{Im}(\mathbf{u})$};
     
     % Unit Hypersphere Projection Circle (Boundary S^{d-1})
     \draw[dashed, blue!50, thick] (0,0) circle (2.2cm);
-    % Quadrant II is completely empty: place Manifold label here
-    \node[blue!80!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=blue!30, rounded corners=2pt] 
+    % Quadrant II: completely empty, ideal placement for Manifold label
+    \node[blue!80!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=blue!40, rounded corners=2pt] 
         at (-1.4, 1.7) {Manifold $S^{d-1}$};
     
     % Unassisted Agent Trajectory (Inward Logarithmic Spiral into Attractor Well)
     \draw[thick, red!75!black, dashed, domain=0:13.5, samples=220, smooth, variable=\t] 
         plot ({2.2*exp(-0.24*\t)*cos(\t*72)}, {2.2*exp(-0.24*\t)*sin(\t*72)});
     
-    % Trapping Basin Center (Attractor Well) in Quadrant III
+    % Trapping Basin Center (Attractor Well) in Quadrant III with generous clearance
     \filldraw[red!90] (0,0) circle (3pt);
-    \node[red!85!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=red!40, rounded corners=2pt, anchor=north east] 
-        at (-0.5, -0.5) {Attractor Basin ($v_t \to 0$)};
-    \draw[->, red!80, thin] (-0.5, -0.5) -- (-0.08, -0.08);
+    \node[red!85!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=red!40, rounded corners=2pt] (basin)
+        at (-1.6, -1.0) {Attractor Basin ($v_t \to 0$)};
+    \draw[->, red!80!black, thick] (basin.east) -- (-0.15, -0.15);
     
     % Interception Point (Quadrant I)
     \coordinate (inter) at (0.95, 0.45);
     \filldraw[orange!90!black] (inter) circle (3pt);
-    % Label placed strictly below-right in Quadrant IV space so it NEVER overlaps the Doctor Pivot arrow
-    \node[orange!90!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=orange!50, rounded corners=2pt, anchor=north west] 
-        at (1.1, 0.25) {Interception ($v_t < 0.70$)};
+    % Label placed strictly with callout pointer to eliminate axis and vector overlap
+    \node[orange!90!black, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=orange!50, rounded corners=2pt] (interlabel)
+        at (2.0, 0.35) {Interception ($v_t < 0.70$)};
+    \draw[->, orange!80!black, thin] (interlabel.west) -- (inter);
     
     % Doctor Pivot Outward Perturbation Vector (Shoots sharply Upward & Outward)
     \draw[-{Stealth[length=3.5mm]}, line width=1.6pt, purple!85!black] 
         (inter) -- (1.75, 1.85) coordinate (pivoted)
         node[midway, above left=1pt, fill=white, inner sep=2pt, font=\scriptsize\bfseries] {Doctor Pivot $\Delta \mathbf{u}$};
     
-    % Recovered Trajectory (Smooth Escaping Curve, y >= 1.3cm well above the horizontal axis)
+    % Recovered Trajectory (Smooth Escaping Curve, y >= 1.4cm well above the horizontal axis)
     \draw[line width=1.6pt, green!60!black] 
-        (pivoted) .. controls (2.1, 2.1) and (2.5, 1.8) .. (2.6, 1.3) 
+        (pivoted) .. controls (2.1, 2.1) and (2.5, 1.9) .. (2.6, 1.4) 
         node[above right=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2.5pt, draw=green!40, rounded corners=2pt] {Resolved Trajectory};
 
 \end{tikzpicture}%
@@ -632,6 +631,19 @@ A natural concern in automated loop detection is the risk of penalizing legitima
 \textbf{Internal Validity}: Benchmark trajectories were derived from authentic SWE-bench and Nebius runs. Variability in model generation temperature could alter specific phrasing; however, feature hashing over subword n-grams ensures robustness against minor token shifts.
 
 \textbf{External Validity}: Our evaluations span Python repositories (Django, SymPy, Scikit-learn). Extending CAPYBALA to compiled languages (C++, Rust) requires incorporating compiler diagnostic parsers into the Tier 1 canonicalization module.
+
+\subsection{Open Science, Artifact, and Data Availability}
+To support verifiable scientific inquiry, reproducibility, and rigorous peer scrutiny, all research artifacts associated with this work are permanently and publicly accessible:
+
+\textbf{1) Benchmark Dataset}: The complete empirical corpus of 200 multi-turn SWE-bench trajectories (100 cognitive deadlock sessions and 100 non-deadlock baseline sessions) alongside 2,360 production turns from the Nebius SWE-agent corpus is deposited on Kaggle: \url{https://www.kaggle.com/datasets/khairan7/ai-agent-cognitive-deadlock-benchmark/data} \cite{capybala_kaggle_2026}. The dataset includes raw JSON-serialized tool calls, standard error streams, exit codes, and per-turn token metrics.
+
+\textbf{2) Software Distribution}: The CAPYBALA runtime engine is distributed as an open-source Python package on the Python Package Index (PyPI): \texttt{pip install capybala} \cite{capybala_pypi_2026} (\url{https://pypi.org/project/capybala/}). It provides zero-dependency $O(1)$ ring-buffer tracking, the 1024-D signed feature-hashed manifold projector, and middleware connectors for standard agent harnesses.
+
+\textbf{3) Source Code and Replication Suite}: The full development repository, comprehensive test harness (95 automated unit tests), and deterministic benchmark replication scripts are licensed under the MIT License and hosted on GitHub: \url{https://github.com/codesbykhairannoor/capybala} \cite{capybala_github_2026}.
+
+\textbf{4) Live Interactive Demonstration}: A production web interface demonstrating real-time trajectory visualization, synthetic deadlock injection, and phase-space projection dynamics is deployed on Render: \url{https://capybala.onrender.com} \cite{capybala_render_2026}.
+
+\textbf{5) Empirical Verifiability Guarantee}: The author certifies that all token counts, precision-recall metrics, and latency percentiles reported in this study represent unmanipulated experimental observations. Live frontier model duels reported in Table \ref{tab:live_duels} correspond to verifiable OpenRouter transaction logs (\texttt{gen-1793607621} and \texttt{gen-1793607998}).
 
 \section{Conclusion}
 
