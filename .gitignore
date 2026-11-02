@@ -70,3 +70,8 @@ README_FRESH_BUGS*.md
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Archives & Packages
+*.zip
+*.tar.gz
+
