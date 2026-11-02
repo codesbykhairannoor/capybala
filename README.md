@@ -13,7 +13,7 @@
 
 ## ⚡ The Problem: Cognitive Deadlocks & Cache Invalidation
 
-When an autonomous coding agent (Claude 3.7 Sonnet, GPT-4o, Llama 3.3, DeepSeek-V3) gets stuck in complex codebases:
+When an autonomous coding agent (Google DeepMind Gemini 4 Argon, Anthropic Claude Sonnet 5.5, OpenAI GPT-5, Meta Llama 4, DeepSeek-V3) gets stuck in complex codebases:
 1. **It loops cyclically**: Repeating the exact same failing command, alternating between broken patches (A ↔ B), or getting trapped in paraphrased search loops (`grep` vs `find`).
 2. **Context window floods**: Accumulates 15,000+ tokens of identical traceback spam and negative observations.
 3. **Prompt cache invalidation**: Naive middle-context pruners mutate historical messages, breaking Anthropic/OpenAI prompt prefix hashes and destroying the **90% prompt cache discount**.
@@ -65,7 +65,7 @@ client = cb.watch(OpenAI())
 
 # Use client exactly as you always do (including stream=True!):
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="gemini-4-argon",  # Or "claude-sonnet-5.5", "gpt-5"
     messages=messages
 )
 ```
@@ -79,7 +79,7 @@ import capybala as cb
 async_client = cb.watch(AsyncOpenAI())
 
 response = await async_client.chat.completions.create(
-    model="gpt-4o",
+    model="claude-sonnet-5.5",
     messages=messages
 )
 ```
@@ -168,7 +168,7 @@ messages = cb.heal(messages)
 
 ## 📊 Verification & Empirical Benchmarks
 
-Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTorch Lightning`, etc.) and live stress-tested with frontier models (Meta AI `muse-spark-1.3`, Claude Haiku 5.5):
+Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTorch Lightning`, etc.) and live stress-tested with frontier models (Google DeepMind Gemini 4 Argon, Meta AI `muse-spark-1.3`, Claude Sonnet 5.5):
 - **100.0% Recall** on repetitive cognitive deadlocks ($\ge 3$ turns).
 - **0.0% False Positive Rate** on exploratory Git operations and healthy polling.
 - **78.8% Token Waste Prevented** per session across benchmark dataset.
