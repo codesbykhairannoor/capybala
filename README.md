@@ -1,9 +1,13 @@
-# 🦫 `capybala` (v0.9.1)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/codesbykhairannoor/capybala/main/web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
+</p>
+
+# 🦫 `capybala` (v0.9.2)
 
 **C**ontext-**A**ware **P**runing for **Y**ielding & **B**acktrack-**A**ligned **L**oop **A**voidance  
 *High-Speed, Zero-Dependency Cognitive Deadlock & Oscillation Interceptor for Autonomous AI Coding Agents.*
 
-[![PyPI Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/capybala/)
+[![PyPI Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
 [![DOI](https://img.shields.io/badge/DOI-10.21203%2Frs.3.rs--11597011%2Fv1-blue.svg)](https://doi.org/10.21203/rs.3.rs-11597011/v1)
 [![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
@@ -15,7 +19,7 @@
 
 ## ⚡ The Problem: Cognitive Deadlocks & Cache Invalidation
 
-When an autonomous coding agent (Google DeepMind Gemini 4 Argon, Anthropic Claude Sonnet 5.5, OpenAI GPT-5, Meta Llama 4, DeepSeek-V3) gets stuck in complex codebases:
+When an autonomous coding agent (Google DeepMind Gemini 4 Argon, Anthropic Claude Sonnet 5.5, OpenAI GPT-5.4, Meta Llama 4 Scout, DeepSeek-V3) gets stuck in complex codebases:
 1. **It loops cyclically**: Repeating the exact same failing command, alternating between broken patches (A ↔ B), or getting trapped in paraphrased search loops (`grep` vs `find`).
 2. **Context window floods**: Accumulates 15,000+ tokens of identical traceback spam and negative observations.
 3. **Prompt cache invalidation**: Naive middle-context pruners mutate historical messages, breaking Anthropic/OpenAI prompt prefix hashes and destroying the **90% prompt cache discount**.

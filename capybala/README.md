@@ -1,10 +1,16 @@
-# 🦫 `capybala` (v0.9.1)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/codesbykhairannoor/capybala/main/web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
+</p>
+
+# 🦫 `capybala` (v0.9.2)
 
 **C**ontext-**A**ware **P**runing for **Y**ielding & **B**acktrack-**A**ligned **L**oop **A**voidance  
 *High-Speed, Zero-Dependency Cognitive Deadlock & Oscillation Interceptor for Autonomous AI Coding Agents.*
 
-[![PyPI Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/capybala/)
+[![PyPI Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
+[![DOI](https://img.shields.io/badge/DOI-10.21203%2Frs.3.rs--11597011%2Fv1-blue.svg)](https://doi.org/10.21203/rs.3.rs-11597011/v1)
+[![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
 [![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -13,7 +19,7 @@
 
 ## ⚡ The Problem: Cognitive Deadlocks & Cache Invalidation
 
-When an autonomous coding agent (Claude 3.7 Sonnet, GPT-4o, Llama 3.3, DeepSeek-V3) gets stuck in complex codebases:
+When an autonomous coding agent (Google DeepMind Gemini 4 Argon, Anthropic Claude Sonnet 5.5, OpenAI GPT-5.4, Meta Llama 4 Scout, DeepSeek-V3) gets stuck in complex codebases:
 1. **It loops cyclically**: Repeating the exact same failing command, alternating between broken patches (A ↔ B), or getting trapped in paraphrased search loops (`grep` vs `find`).
 2. **Context window floods**: Accumulates 15,000+ tokens of identical traceback spam and negative observations.
 3. **Prompt cache invalidation**: Naive middle-context pruners mutate historical messages, breaking Anthropic/OpenAI prompt prefix hashes and destroying the **90% prompt cache discount**.
@@ -65,7 +71,7 @@ client = cb.watch(OpenAI())
 
 # Use client exactly as you always do (including stream=True!):
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="gemini-4-argon",  # Or "claude-sonnet-5.5", "gpt-5"
     messages=messages
 )
 ```
@@ -79,7 +85,7 @@ import capybala as cb
 async_client = cb.watch(AsyncOpenAI())
 
 response = await async_client.chat.completions.create(
-    model="gpt-4o",
+    model="claude-sonnet-5.5",
     messages=messages
 )
 ```
@@ -168,7 +174,7 @@ messages = cb.heal(messages)
 
 ## 📊 Verification & Empirical Benchmarks
 
-Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTorch Lightning`, etc.) and live stress-tested with frontier models (Meta AI `muse-spark-1.3`, Claude Haiku 5.5):
+Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTorch Lightning`, etc.) and live stress-tested with frontier models (Google DeepMind Gemini 4 Argon, Meta AI `muse-spark-1.3`, Claude Sonnet 5.5):
 - **100.0% Recall** on repetitive cognitive deadlocks ($\ge 3$ turns).
 - **0.0% False Positive Rate** on exploratory Git operations and healthy polling.
 - **78.8% Token Waste Prevented** per session across benchmark dataset.
@@ -176,7 +182,7 @@ Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTo
 
 ---
 
-## 📚 Academic Research & Theoretical Foundations
+## 📚 Academic Research & Citation
 
 Capybala's architecture is grounded in peer-reviewed research across autonomous agent failure analysis, high-dimensional phase-space manifolds, and attention degradation:
 - **Phase-Space Manifolds**: Grounded in Weinberger et al. (*ICML 2009*) feature hashing trick ($O(1)$ memory, sub-millisecond trajectory projection).
@@ -184,6 +190,27 @@ Capybala's architecture is grounded in peer-reviewed research across autonomous 
 - **Attention & Context Degradation**: Pruning rules formulated to eliminate U-shaped retrieval degradation identified by Liu et al. (*TACL 2024*).
 
 See [**`RESEARCH_REFERENCES.md`**](RESEARCH_REFERENCES.md) for the complete, 100% Crossref-verified bibliography with active DOI and Open Access PDF links.
+
+### 📄 How to Cite
+
+If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our official paper preprint:
+
+> **CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents**  
+> Khairan Noor Fadhlillah  
+> *Research Square (Springer Nature)*, 2026.  
+> DOI: [`10.21203/rs.3.rs-11597011/v1`](https://doi.org/10.21203/rs.3.rs-11597011/v1) | [Preprint PDF](https://www.researchsquare.com/article/rs-11597011/v1)
+
+```bibtex
+@article{fadhlillah2026capybala,
+  title={{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}},
+  author={Fadhlillah, Khairan Noor},
+  journal={Research Square},
+  year={2026},
+  month={nov},
+  doi={10.21203/rs.3.rs-11597011/v1},
+  url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
+}
+```
 
 ---
 
