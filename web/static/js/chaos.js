@@ -29,8 +29,8 @@ const ChaosEngine = {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.className = "px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold transition shadow-sm " +
-                    (id === `btnMode${mode.charAt(0).toUpperCase() + mode.slice(1)}` 
-                        ? "bg-amber-500 text-slate-950 border-amber-600 font-bold" 
+                    (id === `btnMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`
+                        ? "bg-amber-500 text-slate-950 border-amber-600 font-bold"
                         : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100");
             }
         });
@@ -191,8 +191,8 @@ const ChaosEngine = {
         try {
             const res = await fetch('/api/velocity', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({cmd1, cmd2})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cmd1, cmd2 })
             });
             const d = await res.json();
 

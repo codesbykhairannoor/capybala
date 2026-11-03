@@ -13,6 +13,7 @@
 [![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
 [![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
+[![Sponsor](https://img.shields.io/badge/Sponsor-Tako.id-ff69b4.svg)](https://tako.id/c/codesbykhai)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -211,6 +212,14 @@ If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space ma
   url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
 }
 ```
+
+---
+
+## ☕ Support & Sponsorship
+
+If you find `capybala` valuable for preventing agent death spirals and saving LLM token costs, consider supporting ongoing research and independent development:
+
+👉 **[Support on Tako.id (codesbykhai)](https://tako.id/c/codesbykhai)**
 
 ---
 
