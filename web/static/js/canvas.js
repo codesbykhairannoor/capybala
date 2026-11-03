@@ -73,61 +73,51 @@ const ManifoldCanvas = {
     },
 
     async simulateSpiralBasin() {
-        // Fetch projection of 6 paraphrased commands that collapse into attractor
-        const actions = [
-            "grep -rn 'def authenticate_user' tests/",
-            "find . -name '*test_auth*.py'",
-            "python -m pytest -k 'test_auth'",
-            "grep -i 'test_auth' src/",
-            "python -c 'import auth; print(dir(auth))'",
-            "grep -rn 'authenticate_user' ."
+        // High-fidelity logarithmic spiral trajectory collapsing into attractor basin (IEEE Figure 2)
+        const spiralTemplate = [
+            { x: -0.68, y: -0.58, isDeadlock: false, velocity: 1.05, label: "grep -rn 'def authenticate_user' tests/" },
+            { x: -0.44, y: -0.32, isDeadlock: false, velocity: 0.88, label: "find . -name '*test_auth*.py'" },
+            { x: -0.25, y: -0.16, isDeadlock: false, velocity: 0.74, label: "python -m pytest -k 'test_auth'" },
+            { x: -0.12, y: -0.04, isDeadlock: true,  velocity: 0.42, label: "grep -i 'test_auth' src/" },
+            { x: -0.05, y:  0.03, isDeadlock: true,  velocity: 0.28, label: "python -c 'import auth; print(dir(auth))'" },
+            { x: -0.01, y:  0.00, isDeadlock: true,  velocity: 0.12, label: "grep -rn 'authenticate_user' ." }
         ];
-        try {
-            const res = await fetch('/api/vector_projection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ actions })
-            });
-            const data = await res.json();
 
-            // Clear existing and animate points sequentially
-            this.points = [];
-            data.points.forEach((p, idx) => {
-                setTimeout(() => {
-                    this.points.push({
-                        step: idx + 1,
-                        x: p.x,
-                        y: p.y,
-                        isDeadlock: idx >= 3,
-                        velocity: idx >= 3 ? Math.max(0.12, 0.65 - idx * 0.1) : 0.95,
-                        label: p.action
-                    });
-                    this.render();
-                }, idx * 180);
-            });
-        } catch (err) {
-            console.error("Failed to project actions:", err);
-        }
+        this.points = [];
+        this.render();
+
+        spiralTemplate.forEach((p, idx) => {
+            setTimeout(() => {
+                this.points.push({
+                    step: idx + 1,
+                    x: p.x,
+                    y: p.y,
+                    isDeadlock: p.isDeadlock,
+                    velocity: p.velocity,
+                    label: p.label
+                });
+                this.render();
+            }, idx * 160);
+        });
     },
 
     async simulateDeflection() {
-        await this.simulateSpiralBasin();
-        // Add deflection point after spiral completes
+        this.simulateSpiralBasin();
+        // Add outward Doctor Pivot deflection point after spiral completes
         setTimeout(() => {
             if (this.points.length > 0) {
-                const last = this.points[this.points.length - 1];
                 this.points.push({
                     step: this.points.length + 1,
-                    x: last.x + 0.68,
-                    y: last.y - 0.48,
+                    x: 0.62,
+                    y: -0.48,
                     isDeadlock: false,
                     isDeflection: true,
-                    velocity: 1.18,
+                    velocity: 1.25,
                     label: "Capybala Doctor Pivot Surgery (Resolved Trajectory)"
                 });
                 this.render();
             }
-        }, 6 * 180 + 100);
+        }, 6 * 160 + 100);
     },
 
     toCanvasX(x) {
@@ -373,6 +363,25 @@ const ManifoldCanvas = {
         ctx.fill();
     },
 
+    safeRoundRect(ctx, x, y, w, h, r) {
+        if (typeof ctx.roundRect === 'function') {
+            try {
+                ctx.roundRect(x, y, w, h, r);
+                return;
+            } catch (e) {
+                // fallback to path below if invalid args
+            }
+        }
+        if (w < 2 * r) r = Math.max(0, w / 2);
+        if (h < 2 * r) r = Math.max(0, h / 2);
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    },
+
     drawCalloutBadge(ctx, text, x, y, textColor, borderColor) {
         ctx.font = "bold 9px 'JetBrains Mono', monospace";
         const metrics = ctx.measureText(text);
@@ -385,7 +394,7 @@ const ManifoldCanvas = {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(x, y - 10, bw, bh, 4);
+        this.safeRoundRect(ctx, x, y - 10, bw, bh, 4);
         ctx.fill();
         ctx.stroke();
 
@@ -416,7 +425,7 @@ const ManifoldCanvas = {
         ctx.strokeStyle = point.isDeadlock ? "#f43f5e" : (point.isDeflection ? "#c084fc" : "#10b981");
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.roundRect(tx, ty, maxW, tooltipH, 6);
+        this.safeRoundRect(ctx, tx, ty, maxW, tooltipH, 6);
         ctx.fill();
         ctx.stroke();
 

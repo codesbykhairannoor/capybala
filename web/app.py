@@ -54,9 +54,10 @@ def project_1024d_to_2d(vec: List[float]) -> Dict[str, float]:
     """Projects a 1024-D unit sphere feature vector to 2D coordinates in range [-1.5, 1.5]."""
     if not vec or len(vec) != 1024:
         return {"x": 0.0, "y": 0.0}
-    x = sum(v * w for v, w in zip(vec, PROJ_WX))
-    y = sum(v * w for v, w in zip(vec, PROJ_WY))
-    return {"x": round(x * 1.5, 4), "y": round(y * 1.5, 4)}
+    # Scale random projection by sqrt(1024/2) = 22.627 to preserve unit norm in 2D
+    x = sum(v * w for v, w in zip(vec, PROJ_WX)) * 22.627
+    y = sum(v * w for v, w in zip(vec, PROJ_WY)) * 22.627
+    return {"x": round(max(-1.2, min(1.2, x)), 4), "y": round(max(-1.2, min(1.2, y)), 4)}
 
 
 def estimate_tokens(messages: List[Dict[str, Any]]) -> int:
