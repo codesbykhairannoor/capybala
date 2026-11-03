@@ -5,6 +5,8 @@
 
 [![PyPI Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
+[![DOI](https://img.shields.io/badge/DOI-10.21203%2Frs.3.rs--11597011%2Fv1-blue.svg)](https://doi.org/10.21203/rs.3.rs-11597011/v1)
+[![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
 [![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -176,7 +178,7 @@ Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTo
 
 ---
 
-## 📚 Academic Research & Theoretical Foundations
+## 📚 Academic Research & Citation
 
 Capybala's architecture is grounded in peer-reviewed research across autonomous agent failure analysis, high-dimensional phase-space manifolds, and attention degradation:
 - **Phase-Space Manifolds**: Grounded in Weinberger et al. (*ICML 2009*) feature hashing trick ($O(1)$ memory, sub-millisecond trajectory projection).
@@ -184,6 +186,27 @@ Capybala's architecture is grounded in peer-reviewed research across autonomous 
 - **Attention & Context Degradation**: Pruning rules formulated to eliminate U-shaped retrieval degradation identified by Liu et al. (*TACL 2024*).
 
 See [**`RESEARCH_REFERENCES.md`**](RESEARCH_REFERENCES.md) for the complete, 100% Crossref-verified bibliography with active DOI and Open Access PDF links.
+
+### 📄 How to Cite
+
+If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our official paper preprint:
+
+> **CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents**  
+> Khairan Noor Fadhlillah  
+> *Research Square (Springer Nature)*, 2026.  
+> DOI: [`10.21203/rs.3.rs-11597011/v1`](https://doi.org/10.21203/rs.3.rs-11597011/v1) | [Preprint PDF](https://www.researchsquare.com/article/rs-11597011/v1)
+
+```bibtex
+@article{fadhlillah2026capybala,
+  title={{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}},
+  author={Fadhlillah, Khairan Noor},
+  journal={Research Square},
+  year={2026},
+  month={nov},
+  doi={10.21203/rs.3.rs-11597011/v1},
+  url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
+}
+```
 
 ---
 

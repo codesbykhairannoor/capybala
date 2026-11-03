@@ -86,4 +86,5 @@ paper/
 *.aux
 *.out
 *.synctex.gz
+*.pdf
 
