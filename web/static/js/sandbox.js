@@ -2,11 +2,13 @@
  * sandbox.js - Live Turn-by-Turn Agent Sandbox & Dynamical Telemetry HUD
  * Lets developers simulate an agent step-by-step, observing Semantic Velocity,
  * Markov Entropy, and 1024-D Manifold coordinates updating in real time.
+ * Grounded in IEEE Section III: Problem Formulation & Discrete Trajectory Dynamics.
  */
 
 const SandboxEngine = {
     history: [],
     trajectoryPoints: [],
+    isPlaying: false,
 
     init() {
         this.reset();
@@ -15,15 +17,17 @@ const SandboxEngine = {
     reset() {
         this.history = [];
         this.trajectoryPoints = [];
+        this.isPlaying = false;
 
         const log = document.getElementById("sandboxStepLog");
         if (log) {
-            log.innerHTML = `<div class="text-slate-400 text-xs italic p-4">// Ready. Submit an action or select a quick preset below to begin simulation...</div>`;
+            log.innerHTML = `<div class="text-slate-400 text-xs italic p-4">// Ready. Submit an action or click 'Auto-Play Attractor Demo' to begin dynamical simulation...</div>`;
         }
 
         this.updateGauges(1.0, 4.16, 0.0);
         this.hideAlert();
-        document.getElementById("sandboxStepCount").textContent = "Step 0";
+        const stepCountEl = document.getElementById("sandboxStepCount");
+        if (stepCountEl) stepCountEl.textContent = "Step 0";
 
         if (window.ManifoldCanvas) {
             ManifoldCanvas.clearPoints();
@@ -51,8 +55,10 @@ const SandboxEngine = {
             return;
         }
 
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span>Computing Step...</span>`;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Evaluating Trajectory...</span>`;
+        }
 
         try {
             const res = await fetch('/api/step', {
@@ -82,11 +88,20 @@ const SandboxEngine = {
 
             this.appendStepToLog(stepData);
             this.updateGauges(stepData.semantic_velocity, stepData.markov_entropy, stepData.latency_ms);
-            document.getElementById("sandboxStepCount").textContent = `Step ${this.history.length}`;
+            
+            const stepCountEl = document.getElementById("sandboxStepCount");
+            if (stepCountEl) stepCountEl.textContent = `Step ${this.history.length}`;
 
-            // Add real 1024-D projection to Manifold Canvas
+            // Add real 1024-D projection to Manifold Canvas with velocity
             if (window.ManifoldCanvas && stepData.coord_2d) {
-                ManifoldCanvas.addPoint(this.history.length, stepData.coord_2d.x, stepData.coord_2d.y, stepData.is_deadlock, action);
+                ManifoldCanvas.addPoint(
+                    this.history.length,
+                    stepData.coord_2d.x,
+                    stepData.coord_2d.y,
+                    stepData.is_deadlock,
+                    action,
+                    stepData.semantic_velocity
+                );
             }
 
             if (stepData.is_deadlock) {
@@ -98,11 +113,67 @@ const SandboxEngine = {
         } catch (err) {
             alert("Sandbox Step Error: " + err.message);
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `
-                <svg class="w-4 h-4 fill-current mr-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <span>Execute Step</span>
-            `;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg class="w-4 h-4 fill-current mr-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span>Execute Step</span>
+                `;
+            }
+        }
+    },
+
+    async autoPlayScenario() {
+        if (this.isPlaying) return;
+        this.isPlaying = true;
+        this.reset();
+
+        const scenario = [
+            {
+                act: "pytest tests/test_auth.py",
+                obs: "FAILED tests/test_auth.py::test_jwt - AssertionError: 401 != 200",
+                fail: true
+            },
+            {
+                act: "sed -i 's/verify=True/verify=False/' auth/token.py",
+                obs: "File modified: 1 replacement made in auth/token.py",
+                fail: false
+            },
+            {
+                act: "pytest tests/test_auth.py",
+                obs: "FAILED tests/test_auth.py::test_security - SecurityException: Insecure token bypass forbidden",
+                fail: true
+            },
+            {
+                act: "git checkout auth/token.py",
+                obs: "Updated 1 path from HEAD",
+                fail: false
+            },
+            {
+                act: "pytest tests/test_auth.py",
+                obs: "FAILED tests/test_auth.py::test_jwt - AssertionError: 401 != 200",
+                fail: true
+            }
+        ];
+
+        const playBtn = document.getElementById("autoPlayBtn");
+        if (playBtn) {
+            playBtn.disabled = true;
+            playBtn.innerHTML = `<span>Simulating Turn 1/5...</span>`;
+        }
+
+        for (let i = 0; i < scenario.length; i++) {
+            const step = scenario[i];
+            if (playBtn) playBtn.innerHTML = `<span>Simulating Turn ${i + 1}/5...</span>`;
+            this.setQuickAction(step.act, step.obs, step.fail);
+            await this.submitStep();
+            await new Promise(r => setTimeout(r, 650));
+        }
+
+        this.isPlaying = false;
+        if (playBtn) {
+            playBtn.disabled = false;
+            playBtn.innerHTML = `<span>▶ Auto-Play 5-Step Attractor Loop</span>`;
         }
     },
 
@@ -117,7 +188,7 @@ const SandboxEngine = {
 
         const stepDiv = document.createElement("div");
         stepDiv.className = `p-3 rounded-lg border font-mono text-xs transition space-y-1.5 shadow-sm ${step.is_deadlock
-                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-800"
+                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-800 ring-1 ring-rose-400"
                 : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             }`;
 
@@ -126,20 +197,29 @@ const SandboxEngine = {
 
         stepDiv.innerHTML = `
             <div class="flex justify-between items-center pb-1 border-b border-slate-100 dark:border-slate-800">
-                <span class="font-bold text-slate-900 dark:text-white">Turn ${step.step_number}</span>
+                <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>${step.is_deadlock ? "🚨" : "⚡"}</span>
+                    <span>Turn ${step.step_number}</span>
+                </span>
                 <div class="flex items-center space-x-2 text-[11px]">
                     <span class="${velBadgeClass}">v_t: ${step.semantic_velocity.toFixed(3)}</span>
                     <span class="text-slate-400">|</span>
                     <span class="text-sky-600 dark:text-sky-400">H: ${step.markov_entropy.toFixed(2)}</span>
                     <span class="text-slate-400">|</span>
-                    <span class="text-slate-500">${step.latency_ms.toFixed(3)}ms</span>
+                    <span class="text-emerald-600 dark:text-emerald-400">${step.latency_ms.toFixed(3)}ms</span>
                 </div>
             </div>
             <div class="text-slate-800 dark:text-slate-200 font-semibold truncate"><span class="text-amber-600 font-bold">&gt;</span> ${this.escapeHtml(step.action)}</div>
             ${step.details ? `<div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">${this.escapeHtml(step.details)}</div>` : ''}
             ${step.is_deadlock ? `
-                <div class="mt-2 p-2 rounded bg-rose-100 dark:bg-rose-950/80 border border-rose-300 text-rose-900 dark:text-rose-200 text-[11px] font-bold">
-                    🚨 [DEADLOCK TRIPPED]: ${step.deadlock_type} (${step.details})
+                <div class="mt-2 p-2.5 rounded bg-rose-100 dark:bg-rose-950/80 border border-rose-300 text-rose-900 dark:text-rose-200 text-[11px] font-bold flex flex-col gap-1">
+                    <div class="flex items-center gap-1">
+                        <span>🚨 [CAPYBALA DEADLOCK TRIPPED]:</span>
+                        <span class="underline">${step.deadlock_type}</span>
+                    </div>
+                    <div class="text-[10.5px] font-normal text-rose-800 dark:text-rose-300">
+                        Doctor Pivot Prescription: "${this.escapeHtml(step.directive || "Switch strategic approach to break attractor loop.")}"
+                    </div>
                 </div>
             ` : ''}
         `;
@@ -159,16 +239,16 @@ const SandboxEngine = {
             const pct = Math.min(100, Math.max(0, (vel / 2.0) * 100));
             velBar.style.width = `${pct}%`;
             if (vel < 0.70) {
-                velBar.className = "h-2 rounded-full bg-rose-500 transition-all duration-300";
+                velBar.className = "h-2.5 rounded-full bg-rose-500 transition-all duration-300 shadow-sm";
                 if (velStatus) {
                     velStatus.textContent = "STAGNANT / ATTRACTOR BASIN (v_t < 0.70)";
-                    velStatus.className = "text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400";
+                    velStatus.className = "text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1";
                 }
             } else {
-                velBar.className = "h-2 rounded-full bg-emerald-500 transition-all duration-300";
+                velBar.className = "h-2.5 rounded-full bg-emerald-500 transition-all duration-300 shadow-sm";
                 if (velStatus) {
-                    velStatus.textContent = "DYNAMIC EXPLORATION (Healthy)";
-                    velStatus.className = "text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400";
+                    velStatus.textContent = "DYNAMIC EXPLORATION (Healthy Progression)";
+                    velStatus.className = "text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1";
                 }
             }
         }
@@ -181,8 +261,8 @@ const SandboxEngine = {
             const pct = Math.min(100, Math.max(0, (entropy / 4.16) * 100));
             entBar.style.width = `${pct}%`;
             entBar.className = entropy < 1.50
-                ? "h-2 rounded-full bg-rose-500 transition-all duration-300"
-                : "h-2 rounded-full bg-sky-500 transition-all duration-300";
+                ? "h-2.5 rounded-full bg-rose-500 transition-all duration-300"
+                : "h-2.5 rounded-full bg-sky-500 transition-all duration-300";
         }
 
         const latEl = document.getElementById("gaugeLatencyVal");
@@ -256,4 +336,3 @@ const SandboxEngine = {
             .replace(/'/g, "&#039;");
     }
 };
-

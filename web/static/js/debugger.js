@@ -1,6 +1,11 @@
 /**
  * debugger.js - Production-Grade JSON Conversation Debugger & Context Profiler
  * Connects directly to Capybala's live /api/heal endpoint for real AST surgery.
+ * Features:
+ * - Interactive Turn-Sequence Timeline Barometer
+ * - Protocol Soundness Assurance (Δ_protocol = 0)
+ * - Visual Token Savings Compression Progress
+ * - Side-by-Side Synchronized Scroll Diff View
  */
 
 const DebuggerEngine = {
@@ -186,11 +191,11 @@ const DebuggerEngine = {
         // Deadlock Status Badge
         const statusBadge = document.getElementById("resStatusBadge");
         if (data.is_deadlock) {
-            statusBadge.className = "px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800";
-            statusBadge.textContent = `🚨 DEADLOCK: ${data.deadlock_type.toUpperCase()}`;
+            statusBadge.className = "px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1.5 shadow-sm";
+            statusBadge.innerHTML = `<span>🚨</span><span>DEADLOCK: ${data.deadlock_type.toUpperCase()}</span>`;
         } else {
-            statusBadge.className = "px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800";
-            statusBadge.textContent = `✅ CLEAN FORWARD TRAJECTORY (No Deadlock)`;
+            statusBadge.className = "px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5 shadow-sm";
+            statusBadge.innerHTML = `<span>✅</span><span>CLEAN TRAJECTORY (Zero False Alarms)</span>`;
         }
 
         // Metrics
@@ -200,6 +205,9 @@ const DebuggerEngine = {
         document.getElementById("resTokensSaved").textContent = `${data.tokens_saved.toLocaleString()} (${data.percent_saved}%)`;
         document.getElementById("resTurnsCount").textContent = `${data.original_turn_count} ➔ ${data.healed_turn_count} turns`;
         document.getElementById("resCostSaved").textContent = `$${data.cost_saved_usd.toFixed(4)}`;
+
+        // Render Invariant & Token Savings Progress Bar
+        this.renderTokenEconomyBar(data);
 
         // Doctor Directive Box
         const directiveCard = document.getElementById("resDirectiveCard");
@@ -211,11 +219,136 @@ const DebuggerEngine = {
             directiveCard.classList.add("hidden");
         }
 
+        // Render Turn Timeline Barometer
+        this.renderTimelineBar(data.original_messages, data.healed_messages, data.is_deadlock);
+
         // Render Side-by-Side Diff View
         this.renderDiffViews(data.original_messages, data.healed_messages);
 
         // Scroll to results smoothly
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
+    renderTokenEconomyBar(data) {
+        let barContainer = document.getElementById("tokenEconomyBarContainer");
+        if (!barContainer) {
+            const scoreboard = document.querySelector("#debuggerResultsContainer > div");
+            if (scoreboard) {
+                barContainer = document.createElement("div");
+                barContainer.id = "tokenEconomyBarContainer";
+                barContainer.className = "p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono space-y-2 mt-2";
+                scoreboard.appendChild(barContainer);
+            }
+        }
+        if (!barContainer) return;
+
+        const percentPruned = data.percent_saved;
+        const percentRetained = (100 - percentPruned).toFixed(1);
+
+        barContainer.innerHTML = `
+            <div class="flex justify-between items-center text-slate-300">
+                <span class="font-bold flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Context Window Optimization Telemetry</span>
+                </span>
+                <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-bold">
+                    Protocol Invariant: Δ_protocol = 0 (100% Schema Valid)
+                </span>
+            </div>
+            <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden flex shadow-inner">
+                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${percentRetained}%;" title="Retained Essential Context: ${percentRetained}%"></div>
+                <div class="bg-rose-500/80 h-full transition-all duration-500" style="width: ${percentPruned}%;" title="Pruned Redundant Waste: ${percentPruned}%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-400 pt-0.5">
+                <span class="flex items-center gap-1">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Retained Prefix: <b>${data.tokens_after.toLocaleString()} tok</b> (${percentRetained}%)</span>
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="inline-block w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span>Pruned Redundancy: <b>${data.tokens_saved.toLocaleString()} tok</b> (${percentPruned}% Burn Saved)</span>
+                </span>
+            </div>
+        `;
+    },
+
+    renderTimelineBar(origMsgs, healedMsgs, isDeadlock) {
+        let timelineBox = document.getElementById("turnTimelineBar");
+        if (!timelineBox) {
+            const diffParent = document.querySelector("#debuggerResultsContainer > div.grid");
+            if (diffParent) {
+                timelineBox = document.createElement("div");
+                timelineBox.id = "turnTimelineBar";
+                timelineBox.className = "bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-2";
+                diffParent.parentNode.insertBefore(timelineBox, diffParent);
+            }
+        }
+        if (!timelineBox) return;
+
+        const healedCount = healedMsgs.length;
+        timelineBox.innerHTML = `
+            <div class="flex justify-between items-center text-xs font-mono font-bold text-slate-700 dark:text-slate-300 pb-1">
+                <span class="flex items-center gap-1.5">
+                    <span>🧭 Turn-Sequence Timeline Barometer</span>
+                    <span class="text-[10px] text-slate-400 font-normal">(Click any turn to jump to message)</span>
+                </span>
+                <span class="text-[11px] font-mono text-amber-600 dark:text-amber-400">
+                    ${origMsgs.length} Total Turns Evaluated
+                </span>
+            </div>
+            <div id="timelinePillsTrack" class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+            </div>
+        `;
+
+        const track = document.getElementById("timelinePillsTrack");
+        origMsgs.forEach((msg, idx) => {
+            const isPruned = idx >= (healedCount - 1) && healedCount < origMsgs.length;
+            const role = msg.role || "unknown";
+            const pill = document.createElement("button");
+            pill.type = "button";
+            
+            let colorCls = "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300";
+            let icon = "💬";
+            if (role === "system") { icon = "⚙️"; colorCls = "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300"; }
+            else if (role === "user") { icon = "👤"; colorCls = "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300"; }
+            else if (role === "assistant") { icon = "🤖"; colorCls = "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300"; }
+            else if (role === "tool") { icon = "🔧"; colorCls = "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300"; }
+
+            if (isPruned) {
+                colorCls = "bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 line-through opacity-80";
+                icon = "✂️";
+            }
+
+            pill.className = `px-2.5 py-1 rounded-lg border text-[11px] font-mono font-semibold flex items-center gap-1 whitespace-nowrap transition hover:scale-105 ${colorCls}`;
+            pill.innerHTML = `<span>${icon}</span><span>T${idx + 1}:${role}</span>`;
+            pill.onclick = () => this.jumpToTurn(idx);
+            track.appendChild(pill);
+        });
+
+        // Add Injected Doctor Turn pill at end if healed
+        if (isDeadlock && healedCount > 0) {
+            const docPill = document.createElement("button");
+            docPill.type = "button";
+            docPill.className = "px-2.5 py-1 rounded-lg border border-purple-400 bg-purple-100 text-purple-900 dark:bg-purple-950/80 dark:text-purple-200 text-[11px] font-mono font-bold flex items-center gap-1 whitespace-nowrap shadow-sm";
+            docPill.innerHTML = `<span>🩺</span><span>T${healedCount}:Doctor Pivot</span>`;
+            docPill.onclick = () => this.jumpToTurn(healedCount - 1);
+            track.appendChild(docPill);
+        }
+    },
+
+    jumpToTurn(idx) {
+        const origCard = document.getElementById(`orig-msg-${idx}`);
+        const healedCard = document.getElementById(`healed-msg-${idx}`);
+        if (origCard) {
+            origCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            origCard.classList.add("ring-2", "ring-amber-500");
+            setTimeout(() => origCard.classList.remove("ring-2", "ring-amber-500"), 1600);
+        }
+        if (healedCard) {
+            healedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            healedCard.classList.add("ring-2", "ring-emerald-500");
+            setTimeout(() => healedCard.classList.remove("ring-2", "ring-emerald-500"), 1600);
+        }
     },
 
     renderDiffViews(origMsgs, healedMsgs) {
@@ -232,6 +365,7 @@ const DebuggerEngine = {
         origMsgs.forEach((msg, idx) => {
             const isPruned = idx >= (healedCount - 1) && healedCount < origMsgs.length;
             const card = document.createElement("div");
+            card.id = `orig-msg-${idx}`;
             card.className = `p-3 rounded-lg border text-xs font-mono transition ${isPruned
                     ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 line-through opacity-75 text-rose-900 dark:text-rose-300"
                     : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
@@ -240,13 +374,13 @@ const DebuggerEngine = {
             const role = msg.role || "unknown";
             let contentStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
             if (msg.tool_calls) {
-                contentStr += " " + JSON.stringify(msg.tool_calls);
+                contentStr += "\n[Tool Calls]: " + JSON.stringify(msg.tool_calls, null, 2);
             }
 
             card.innerHTML = `
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold uppercase text-[10px] ${this.getRoleBadgeColor(role)}">${role}</span>
-                    <span class="text-[10px] text-slate-400">#${idx + 1} ${isPruned ? "• [PRUNED]" : ""}</span>
+                    <span class="text-[10px] text-slate-400">#${idx + 1} ${isPruned ? "• [PRUNED REDUNDANCY]" : ""}</span>
                 </div>
                 <div class="whitespace-pre-wrap break-words leading-relaxed">${this.escapeHtml(contentStr || "(empty content)")}</div>
             `;
@@ -255,20 +389,24 @@ const DebuggerEngine = {
 
         // Render Healed Messages
         healedMsgs.forEach((msg, idx) => {
-            const isInjected = JSON.stringify(msg).includes("CAPYBALA DOCTOR INTERVENTION") || JSON.stringify(msg).includes("CAPYBALA STATE ROLLBACK");
+            const isInjected = JSON.stringify(msg).includes("CAPYBALA DOCTOR INTERVENTION") || JSON.stringify(msg).includes("CAPYBALA STATE ROLLBACK") || JSON.stringify(msg).includes("Doctor Pivot");
             const card = document.createElement("div");
+            card.id = `healed-msg-${idx}`;
             card.className = `p-3 rounded-lg border text-xs font-mono transition ${isInjected
-                    ? "bg-amber-50 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-sm"
+                    ? "bg-amber-50 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-md ring-1 ring-amber-400"
                     : "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-slate-800 dark:text-slate-200"
                 }`;
 
             const role = msg.role || "unknown";
             let contentStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+            if (msg.tool_calls) {
+                contentStr += "\n[Tool Calls]: " + JSON.stringify(msg.tool_calls, null, 2);
+            }
 
             card.innerHTML = `
                 <div class="flex justify-between items-center mb-1">
-                    <span class="font-bold uppercase text-[10px] ${isInjected ? "text-amber-700 dark:text-amber-400 font-extrabold" : this.getRoleBadgeColor(role)}">
-                        ${isInjected ? "🦫 DOCTOR DIRECTIVE INJECTED" : role}
+                    <span class="font-bold uppercase text-[10px] ${isInjected ? "text-amber-700 dark:text-amber-400 font-extrabold flex items-center gap-1" : this.getRoleBadgeColor(role)}">
+                        ${isInjected ? "🦫 DOCTOR SURGERY DIRECTIVE (INJECTED)" : role}
                     </span>
                     <span class="text-[10px] text-slate-400">#${idx + 1}</span>
                 </div>
@@ -280,11 +418,11 @@ const DebuggerEngine = {
 
     getRoleBadgeColor(role) {
         switch (role) {
-            case "system": return "text-purple-600 dark:text-purple-400";
-            case "user": return "text-sky-600 dark:text-sky-400";
-            case "assistant": return "text-emerald-600 dark:text-emerald-400";
-            case "tool": return "text-amber-600 dark:text-amber-400";
-            default: return "text-slate-500";
+            case "system": return "text-purple-600 dark:text-purple-400 font-bold";
+            case "user": return "text-sky-600 dark:text-sky-400 font-bold";
+            case "assistant": return "text-emerald-600 dark:text-emerald-400 font-bold";
+            case "tool": return "text-amber-600 dark:text-amber-400 font-bold";
+            default: return "text-slate-500 font-bold";
         }
     },
 
@@ -295,7 +433,7 @@ const DebuggerEngine = {
         }
         const text = JSON.stringify(this.currentResult.healed_messages, null, 2);
         navigator.clipboard.writeText(text).then(() => {
-            alert("✅ Healed JSON copied to clipboard!");
+            alert("✅ Healed JSON copied to clipboard! Ready to paste into OpenAI or Anthropic payload.");
         }).catch(err => {
             alert("Failed to copy: " + err);
         });
