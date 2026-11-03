@@ -8,8 +8,7 @@ const App = {
         if (window.DebuggerEngine) DebuggerEngine.init();
         if (window.SandboxEngine) SandboxEngine.init();
         if (window.DuelEngine) DuelEngine.init();
-        if (window.ManifoldCanvas) ManifoldCanvas.init();
-        if (window.ChaosEngine) ChaosEngine.computeDistance();
+        if (window.ChaosEngine) ChaosEngine.init();
 
         this.initScrollSpy();
 

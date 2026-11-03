@@ -78,9 +78,9 @@ const ManifoldCanvas = {
             { x: -0.68, y: -0.58, isDeadlock: false, velocity: 1.05, label: "grep -rn 'def authenticate_user' tests/" },
             { x: -0.44, y: -0.32, isDeadlock: false, velocity: 0.88, label: "find . -name '*test_auth*.py'" },
             { x: -0.25, y: -0.16, isDeadlock: false, velocity: 0.74, label: "python -m pytest -k 'test_auth'" },
-            { x: -0.12, y: -0.04, isDeadlock: true,  velocity: 0.42, label: "grep -i 'test_auth' src/" },
-            { x: -0.05, y:  0.03, isDeadlock: true,  velocity: 0.28, label: "python -c 'import auth; print(dir(auth))'" },
-            { x: -0.01, y:  0.00, isDeadlock: true,  velocity: 0.12, label: "grep -rn 'authenticate_user' ." }
+            { x: -0.12, y: -0.04, isDeadlock: true, velocity: 0.42, label: "grep -i 'test_auth' src/" },
+            { x: -0.05, y: 0.03, isDeadlock: true, velocity: 0.28, label: "python -c 'import auth; print(dir(auth))'" },
+            { x: -0.01, y: 0.00, isDeadlock: true, velocity: 0.12, label: "grep -rn 'authenticate_user' ." }
         ];
 
         this.points = [];

@@ -83,7 +83,7 @@
                 </button>
                 <button onclick="App.scrollToSection('canvas-section')" id="nav-canvas"
                     class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
-                    🌀 1024-D Manifold
+                    🌀 Phase-Space Physics
                 </button>
                 <button onclick="App.scrollToSection('benchmarks-section')" id="nav-benchmarks"
                     class="nav-tab-inactive px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
@@ -1143,7 +1143,7 @@
 
 
         <!-- ============================================================== -->
-        <!-- SECTION 4: TRUE 1024-D MANIFOLD PROJECTION & COSINE CALCULATOR -->
+        <!-- SECTION 4: PHASE-SPACE TRAJECTORY DYNAMICS & SEMANTIC PHYSICS     -->
         <!-- ============================================================== -->
         <section id="canvas-section" class="space-y-6 pt-6">
 
@@ -1152,96 +1152,147 @@
                     class="text-xs font-mono uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-bold">Feature
                     4: Mathematical Physics</span>
                 <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Phase-Space Trajectory Manifold Canvas
+                    Phase-Space Trajectory Dynamics &amp; Gravity Well Telemetry
                 </h2>
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Mathematical visualization of semantic gravity wells. Actions are hashed into a 1024-dimensional
-                    feature vector on a unit sphere, then projected into 2D via deterministic Johnson-Lindenstrauss
-                    orthonormal basis vectors.
+                    Mathematical telemetry of agent trajectory dynamics. Capybala projects sequential agent tool invocations into a 1024-dimensional signed feature manifold, tracking directional semantic velocity (<span class="font-mono font-bold text-amber-600 dark:text-amber-400">v_t</span>), variance (<span class="font-mono font-bold">&sigma;&sup2;</span>), and Markov entropy (<span class="font-mono font-bold">H</span>) to catch ergodic attractor traps in <span class="font-mono font-bold text-emerald-600">&lt;1ms</span>.
                 </p>
             </div>
 
-            <!-- Canvas Card -->
+            <!-- Mathematical Physics Telemetry Card -->
             <div
                 class="bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
 
+                <!-- Mode Controls Bar -->
                 <div
                     class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-4">
-                    <span class="text-xs font-mono text-slate-500 font-semibold">Simulate Real Mathematical
-                        Projections:</span>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="ManifoldCanvas.setMode('spiral')"
+                    <span class="text-xs font-mono text-slate-500 font-semibold">Simulate Phase-Space Trajectory States:</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="ChaosEngine.setTrajectoryMode('vortex')" id="btnModeVortex"
+                            class="px-3 py-1.5 rounded-lg border border-amber-600 bg-amber-500 text-slate-950 text-xs font-mono font-bold transition shadow-sm">
+                            🌀 Simulate Attractor Basin
+                        </button>
+                        <button onclick="ChaosEngine.setTrajectoryMode('doctor')" id="btnModeDoctor"
                             class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-700 dark:text-slate-300 hover:bg-slate-100 font-semibold">
-                            Simulate Attractor Basin
+                            🩺 Show Doctor Pivot Vector
                         </button>
-                        <button onclick="ManifoldCanvas.setMode('deflect')"
-                            class="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-xs font-mono text-amber-800 dark:text-amber-300 font-semibold">
-                            Show Deflection Vector
-                        </button>
-                        <button onclick="ManifoldCanvas.clearPoints()"
-                            class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 font-mono text-xs text-slate-600 dark:text-slate-400">
-                            Clear
+                        <button onclick="ChaosEngine.setTrajectoryMode('healthy')" id="btnModeHealthy"
+                            class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-700 dark:text-slate-300 hover:bg-slate-100 font-semibold">
+                            ✅ Dynamic Forward Progress
                         </button>
                     </div>
                 </div>
 
-                <!-- Canvas and HUD -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                    <div
-                        class="lg:col-span-8 flex justify-center bg-slate-950 rounded-2xl p-4 border border-slate-800 shadow-inner relative overflow-hidden">
-                        <canvas id="manifoldCanvas" width="680" height="360" class="max-w-full rounded-xl"></canvas>
-                        <div
-                            class="absolute top-6 left-6 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
-                            Manifold: True 1024-D Projection
+                <!-- High-Impact Telemetry & Dynamic Pipeline HUD -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- Left: Interactive Trajectory Pipeline (No Fragile Canvas!) -->
+                    <div class="lg:col-span-8 space-y-4 bg-slate-950 rounded-2xl p-5 border border-slate-800 shadow-inner">
+                        
+                        <!-- Header with Status Badge & Velocity Gauge -->
+                        <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-800">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-mono font-bold text-slate-300 uppercase tracking-wide">1024-D Dynamical Pipeline:</span>
+                                <span id="telemetryStateBadge" class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                                    🚨 Attractor Well Trap (v_t &lt; 0.70)
+                                </span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-xs font-mono">
+                                <span class="text-slate-400">Velocity (v_t):</span>
+                                <span id="telemetryVelocityVal" class="font-bold text-base text-amber-400">0.184</span>
+                            </div>
+                        </div>
+
+                        <!-- Velocity Barometer Meter -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] font-mono text-slate-500">
+                                <span>0.0 (Singularity / Deadlock)</span>
+                                <span class="text-amber-500 font-semibold">&larr; Interception Threshold (0.70) &rarr;</span>
+                                <span>1.5 (Escape Velocity)</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                                <div id="telemetryVelocityBar" class="h-full bg-rose-500 transition-all duration-500" style="width: 18%;"></div>
+                                <div class="absolute top-0 bottom-0 left-[46.6%] w-0.5 bg-amber-400/80 z-10"></div>
+                            </div>
+                        </div>
+
+                        <!-- Step Cards Pipeline Container -->
+                        <div id="trajectoryPipeline" class="space-y-2.5 pt-2 font-mono">
+                            <!-- Populated dynamically by ChaosEngine.setTrajectoryMode -->
+                        </div>
+
+                        <!-- Physical Narrative Banner -->
+                        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 font-mono flex items-start space-x-2">
+                            <span class="text-amber-400 text-sm">💡</span>
+                            <div id="telemetryNarrative" class="flex-1 leading-relaxed">
+                                Agent trapped in repetitive semantic basin. Directional velocity collapsed to <strong>0.184</strong> with variance <strong>&sigma;&sup2; &le; 0.04</strong>. Capybala triggers interception in <strong>&lt;0.64ms</strong>.
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Right: IEEE Scientific Legend & Formal Equations -->
                     <div class="lg:col-span-4 space-y-3 font-mono text-xs">
                         <div
-                            class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
-                            <div class="font-bold text-slate-900 dark:text-white text-xs">IEEE Manifold Legend:</div>
+                            class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 shadow-sm">
+                            <div class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wide">IEEE Manifold Invariants:</div>
                             <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
-                                <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></span>
-                                <span>Green Nodes: Forward Exploration (v_t ≥ 0.70)</span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shrink-0"></span>
+                                <span>Forward Exploration (v_t &ge; 0.70)</span>
                             </div>
                             <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
-                                <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm"></span>
-                                <span>Red Spiral: Attractor Well Basin (v_t → 0)</span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shrink-0"></span>
+                                <span>Attractor Gravity Basin (v_t &rarr; 0)</span>
                             </div>
                             <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
-                                <span class="w-3 h-3 rounded-full bg-purple-400 shadow-sm"></span>
-                                <span>Purple Vector: Doctor Pivot Δu Surgery</span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-sm shrink-0"></span>
+                                <span>Doctor Pivot &Delta;u Surgery</span>
                             </div>
                             <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
-                                <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></span>
-                                <span>Green Arc: Escaping Resolved Trajectory</span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shrink-0"></span>
+                                <span>Escaping Resolved Trajectory</span>
                             </div>
                         </div>
 
                         <div
-                            class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-1.5">
-                            <div class="font-bold text-slate-900 dark:text-white text-xs">Mathematical Equations:</div>
+                            class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2 shadow-sm">
+                            <div class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wide">Mathematical Formulations:</div>
                             <div class="text-[11px] text-slate-600 dark:text-slate-400">
                                 Velocity: <code
-                                    class="text-amber-700 dark:text-amber-400 font-semibold">v_t = 1 - cos(v_t, v_t-1)</code>
+                                    class="text-amber-700 dark:text-amber-400 font-semibold">v_t = 1 - cos(u_t, u_t-1)</code>
                             </div>
                             <div class="text-[11px] text-slate-600 dark:text-slate-400">
-                                Variance: <code
-                                    class="text-sky-600 dark:text-sky-400 font-semibold">sigma^2 &lt;= 0.08</code>
+                                Ergodic Variance: <code
+                                    class="text-sky-600 dark:text-sky-400 font-semibold">&sigma;&sup2; &le; 0.08</code>
                             </div>
                             <div class="text-[11px] text-slate-600 dark:text-slate-400">
-                                Entropy: <code
-                                    class="text-emerald-700 dark:text-emerald-400 font-semibold">H = -sum(p_ij * log p_ij)</code>
+                                Markov Entropy: <code
+                                    class="text-emerald-700 dark:text-emerald-400 font-semibold">H = -&sum;(p_ij &middot; log p_ij)</code>
+                            </div>
+                            <div class="text-[11px] text-slate-600 dark:text-slate-400">
+                                Protocol Pairing: <code
+                                    class="text-purple-600 dark:text-purple-400 font-semibold">&Delta;_protocol = 0 (Preserved)</code>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2-Action Velocity Distance Tester -->
+                <!-- 2-Action Velocity Distance Tester (Live API) -->
                 <div
                     class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50 dark:bg-slate-900/60 space-y-4">
-                    <div class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">Live 2-Action Velocity
-                        and Cosine Distance:</div>
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
+                            Live 2-Action Semantic Velocity &amp; Cosine Calculator:
+                        </div>
+                        <div class="flex items-center space-x-1.5 text-[11px] font-mono text-slate-500">
+                            <span>Presets:</span>
+                            <button onclick="ChaosEngine.injectPreset('direct_repetition')" class="text-amber-600 dark:text-amber-400 hover:underline">Repetition</button>
+                            <span>&bull;</span>
+                            <button onclick="ChaosEngine.injectPreset('oscillation')" class="text-amber-600 dark:text-amber-400 hover:underline">Oscillation</button>
+                            <span>&bull;</span>
+                            <button onclick="ChaosEngine.injectPreset('clean_progress')" class="text-emerald-600 dark:text-emerald-400 hover:underline">Progress</button>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label class="text-[11px] font-mono text-slate-500">Action 1:</label>
@@ -1257,17 +1308,14 @@
 
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
                         <button onclick="ChaosEngine.computeDistance()"
-                            class="px-4 py-2 rounded-lg font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 transition">
-                            Compute Semantic Distance
+                            class="px-4 py-2 rounded-lg font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 transition flex items-center space-x-1.5">
+                            <span>⚡ Compute Semantic Distance</span>
                         </button>
                         <div
                             class="flex flex-wrap items-center gap-5 text-xs font-mono text-slate-600 dark:text-slate-400">
-                            <div>Cosine: <span id="chaosCos" class="font-bold text-slate-900 dark:text-white">-</span>
-                            </div>
-                            <div>Velocity: <span id="chaosVel"
-                                    class="font-bold text-amber-700 dark:text-amber-400">-</span></div>
-                            <div>Latency: <span id="chaosLat"
-                                    class="font-bold text-emerald-700 dark:text-emerald-400">-</span></div>
+                            <div>Cosine: <span id="chaosCos" class="font-bold text-slate-900 dark:text-white">-</span></div>
+                            <div>Velocity: <span id="chaosVel" class="font-bold text-amber-700 dark:text-amber-400">-</span></div>
+                            <div>Latency: <span id="chaosLat" class="font-bold text-emerald-700 dark:text-emerald-400">-</span></div>
                             <div>Status: <span id="chaosStatus" class="font-bold">-</span></div>
                         </div>
                     </div>
@@ -1488,12 +1536,11 @@ from capybala.integrations import (
     </footer>
 
     <!-- Modular Scripts with Cache-Busting -->
-    <script src="/static/js/debugger.js?v=0.9.6"></script>
-    <script src="/static/js/sandbox.js?v=0.9.6"></script>
-    <script src="/static/js/duel.js?v=0.9.6"></script>
-    <script src="/static/js/canvas.js?v=0.9.6"></script>
-    <script src="/static/js/chaos.js?v=0.9.6"></script>
-    <script src="/static/js/app.js?v=0.9.6"></script>
+    <script src="/static/js/debugger.js?v=0.9.7"></script>
+    <script src="/static/js/sandbox.js?v=0.9.7"></script>
+    <script src="/static/js/duel.js?v=0.9.7"></script>
+    <script src="/static/js/chaos.js?v=0.9.7"></script>
+    <script src="/static/js/app.js?v=0.9.7"></script>
     <script>
         // Secondary guarantee to trigger App.init if DOM is already active
         if (window.App && typeof App.init === 'function') {
