@@ -526,24 +526,24 @@
                     <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                         <div class="text-[9px] uppercase text-slate-400">Official Model</div>
                         <div id="proofModel" class="text-slate-700 dark:text-slate-300 font-bold truncate">
-                        gemini-4-argon / muse-spark-1.3
+                            gemini-4-argon / muse-spark-1.3
+                        </div>
+                    </div>
+                    <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <div class="text-[9px] uppercase text-slate-400">Total Reasoning Tokens</div>
+                        <div id="proofTokens" class="text-slate-700 dark:text-slate-300 font-bold">1,049 tokens</div>
+                    </div>
+                    <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <div class="text-[9px] uppercase text-slate-400">Live Network Latency</div>
+                        <div id="proofLatency" class="text-slate-700 dark:text-slate-300 font-bold">1,820 ms</div>
                     </div>
                 </div>
-                <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div class="text-[9px] uppercase text-slate-400">Total Reasoning Tokens</div>
-                    <div id="proofTokens" class="text-slate-700 dark:text-slate-300 font-bold">1,049 tokens</div>
+                <div id="proofRawContainer" class="space-y-1">
+                    <div class="text-[10px] uppercase text-slate-400 font-bold">Raw Model Thought Stream (Unfiltered
+                        from api.meta.ai):</div>
+                    <pre id="proofRawText"
+                        class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed"></pre>
                 </div>
-                <div class="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div class="text-[9px] uppercase text-slate-400">Live Network Latency</div>
-                    <div id="proofLatency" class="text-slate-700 dark:text-slate-300 font-bold">1,820 ms</div>
-                </div>
-            </div>
-            <div id="proofRawContainer" class="space-y-1">
-                <div class="text-[10px] uppercase text-slate-400 font-bold">Raw Model Thought Stream (Unfiltered
-                    from api.meta.ai):</div>
-                <pre id="proofRawText"
-                    class="p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed"></pre>
-            </div>
             </div>
 
         </section>
@@ -1287,10 +1287,10 @@
                     class="text-xs font-mono uppercase tracking-widest text-purple-700 dark:text-purple-400 font-bold">Scientific
                     Validation</span>
                 <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Reproducible SWE-bench Benchmarks &amp; Peer Audits
+                    Reproducible Empirical Benchmarks &amp; Open Science Data
                 </h2>
                 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Evaluated across 100 SWE-bench trajectories and cross-examined adversarially by frontier AI models.
+                    Evaluated across 200 authentic SWE-bench agent runs and 3,209 execution turns from the open Nebius SWE-agent corpus, with full replication telemetry archived on Kaggle.
                 </p>
             </div>
 
@@ -1298,84 +1298,110 @@
                 <!-- SWE-bench Table -->
                 <div
                     class="lg:col-span-6 bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-                        SWE-bench Empirical Metric Summary
-                    </h3>
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">
+                            SWE-bench Benchmark (200 Trajectories)
+                        </h3>
+                        <span class="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-mono text-[11px] font-bold">Table I &amp; IV</span>
+                    </div>
                     <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Evaluated across 100 long-horizon agent trajectories (50 genuine multi-turn cognitive deadlocks
-                        from SWE-bench failed runs, and 50 clean tasks):
+                        Evaluated across 200 real-world issue resolutions (140 confirmed cognitive deadlocks, 60 clean problem-solving baselines):
                     </p>
                     <div
                         class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs font-mono shadow-sm">
                         <div
                             class="bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 flex justify-between">
-                            <span>Metric</span>
-                            <span>Measured Value</span>
+                            <span>Empirical Metric</span>
+                            <span>Capybala Measured</span>
                         </div>
                         <div
                             class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-[#0a0c10]">
                             <div class="px-3.5 py-2.5 flex justify-between">
-                                <span class="text-slate-500">True Negative Rate (Clean Tasks)</span>
-                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">96.00% (48 / 50)</span>
+                                <span class="text-slate-500">Deadlock Detection Recall</span>
+                                <span class="text-sky-700 dark:text-sky-400 font-bold">97.86% (137 / 140)</span>
                             </div>
                             <div class="px-3.5 py-2.5 flex justify-between">
-                                <span class="text-slate-500">True Deadlock Recall</span>
-                                <span class="text-sky-700 dark:text-sky-400 font-bold">95.56% (43 / 45)</span>
+                                <span class="text-slate-500">Classification Precision</span>
+                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">98.56% (F1: 0.9821)</span>
                             </div>
                             <div class="px-3.5 py-2.5 flex justify-between">
-                                <span class="text-slate-500">Attractor False Positive Rate</span>
-                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">0.00% (0 / 50 clean
-                                    tasks)</span>
+                                <span class="text-slate-500">Clean Task Specificity (TNR)</span>
+                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">96.67% (58 / 60)</span>
                             </div>
                             <div class="px-3.5 py-2.5 flex justify-between">
-                                <span class="text-slate-500">Average Turn Latency</span>
-                                <span class="text-slate-900 dark:text-white font-bold">0.871 ms / turn</span>
+                                <span class="text-slate-500">Cumulative Wasted Tokens Eliminated</span>
+                                <span class="text-amber-700 dark:text-amber-400 font-bold">1,017,250 tok (42.8% saved)</span>
                             </div>
                             <div class="px-3.5 py-2.5 flex justify-between">
-                                <span class="text-slate-500">Wasted Turns Prevented</span>
-                                <span class="text-amber-700 dark:text-amber-400 font-bold">1,142 turns (45.9%
-                                    savings)</span>
+                                <span class="text-slate-500">Mean Supervisor Latency</span>
+                                <span class="text-slate-900 dark:text-white font-bold">0.641 ms (p50: 0.546 ms)</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Multi-AI Audit -->
+                <!-- Nebius Corpus Table (Replaces AI Testimonials) -->
                 <div
                     class="lg:col-span-6 bg-white dark:bg-[#11141c] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-                        Independent Multi-AI Peer Audit
-                    </h3>
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">
+                            Nebius Corpus Stress Test (3,209 Turns)
+                        </h3>
+                        <span class="px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 font-mono text-[11px] font-bold">Table II (IEEE)</span>
+                    </div>
                     <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Evaluated by 3 frontier models via neutral code inspection and adversarial test challenges:
+                        Evaluated across 100 authentic open agent trajectories (3,209 execution turns across 50 stuck and 50 clean sessions):
                     </p>
-                    <div class="space-y-3">
+                    <div
+                        class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs font-mono shadow-sm">
                         <div
-                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 text-xs font-mono space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-slate-900 dark:text-white">Claude Sonnet 5.5 / Gemini 4
-                                    Argon</span>
-                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Status: 4/4 Attack
-                                    Vectors Solved</span>
-                            </div>
-                            <p class="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
-                                "Markov entropy small-sample normalization and active TDD line tracking are
-                                mathematically verified. Pure-Python O(1) bounded space holds true."
-                            </p>
+                            class="bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 flex justify-between">
+                            <span>Empirical Metric</span>
+                            <span>Measured Value (Threshold)</span>
                         </div>
                         <div
-                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 text-xs font-mono space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-slate-900 dark:text-white">DeepSeek-V3</span>
-                                <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Correctness: 8.0/10 |
-                                    Production: 7.0/10</span>
+                            class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-[#0a0c10]">
+                            <div class="px-3.5 py-2.5 flex justify-between">
+                                <span class="text-slate-500">Deadlock Recall (TPR)</span>
+                                <span class="text-sky-700 dark:text-sky-400 font-bold">86.00% (43 / 50 stuck)</span>
                             </div>
-                            <p class="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
-                                "L2 unit sphere projection and Shannon entropy gating are mathematically valid and
-                                numerically stable."
-                            </p>
+                            <div class="px-3.5 py-2.5 flex justify-between">
+                                <span class="text-slate-500">Clean Task Specificity (TNR)</span>
+                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">96.00% (48 / 50 clean)</span>
+                            </div>
+                            <div class="px-3.5 py-2.5 flex justify-between">
+                                <span class="text-slate-500">False Positive Rate (FPR)</span>
+                                <span class="text-emerald-700 dark:text-emerald-400 font-bold">4.00% (&lt; 5.0% target)</span>
+                            </div>
+                            <div class="px-3.5 py-2.5 flex justify-between">
+                                <span class="text-slate-500">Non-Productive Turns Saved</span>
+                                <span class="text-amber-700 dark:text-amber-400 font-bold">1,487 / 2,489 turns (59.74%)</span>
+                            </div>
+                            <div class="px-3.5 py-2.5 flex justify-between">
+                                <span class="text-slate-500">Engine Throughput</span>
+                                <span class="text-slate-900 dark:text-white font-bold">1,559.3 turns / sec</span>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Academic Preprint & Open Science Verification Links -->
+            <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-mono flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+                <div class="flex items-center space-x-3 text-slate-300">
+                    <span class="text-lg">📄</span>
+                    <div>
+                        <div class="font-bold text-white">Official Academic Research Preprint</div>
+                        <div class="text-[11px] text-slate-400">Published on Research Square (Springer Nature) &bull; DOI: <a href="https://doi.org/10.21203/rs.3.rs-11597011/v1" target="_blank" class="text-amber-400 hover:underline">10.21203/rs.3.rs-11597011/v1</a></div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="https://doi.org/10.21203/rs.3.rs-11597011/v1" target="_blank" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition">
+                        Read Preprint PDF
+                    </a>
+                    <a href="https://www.kaggle.com/datasets/khairan7/ai-agent-cognitive-deadlock-benchmark/data" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs transition">
+                        Kaggle Benchmark Dataset
+                    </a>
                 </div>
             </div>
 

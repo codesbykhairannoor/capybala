@@ -306,7 +306,7 @@ const DebuggerEngine = {
             const role = msg.role || "unknown";
             const pill = document.createElement("button");
             pill.type = "button";
-            
+
             let colorCls = "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300";
             let icon = "💬";
             if (role === "system") { icon = "⚙️"; colorCls = "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300"; }
@@ -367,8 +367,8 @@ const DebuggerEngine = {
             const card = document.createElement("div");
             card.id = `orig-msg-${idx}`;
             card.className = `p-3 rounded-lg border text-xs font-mono transition ${isPruned
-                    ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 line-through opacity-75 text-rose-900 dark:text-rose-300"
-                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
+                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 line-through opacity-75 text-rose-900 dark:text-rose-300"
+                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
                 }`;
 
             const role = msg.role || "unknown";
@@ -393,8 +393,8 @@ const DebuggerEngine = {
             const card = document.createElement("div");
             card.id = `healed-msg-${idx}`;
             card.className = `p-3 rounded-lg border text-xs font-mono transition ${isInjected
-                    ? "bg-amber-50 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-md ring-1 ring-amber-400"
-                    : "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-slate-800 dark:text-slate-200"
+                ? "bg-amber-50 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-md ring-1 ring-amber-400"
+                : "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60 text-slate-800 dark:text-slate-200"
                 }`;
 
             const role = msg.role || "unknown";

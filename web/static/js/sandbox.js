@@ -88,7 +88,7 @@ const SandboxEngine = {
 
             this.appendStepToLog(stepData);
             this.updateGauges(stepData.semantic_velocity, stepData.markov_entropy, stepData.latency_ms);
-            
+
             const stepCountEl = document.getElementById("sandboxStepCount");
             if (stepCountEl) stepCountEl.textContent = `Step ${this.history.length}`;
 
@@ -188,8 +188,8 @@ const SandboxEngine = {
 
         const stepDiv = document.createElement("div");
         stepDiv.className = `p-3 rounded-lg border font-mono text-xs transition space-y-1.5 shadow-sm ${step.is_deadlock
-                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-800 ring-1 ring-rose-400"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            ? "bg-rose-50 dark:bg-rose-950/40 border-rose-400 dark:border-rose-800 ring-1 ring-rose-400"
+            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             }`;
 
         const isLowVel = step.semantic_velocity < 0.70;

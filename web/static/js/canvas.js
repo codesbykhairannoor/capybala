@@ -89,7 +89,7 @@ const ManifoldCanvas = {
                 body: JSON.stringify({ actions })
             });
             const data = await res.json();
-            
+
             // Clear existing and animate points sequentially
             this.points = [];
             data.points.forEach((p, idx) => {
