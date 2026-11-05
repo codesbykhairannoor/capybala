@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/codesbykhairannoor/capybala/main/web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
+  <img src="web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
 </p>
 
 # 🦫 `capybala` (v0.9.2)
@@ -9,11 +9,9 @@
 
 [![PyPI Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
-[![DOI](https://img.shields.io/badge/DOI-10.21203%2Frs.3.rs--11597011%2Fv1-blue.svg)](https://doi.org/10.21203/rs.3.rs-11597011/v1)
-[![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
+[![Review Status](https://img.shields.io/badge/peer--review-double--blind-purple.svg)]()
 [![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
-[![Sponsor](https://img.shields.io/badge/Sponsor-Tako.id-ff69b4.svg)](https://tako.id/c/codesbykhai)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -194,34 +192,23 @@ See [**`RESEARCH_REFERENCES.md`**](RESEARCH_REFERENCES.md) for the complete, 100
 
 ### 📄 How to Cite
 
-If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our official paper preprint:
+If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our replication repository:
 
 > **CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents**  
-> Khairan Noor Fadhlillah  
-> *Research Square (Springer Nature)*, 2026.  
-> DOI: [`10.21203/rs.3.rs-11597011/v1`](https://doi.org/10.21203/rs.3.rs-11597011/v1) | [Preprint PDF](https://www.researchsquare.com/article/rs-11597011/v1)
+> *Under Double-Blind Peer Review*, 2026.  
+> Anonymized Replication Repository: [`anonymous.4open.science/r/capybala-7B9B`](https://anonymous.4open.science/r/capybala-7B9B/)
 
 ```bibtex
-@article{fadhlillah2026capybala,
+@article{capybala2026anonymous,
   title={{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}},
-  author={Fadhlillah, Khairan Noor},
-  journal={Research Square},
+  author={{Anonymous Authors}},
+  journal={Under Double-Blind Peer Review},
   year={2026},
-  month={nov},
-  doi={10.21203/rs.3.rs-11597011/v1},
-  url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
+  url={https://anonymous.4open.science/r/capybala-7B9B/}
 }
 ```
 
 ---
 
-## ☕ Support & Sponsorship
-
-If you find `capybala` valuable for preventing agent death spirals and saving LLM token costs, consider supporting ongoing research and independent development:
-
-👉 **[Support on Tako.id (codesbykhai)](https://tako.id/c/codesbykhai)**
-
----
-
 ## 📜 License
-Apache-2.0 License. Built for the Meta Global AI Developer Hackathon 2026.
+Apache-2.0 License. Built for Autonomous Agent Cognitive Reliability.

@@ -23,25 +23,21 @@ The following open-source tools and repositories are used to programmatically au
 
 ## 2. Canonical Academic Bibliography (100% Verified)
 
-### 🌟 Official Paper Preprint
+### 🌟 Paper Manuscript (Under Double-Blind Peer Review)
 
 #### CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents
-- **Author**: Khairan Noor Fadhlillah
-- **Affiliation**: Universitas Ary Ginanjar (ESQ Business School)
-- **Preprint Platform**: *Research Square (Springer Nature)*, 2026
-- **Official DOI**: [`10.21203/rs.3.rs-11597011/v1`](https://doi.org/10.21203/rs.3.rs-11597011/v1)
-- **Live Preprint**: [https://www.researchsquare.com/article/rs-11597011/v1](https://www.researchsquare.com/article/rs-11597011/v1)
-- **Direct PDF**: [Download Full-Text Manuscript (10 Pages)](https://www.researchsquare.com/article/rs-11597011/v1.pdf)
+- **Author**: Anonymous Authors
+- **Affiliation**: Anonymized for Double-Blind Peer Review
+- **Venue**: Under Double-Blind Peer Review, 2026
+- **Replication Repository**: [`anonymous.4open.science/r/capybala-7B9B`](https://anonymous.4open.science/r/capybala-7B9B/)
 - **BibTeX**:
   ```bibtex
-  @article{fadhlillah2026capybala,
+  @article{capybala2026anonymous,
     title={{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}},
-    author={Fadhlillah, Khairan Noor},
-    journal={Research Square},
+    author={{Anonymous Authors}},
+    journal={Under Double-Blind Peer Review},
     year={2026},
-    month={nov},
-    doi={10.21203/rs.3.rs-11597011/v1},
-    url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
+    url={https://anonymous.4open.science/r/capybala-7B9B/}
   }
   ```
 

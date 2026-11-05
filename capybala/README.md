@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/codesbykhairannoor/capybala/main/web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
+  <img src="web/static/img/capybala-logo.png" width="180" alt="Capybala Logo">
 </p>
 
 # 🦫 `capybala` (v0.9.2)
@@ -9,11 +9,9 @@
 
 [![PyPI Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/capybala/)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/capybala/)
-[![DOI](https://img.shields.io/badge/DOI-10.21203%2Frs.3.rs--11597011%2Fv1-blue.svg)](https://doi.org/10.21203/rs.3.rs-11597011/v1)
-[![Preprint](https://img.shields.io/badge/Research_Square-Preprint-green.svg)](https://www.researchsquare.com/article/rs-11597011/v1)
+[![Review Status](https://img.shields.io/badge/peer--review-double--blind-purple.svg)]()
 [![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20(pure%20std%20lib)-success.svg)]()
-[![Sponsor](https://img.shields.io/badge/Sponsor-Tako.id-ff69b4.svg)](https://tako.id/c/codesbykhai)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -58,170 +56,80 @@ flowchart TD
 
 ---
 
-## 🚀 The 1-Line Developer Experience
+## 🚀 Quickstart
 
-### 1. Drop-In Client Wrapper (Sync & Async)
-Zero modifications to your agent loop. Wrap your client and you're protected:
+### Installation
+
+```bash
+pip install capybala
+```
+
+### Drop-in Loop Detection & Self-Healing Interceptor
 
 ```python
-from openai import OpenAI
-import capybala as cb
+from capybala import LoopSentinel, LoopDecision
 
-# Explicit, type-safe, zero global side-effects:
-client = cb.watch(OpenAI())
-
-# Use client exactly as you always do (including stream=True!):
-response = client.chat.completions.create(
-    model="gemini-4-argon",  # Or "claude-sonnet-5.5", "gpt-5"
-    messages=messages
-)
-```
-
-#### Also Works Flawlessly with `AsyncOpenAI` & `AsyncAnthropic`:
-```python
-from openai import AsyncOpenAI
-import capybala as cb
-
-# Preserves inspect.iscoroutinefunction() and offloads CPU passes:
-async_client = cb.watch(AsyncOpenAI())
-
-response = await async_client.chat.completions.create(
-    model="claude-sonnet-5.5",
-    messages=messages
-)
-```
-
-When an agent enters an infinite loop, Capybala intercepts it and prints the **Flight Recorder** to stderr:
-
-```text
-─────────────────────────────────────────────────────────────────
-🦫  Capybala Cycle Intercepted [Tier 1 Exact Cycle: pytest tests/test_core.py]
- ├── Cycle Length: 2 turns | Recovered: ~3,200 tokens (~$0.019)
- ├── Cache Telemetry: 8,450 / 9,100 tokens cached (92.8% hit rate)
- └── Resolution:   Atomic Rollback + Grounded Reflection Injected
-─────────────────────────────────────────────────────────────────
-```
-
-### 2. Enterprise Shadow Mode (`shadow_mode=True`)
-For enterprise engineering teams wanting zero-risk observability before enabling active rollbacks:
-
-```python
-import capybala as cb
-from openai import OpenAI
-
-# Shadow mode: monitors and logs deadlocks without mutating messages or interrupting traffic
-client = cb.watch(OpenAI(), shadow_mode=True)
-```
-
-In shadow mode, Capybala outputs:
-```text
-─────────────────────────────────────────────────────────────────
-🦫  [SHADOW MODE] Capybala Cycle Intercept Candidate [pytest tests/test_core.py]
- ├── Cycle Length: 2 turns | Estimated Waste: ~3,200 tokens (~$0.019)
- ├── Detection Tier: tier1_exact | Policy: Shadow Audit (No Context Mutated)
- └── Resolution:   Audit Logged for Review (Zero-Risk Execution)
-─────────────────────────────────────────────────────────────────
-```
-
-### 3. Cache-Preserving Rollback (`cache_preserving=True`)
-Modern LLM APIs (Anthropic Claude, OpenAI) provide up to a 90% prompt cache discount on preserved prompt prefixes. Capybala's `rollback_and_reflect()` operates strictly on the suffix, leaving historic prefix messages byte-for-byte identical:
-
-```python
-import capybala as cb
-
-pruner = cb.ContextPruner()
-result = pruner.rollback_and_reflect(
-    messages=messages,
-    failing_action="python -m pytest tests/test_auth.py",
-    deadlock_details="2-step oscillating circular dependency",
-    rollback_turns=4,
-    cache_preserving=True  # Preserves prefix cache hit rate
+sentinel = LoopSentinel(
+    exact_threshold=2,        # Intercept 2-cycle exact oscillation
+    velocity_threshold=0.70,   # Flag semantic stagnation
+    patience_budget=3         # Allow 3 exploration retries
 )
 
-messages = result.pruned_messages
-print(f"Tokens saved: {result.tokens_saved_estimate} | Cache preserved: {result.cache_preserved}")
-```
+messages = [
+    {"role": "user", "content": "Fix the authentication bug in auth.py"}
+]
 
-### 4. Pure Functional 1-Liner (For Custom Agent Frameworks)
-```python
-import capybala as cb
+# Simulate agent step
+action = {"tool": "run_command", "command": "pytest tests/test_auth.py"}
+feedback = "FAILED tests/test_auth.py::test_jwt_login - KeyError: 'exp'"
 
-# In-place mutation guarantees developer outer history lists never experience Ghost Desync:
-messages = cb.heal(messages)
+decision = sentinel.evaluate(action, feedback)
+
+if decision.is_loop:
+    print(f"Deadlock Detected: {decision.reason}")
+    print(f"Doctor Guidance: {decision.remediation_guidance}")
+    # Execute cache-preserving atomic rollback
+    messages = sentinel.prune_context(messages, mode="atomic_rollback")
 ```
 
 ---
 
-## 🛡️ Production Invariant Guarantees (v0.9.1)
+## 🛡️ Framework Integrations
 
-| Production Hazard | Naive Loop Breakers | `capybala` v0.9.1 Guarantee |
-| :--- | :---: | :---: |
-| **Enterprise Adoption Risk** | Active mutation frightens production teams | **Enterprise Shadow Mode**: Run `shadow_mode=True` for passive observability with zero context changes. |
-| **Prompt Cache Invalidation** | Rewrites ancient messages, busting Anthropic/OpenAI prompt cache | **Cache-Preserving Prefix Rollback**: Truncates suffix only; keeps historical prefixes 100% byte-for-byte identical. |
-| **Cross-Syntax Evasion (`grep` vs `find`)** | Lexical shingles miss equivalent commands | **Canonical Action Normalizer**: Unifies diverse command syntaxes into standardized operational intents. |
-| **Two-Tier Cycle Detection** | Slow regex scans or missed paraphrased loops | **Two-Tier Engine**: $O(1)$ Bounded Ring-Buffer Matcher ($<0.01$ ms) + Sub-millisecond continuous lexical trajectory ($<0.8$ ms). |
-| **Infinite Healing Loops (Meta-Deadlocks)** | Blindly heals forever, burning thousands of dollars | **Autonomous Circuit Breaker**: Halts infinite healing loops after `max_interventions=5` (`DeadlockEmergencyStop`). |
-| **Volatile Dynamic Arguments** | Hashes raw args; blinded by changing timestamps/nonces | **JSON Key Sanitizer**: Strips volatile fields (`timestamp`, `nonce`, `request_id`) and canonicalizes JSON dicts. |
-| **Autoregressive Reflection Echo** | Static reflection becomes an attractor token loop | **Progressive Escalation Healer**: Levels 1, 2, 3+ escalate from local diagnostics to radical hypothesis resets. |
-| **Streaming Completions (`stream=True`)** | Breaks generators and crashes chunk streaming | **Streaming Generator Passthrough**: Preserves chunk streaming and async generators without disruption. |
-| **Anthropic Role Alternation** | Injects back-to-back user messages; triggers `400 Bad Request` | **Strict Claude Role Hygiene**: Merges guidance into existing user turns; strictly maintains turn alternation. |
-| **AsyncIO Event Loop Starvation** | Stalls main loop with heavy regexes; strips coroutine flags | **Async-Native Offloading**: Preserves `iscoroutinefunction`, offloads CPU work via `asyncio.to_thread`. |
-| **Ghost Pruning Desync** | Returns new list while developer's outer loop keeps old bloated list | **In-Place Mutation**: `messages[:] = clean_history` synchronizes caller state automatically. |
-| **Memory Leaks in Ring Buffers** | Stores raw strings, pinning 800MB+ in RAM per agent | **Zero Memory Pinning**: Stores 16-byte SHA digests and bounds regex passes to 32KB. |
-| **OpenAI Parallel Tool Calls** | Splits message, triggers fatal `400 Bad Request` | **Atomic Checkpoint Rollback**: Never separates `tool_calls` from paired `tool` responses. |
-| **Legitimate Polling** | Kills `curl /health`, `kubectl`, `ps aux` after 3 runs | **Dynamic Polling Exemption**: Whitelists waiting and status commands. |
+Capybala includes native, zero-friction adapters for major agentic frameworks:
 
----
-
-## 📊 Verification & Empirical Benchmarks
-
-Validated against 200 real **SWE-bench Deadlock Trajectories** (`AnalogJ`, `PyTorch Lightning`, etc.) and live stress-tested with frontier models (Google DeepMind Gemini 4 Argon, Meta AI `muse-spark-1.3`, Claude Sonnet 5.5):
-- **100.0% Recall** on repetitive cognitive deadlocks ($\ge 3$ turns).
-- **0.0% False Positive Rate** on exploratory Git operations and healthy polling.
-- **78.8% Token Waste Prevented** per session across benchmark dataset.
-- **< 0.01 ms Tier 1 Latency / < 0.8 ms Tier 2 Latency** (100% pure Python standard library, 0 external dependencies).
+- **LangChain / LangGraph**: Native `CapybalaCallbackHandler` and cycle-breaking graph nodes.
+- **Llama Index / Llama Stack**: Integrated interceptor hooks for inference loops.
+- **CrewAI / AutoGen**: Multi-agent conversational deadlock resolver.
+- **Raw OpenAI / Anthropic Function Calling**: Direct context pruner and token savings monitor.
 
 ---
 
 ## 📚 Academic Research & Citation
 
-Capybala's architecture is grounded in peer-reviewed research across autonomous agent failure analysis, high-dimensional phase-space manifolds, and attention degradation:
-- **Phase-Space Manifolds**: Grounded in Weinberger et al. (*ICML 2009*) feature hashing trick ($O(1)$ memory, sub-millisecond trajectory projection).
-- **Agent Failure Taxonomies**: Evaluated against real failure modes documented in Xia et al. (*ACM PACMSE/FSE 2025*) and Jimenez et al. (*ICLR 2024 SWE-bench*).
-- **Attention & Context Degradation**: Pruning rules formulated to eliminate U-shaped retrieval degradation identified by Liu et al. (*TACL 2024*).
+Capybala's architecture is grounded in peer-reviewed research across autonomous agent failure analysis, high-dimensional phase-space manifolds, and attention degradation.
 
 See [**`RESEARCH_REFERENCES.md`**](RESEARCH_REFERENCES.md) for the complete, 100% Crossref-verified bibliography with active DOI and Open Access PDF links.
 
 ### 📄 How to Cite
 
-If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our official paper preprint:
+If you use Capybala, its 200-trajectory benchmark dataset, or its phase-space manifold formulation in your research, please cite our replication repository:
 
 > **CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents**  
-> Khairan Noor Fadhlillah  
-> *Research Square (Springer Nature)*, 2026.  
-> DOI: [`10.21203/rs.3.rs-11597011/v1`](https://doi.org/10.21203/rs.3.rs-11597011/v1) | [Preprint PDF](https://www.researchsquare.com/article/rs-11597011/v1)
+> *Under Double-Blind Peer Review*, 2026.  
+> Anonymized Replication Repository: [`anonymous.4open.science/r/capybala-7B9B`](https://anonymous.4open.science/r/capybala-7B9B/)
 
 ```bibtex
-@article{fadhlillah2026capybala,
+@article{capybala2026anonymous,
   title={{CAPYBALA: Context-Aware Pruning for Yielding and Backtrack-Aligned Loop Avoidance in Autonomous Software Engineering Agents}},
-  author={Fadhlillah, Khairan Noor},
-  journal={Research Square},
+  author={{Anonymous Authors}},
+  journal={Under Double-Blind Peer Review},
   year={2026},
-  month={nov},
-  doi={10.21203/rs.3.rs-11597011/v1},
-  url={https://doi.org/10.21203/rs.3.rs-11597011/v1}
+  url={https://anonymous.4open.science/r/capybala-7B9B/}
 }
 ```
 
 ---
 
-## ☕ Support & Sponsorship
-
-If you find `capybala` valuable for preventing agent death spirals and saving LLM token costs, consider supporting ongoing research and independent development:
-
-👉 **[Support on Tako.id (codesbykhai)](https://tako.id/c/codesbykhai)**
-
----
-
 ## 📜 License
-Apache-2.0 License. Built for the Meta Global AI Developer Hackathon 2026.
+Apache-2.0 License. Built for Autonomous Agent Cognitive Reliability.

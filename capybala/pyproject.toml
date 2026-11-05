@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "capybala"
 version = "0.9.2"
 authors = [
-  { name = "Khairan Noor Fadhlillah", email = "khairan.noor.f@students.esqbs.ac.id" },
+  { name = "Anonymous Authors", email = "anonymous@review.submission" },
 ]
 description = "Context-Aware Pruning for Yielding & Backtrack-Aligned Loop Avoidance: The chill, self-healing runtime that cures autonomous AI agents from cognitive deadlocks."
 readme = "README.md"
@@ -25,8 +25,6 @@ langchain = ["langchain-core"]
 all = ["llama-stack-client", "langchain-core"]
 
 [project.urls]
-"Homepage" = "https://github.com/codesbykhairannoor/capybala"
-"Preprint Paper" = "https://doi.org/10.21203/rs.3.rs-11597011/v1"
-"Benchmark Dataset" = "https://www.kaggle.com/datasets/khairan7/ai-agent-cognitive-deadlock-benchmark/data"
+"Homepage" = "https://anonymous.4open.science/r/capybala-7B9B"
+"Replication Package" = "https://anonymous.4open.science/r/capybala-7B9B"
 "Live Interactive Demo" = "https://capybala.onrender.com"
-"Bug Tracker" = "https://github.com/codesbykhairannoor/capybala/issues"
